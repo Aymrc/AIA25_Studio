@@ -1,0 +1,4 @@
+import os 
+
+OPENAI_API_KEY = "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"
+
