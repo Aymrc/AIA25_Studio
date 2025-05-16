@@ -2,7 +2,7 @@ from server.config import *
 from llm_calls import *
 import json
 
-# Placeholder design data (replace later with actual GH or JSON input)
+# Placeholder design data
 design_data = {
     "materials": ["concrete", "glass", "timber"],
     "embodied_carbon": "420 kgCO₂e/m²",
@@ -18,10 +18,13 @@ design_data = {
     "plot_dimensions": "30m x 40m"
 }
 
-# Greet and ask open-ended query
+# Confirm what model is being used
+print("🔧 Using model:", completion_model)
+
+# Initial prompt
 print("\n👋 " + query_intro())
 
-# User interaction loop
+# Loop
 while True:
     user_input = input("\n💬 What would you like to know about your design? (type 'exit' to quit)\n> ")
 
@@ -31,9 +34,7 @@ while True:
 
     if any(word in user_input.lower() for word in ["improve", "reduce", "maximize", "minimize", "optimize", "should i", "could i", "recommend", "how can i"]):
         suggestion = suggest_improvements(user_input, design_data)
-        print("\n🧩 Suggestion:")
-        print(suggestion)
+        print("\n🧩 Suggestion:\n" + suggestion)
     else:
         reply = answer_user_query(user_input, design_data)
-        print("\n📊 Data Insight:")
-        print(reply)
+        print("\n📊 Data Insight:\n" + reply)
