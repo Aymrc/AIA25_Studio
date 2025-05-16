@@ -30,8 +30,8 @@ gpt4o = [
 # Notice how this model is running locally. Uses local server with LMStudio
 llama3 = [
         {
-            "model": "llava-llama-3-8b-v1_1-imat", #change this to point to a new model
-            'api_key': 'any string here is fine',
+            "model": "llama-3.1-tulu-3.1-8b", #change this to point to a new model
+            'api_key': OPENAI_API_KEY,
             'api_type': 'openai',
             'base_url': "http://127.0.0.1:1234",
             "cache_seed": random.randint(0, 100000),
@@ -56,7 +56,7 @@ llava_llama = [
 def api_mode (mode):
     if mode == "local":
         client = local_client
-        completion_model = llava_llama[0]['model']
+        completion_model = llama3[0]['model']
         embedding_model = local_embedding_model
         return client, completion_model, embedding_model
     

@@ -1,92 +1,72 @@
-from server.config import *
 import json
+from server.config import *
+from server.keys import OPENAI_API_KEY
 
-def ask_single_parameter(param_name, instructions, examples, messages):
-    prompt = f"Please provide the {param_name}. {instructions}\nExample: {examples}"
-    
-    while True:
-        messages.append({"role": "assistant", "content": prompt})
-        print("\n🤖 Copilot:", prompt)
-        user_input = input("👤 You: ").strip()
-        messages.append({"role": "user", "content": user_input})
 
-        # Ask the LLM to extract the single parameter
-        response = client.chat.completions.create(
-            model=completion_model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": f"""
-You are an assistant that extracts the value of '{param_name}' from the user's input.
-Return a JSON object like: {{ "{param_name}": "value" }}
-If the value is unclear or invalid, return: {{ "{param_name}": null }}
-
-Expected format:
-- plot_size: two numbers in meters (e.g., "30x40", "30 by 40 meters")
-- typology: block, courtyard, or l-shaped
-- gfa: a number in square meters (e.g., "5000", "5000 m2")
-- material: wood, steel, or concrete
-"""
-                },
-                {"role": "user", "content": user_input}
-            ]
-        )
-
-        try:
-            result = json.loads(response.choices[0].message.content.strip())
-            value = result.get(param_name)
-            if value:
-                return value
-        except Exception as e:
-            print("⚠️ Failed to parse LLM response:", e)
-
-        print(f"⚠️ I couldn't understand the {param_name}. Please try again.\n")
-
-def ask_until_all_complete(messages):
-    plot_size = ask_single_parameter(
-        "plot_size",
-        "Enter the size of the plot in meters using two numbers (length by width).",
-        "for example: 30 by 40 meters, 20 x 50",
-        messages
-    )
-
-    typology = ask_single_parameter(
-        "typology",
-        "Choose from block, courtyard, or L-shaped.",
-        "courtyard",
-        messages
-    )
-
-    gfa = ask_single_parameter(
-        "gfa",
-        "State the gross floor area in square meters.",
-        "5000 m2",
-        messages
-    )
-
-    material = ask_single_parameter(
-        "material",
-        "Choose a preferred structural material: wood, steel, or concrete.",
-        "concrete",
-        messages
-    )
-
-    return plot_size, typology, gfa, material
-
-def summarize_design(client, model, plot_size, typology, gfa, material):
+def query_intro():
+    """Prompt the user to ask about their design."""
     response = client.chat.completions.create(
-        model=model,
+        model=completion_model,
         messages=[
             {
                 "role": "system",
-                "content": (
-                    "You are a visionary architectural storyteller. Based on the user's building parameters, craft an evocative and imaginative summary of their proposed design. "
-                    "Highlight the mood, spatial experience, and how the typology and materials express sustainability and design intent. Keep it brief, beautiful, and inspiring."
-                )
+                "content": """
+                Greet the user briefly and say: "What would you like to know about your design?"
+                Do not list options or explain functionality.
+                """
+            }
+        ]
+    )
+    return response.choices[0].message.content
+
+
+def answer_user_query(user_query, design_data):
+    """Return a precise, factual answer using available project data."""
+    design_data_json = json.dumps(design_data)
+    response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {
+                "role": "system",
+                "content": f"""
+                You are a technical assistant. Answer the user's question using only this data:
+
+                {design_data_json}
+
+                Respond in 1–2 concise sentences. If the answer isn't in the data, say so directly.
+                Avoid unnecessary explanations.
+                """
             },
             {
                 "role": "user",
-                "content": f"The user provided the following: Typology = {typology}, Plot Size = {plot_size}, GFA = {gfa} m2, Material = {material}."
+                "content": user_query
+            }
+        ]
+    )
+    return response.choices[0].message.content
+
+
+def suggest_improvements(user_prompt, design_data):
+    """Give 1–2 brief, practical suggestions based on the design data."""
+    design_data_json = json.dumps(design_data)
+    response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {
+                "role": "system",
+                "content": f"""
+                You are a design advisor. Suggest practical improvements using this data:
+
+                {design_data_json}
+
+                Answer the user's prompt in 1–2 short, specific suggestions.
+                Be direct. No intros, no conclusions. Do not repeat the user prompt.
+                Only suggest changes relevant to this design.
+                """
+            },
+            {
+                "role": "user",
+                "content": user_prompt
             }
         ]
     )

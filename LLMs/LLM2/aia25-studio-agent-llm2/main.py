@@ -1,32 +1,39 @@
-from server.config import client, completion_model
-from llm_calls import ask_until_all_complete, summarize_design
+from server.config import *
+from llm_calls import *
+import json
 
-# === Introduction printed manually ===
-print("\n🤖 Copilot: Hello! I'm your architectural design assistant.")
-print("🤖 Copilot: I’ll help you make early design decisions based on sustainability KPIs like embodied carbon and thermal performance.\n")
-print("To begin, I’ll ask you a few questions one by one to define your project:\n")
-print(" - 📏 Plot size (e.g., 30 by 40 meters)")
-print(" - 🧱 Typology: Block, Courtyard, or L-shaped")
-print(" - 🏢 Gross Floor Area (GFA) in square meters")
-print(" - 🧱 Structural material: Wood, Steel, or Concrete\n")
+# Placeholder design data (replace later with actual GH or JSON input)
+design_data = {
+    "materials": ["concrete", "glass", "timber"],
+    "embodied_carbon": "420 kgCO₂e/m²",
+    "solar_radiation_area": "380 m²",
+    "number_of_levels": 6,
+    "typology": "block",  # Options: courtyard, block, L-shaped
+    "unit_counts": {
+        "3BD": 8,
+        "2BD": 12,
+        "1BD": 10
+    },
+    "GFA": "2,400 m²",
+    "plot_dimensions": "30m x 40m"
+}
 
-# === Initialize message history ===
-messages = [
-    {
-        "role": "system",
-        "content": (
-            "You are an architectural design copilot. Your role is to ask the user for four parameters one by one: "
-            "plot size, typology, GFA, and structural material. After collecting all inputs, you will summarize their "
-            "design in a creative and architectural tone."
-        )
-    }
-]
+# Greet and ask open-ended query
+print("\n👋 " + query_intro())
 
-# === Input collection step-by-step ===
-plot_size, typology, gfa, structure_material = ask_until_all_complete(messages)
+# User interaction loop
+while True:
+    user_input = input("\n💬 What would you like to know about your design? (type 'exit' to quit)\n> ")
 
-# === Final summary generation ===
-summary = summarize_design(client, completion_model, plot_size, typology, gfa, structure_material)
+    if user_input.lower() in ["exit", "quit"]:
+        print("👋 Goodbye!")
+        break
 
-# === Output ===
-print("\n🏗️ Project Summary:\n" + summary)
+    if any(word in user_input.lower() for word in ["improve", "reduce", "maximize", "minimize", "optimize", "should i", "could i", "recommend", "how can i"]):
+        suggestion = suggest_improvements(user_input, design_data)
+        print("\n🧩 Suggestion:")
+        print(suggestion)
+    else:
+        reply = answer_user_query(user_input, design_data)
+        print("\n📊 Data Insight:")
+        print(reply)
