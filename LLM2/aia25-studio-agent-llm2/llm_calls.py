@@ -3,10 +3,6 @@ from server.config import *
 from server.keys import OPENAI_API_KEY
 
 def classify_input(user_input: str) -> str:
-    """
-    Basic intent classification based on keyword presence.
-    Routes input to the right function using design_data.
-    """
     design_data = {
         "materials": ["concrete", "glass", "timber"],
         "embodied_carbon": "420 kgCO₂e/m²",
@@ -22,9 +18,14 @@ def classify_input(user_input: str) -> str:
         "plot_dimensions": "30m x 40m"
     }
 
-    keywords = ["improve", "reduce", "maximize", "minimize", "optimize", "should i", "could i", "recommend", "how can i"]
+    change_keywords = ["change", "replace", "switch", "update", "make it", "modify", "set", "turn into"]
+    improve_keywords = ["improve", "reduce", "maximize", "minimize", "optimize", "should i", "could i", "recommend", "how can i"]
 
-    if any(kw in user_input.lower() for kw in keywords):
+    lowered = user_input.lower()
+
+    if any(kw in lowered for kw in change_keywords):
+        return suggest_change(user_input, design_data)
+    elif any(kw in lowered for kw in improve_keywords):
         return suggest_improvements(user_input, design_data)
     else:
         return answer_user_query(user_input, design_data)
@@ -97,4 +98,41 @@ def suggest_improvements(user_prompt, design_data):
             }
         ]
     )
+    return response.choices[0].message.content
+
+
+def suggest_change(user_prompt, design_data):
+    """Interpret user's design change request and return a structured JSON output."""
+    design_data_json = json.dumps(design_data)
+
+    response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {
+                "role": "system",
+                "content": f"""
+                You are a strict parser and design assistant.
+
+                The user is requesting a design change. Based on the request and the project data below, output a JSON object in this format only:
+
+                {{
+                "action": "update", 
+                "target": "<what should be changed>", 
+                "new_value": "<what it should be changed to>", 
+                "rationale": "<brief reason why this change could be beneficial>"
+                }}
+
+                Respond ONLY with a valid JSON object. Do not explain anything. Do not say "here is your response". Use the project data to inform your reasoning:
+
+                {design_data_json}
+"""
+            },
+            {
+                "role": "user",
+                "content": user_prompt
+            }
+        ]
+    )
+
+    # Return parsed JSON for logging, or raw string for model
     return response.choices[0].message.content

@@ -21,7 +21,6 @@ design_data = {
 # Greet and ask open-ended query
 print("\n👋 " + query_intro())
 
-# User interaction loop
 while True:
     user_input = input("\n💬 What would you like to know about your design? (type 'exit' to quit)\n> ")
 
@@ -29,10 +28,20 @@ while True:
         print("👋 Goodbye!")
         break
 
-    if any(word in user_input.lower() for word in ["improve", "reduce", "maximize", "minimize", "optimize", "should i", "could i", "recommend", "how can i"]):
+    lowered = user_input.lower()
+    change_keywords = ["change", "replace", "switch", "update", "make it", "modify", "set", "turn into"]
+    improve_keywords = ["improve", "reduce", "maximize", "minimize", "optimize", "should i", "could i", "recommend", "how can i"]
+
+    if any(kw in lowered for kw in change_keywords):
+        result = suggest_change(user_input, design_data)
+        print("\n🛠 Change Instruction:")
+        print(result)
+
+    elif any(kw in lowered for kw in improve_keywords):
         suggestion = suggest_improvements(user_input, design_data)
         print("\n🧩 Suggestion:")
         print(suggestion)
+
     else:
         reply = answer_user_query(user_input, design_data)
         print("\n📊 Data Insight:")
