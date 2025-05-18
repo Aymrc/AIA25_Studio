@@ -41,36 +41,56 @@ def llm_call():
 @app.route('/llm_message', methods=['POST'])
 def llm_message():
     try:
+        # Get the JSON data from the request
         data = request.get_json()
-        input_string = data.get('input', '')
+        print(f"Received request data: {data}")
         
-        # Check if state and design_data are provided
+        # Extract input, state, and design data from the request
+        input_string = data.get('input', '')
         state = data.get('state', 'initial')
         design_data = data.get('design_data', {})
         
-        print(f"Received message: '{input_string}', state: {state}")
+        print(f"Processing message with state: {state}, input: '{input_string}'")
         
-        # If state is initial or not provided, just use answer_user_query
-        if state == 'initial' and not design_data:
-            response = answer_user_query(input_string, {})
-            return jsonify({'response': response})
-        else:
-            # Otherwise use the new conversation state manager
-            try:
-                new_state, response, updated_design_data = manage_conversation_state(state, input_string, design_data)
-                return jsonify({
-                    'response': response,
-                    'state': new_state,
-                    'design_data': updated_design_data
-                })
-            except NameError:
-                # If manage_conversation_state doesn't exist, fall back to answer_user_query
-                response = answer_user_query(input_string, design_data)
-                return jsonify({'response': response})
+        # Use the conversation state manager to handle the input
+        try:
+            # This should use our conversation state management system
+            new_state, response, updated_design_data = manage_conversation_state(state, input_string, design_data)
+            
+            print(f"New state: {new_state}")
+            print(f"Response: {response[:50]}...")  # Print first 50 chars of response
+            
+            # Return a complete response with state and design data
+            return jsonify({
+                'response': response,
+                'state': new_state,
+                'design_data': updated_design_data
+            })
+        except Exception as e:
+            # If the conversation manager fails, log the error and fall back to basic Q&A
+            print(f"Error in conversation state manager: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            
+            # Fallback to simple Q&A
+            response = answer_user_query(input_string, design_data)
+            return jsonify({
+                'response': response,
+                'state': state,  # Keep the same state
+                'design_data': design_data  # Keep the same design data
+            })
+            
     except Exception as e:
-        print(f"Error in llm_message: {str(e)}")
+        # Handle any other errors
+        print(f"Error in llm_message endpoint: {str(e)}")
+        import traceback
         print(traceback.format_exc())
-        return jsonify({'response': f"Server error: {str(e)}"}), 500
+        
+        return jsonify({
+            'response': f"I'm sorry, an error occurred: {str(e)}",
+            'state': 'error',
+            'design_data': {}
+        }), 500
 
 # File-based communication endpoint for Grasshopper
 @app.route('/gh_input', methods=['GET'])

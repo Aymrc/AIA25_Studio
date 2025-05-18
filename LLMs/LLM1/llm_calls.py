@@ -90,6 +90,16 @@ def manage_conversation_state(current_state, user_input, design_data):
                       ["not sure", "don't know", "random", "uncertain", "any", "whatever", "you choose", 
                        "you decide", "suggest", "your choice", "up to you", "don't care"])
     
+    # Check for direct modeling requests regardless of state
+    modeling_phrases = ["help me model", "model it", "model for me", "you model", "do it for me"]
+    is_modeling_request = any(phrase in user_input.lower() for phrase in modeling_phrases)
+    
+    # If it's a direct modeling request, transition to typology state
+    if is_modeling_request:
+        print("[DEBUG] Detected modeling request, setting self_modeling=False")
+        design_data["self_modeling"] = False
+        return "typology", "What typology would you prefer? Options are: courtyard, L-shape, U-shape, or block. (Or say 'not sure' for a suggestion)", design_data
+    
     # Extract building type from input if we're in initial state
     if current_state == "initial" or current_state == "building_type":
         # Check for residential building mentions
