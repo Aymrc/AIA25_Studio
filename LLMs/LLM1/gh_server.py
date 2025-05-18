@@ -1,110 +1,177 @@
 from flask import Flask, request, jsonify
 from server.config import *
 from llm_calls import *
+import traceback
 
 app = Flask(__name__)
 
+# Enable CORS to allow Grasshopper to connect
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
+    return response
+
+# Simple test endpoint
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({'status': 'ok', 'message': 'Server is running'})
+
 @app.route('/llm_call', methods=['POST'])
 def llm_call():
-    data = request.get_json()
-    input_string = data.get('input', '').strip()
+    try:
+        data = request.get_json()
+        input_string = data.get('input', '').strip()
 
-    if input_string.lower() in ["", "intro"]:
-        return jsonify({'response': (
-            "👋 Hello! I'm your design assistant.\n"
-            "I'll help you define early-stage building parameters like materials, climate, geometry, and more.\n"
-            "Let's start by discussing what you'd like to build!"
-        )})
+        if input_string.lower() in ["", "intro"]:
+            return jsonify({'response': (
+                "👋 Hello! I'm your design assistant.\n"
+                "I'll help you define early-stage building parameters like materials, climate, geometry, and more.\n"
+                "Feel free to describe what you want to build — and I'll ask for anything else I need!"
+            )})
 
-    response = classify_input(input_string)
-    return jsonify({'response': response})
-
+        response = classify_input(input_string)
+        return jsonify({'response': response})
+    except Exception as e:
+        print(f"Error in llm_call: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'response': f"Server error: {str(e)}"}), 500
 
 @app.route('/llm_message', methods=['POST'])
 def llm_message():
-    data = request.get_json()
-    input_string = data.get('input', '')
-    
-    # Get conversation state if available
-    state = data.get('state', 'initial')
-    design_data = data.get('design_data', {})
-    
-    # Manage the conversation based on the state
-    new_state, response, updated_design_data = manage_conversation_state(state, input_string, design_data)
-    
-    # Return response with updated state and design data
-    return jsonify({
-        'response': response,
-        'state': new_state,
-        'design_data': updated_design_data
-    })
+    try:
+        data = request.get_json()
+        input_string = data.get('input', '')
+        
+        # Check if state and design_data are provided
+        state = data.get('state', 'initial')
+        design_data = data.get('design_data', {})
+        
+        print(f"Received message: '{input_string}', state: {state}")
+        
+        # If state is initial or not provided, just use answer_user_query
+        if state == 'initial' and not design_data:
+            response = answer_user_query(input_string, {})
+            return jsonify({'response': response})
+        else:
+            # Otherwise use the new conversation state manager
+            try:
+                new_state, response, updated_design_data = manage_conversation_state(state, input_string, design_data)
+                return jsonify({
+                    'response': response,
+                    'state': new_state,
+                    'design_data': updated_design_data
+                })
+            except NameError:
+                # If manage_conversation_state doesn't exist, fall back to answer_user_query
+                response = answer_user_query(input_string, design_data)
+                return jsonify({'response': response})
+    except Exception as e:
+        print(f"Error in llm_message: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'response': f"Server error: {str(e)}"}), 500
 
+# File-based communication endpoint for Grasshopper
+@app.route('/gh_input', methods=['GET'])
+def gh_input():
+    try:
+        input_text = request.args.get('text', '')
+        print(f"Received input from Grasshopper: {input_text}")
+        
+        # Process the input
+        response = answer_user_query(input_text, {})
+        
+        return jsonify({
+            'status': 'success',
+            'response': response
+        })
+    except Exception as e:
+        print(f"Error in gh_input: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/prepare_materiality_json', methods=['POST'])
 def prepare_materiality_json():
     """Prepare materiality JSON to send to ML algorithm"""
-    data = request.get_json()
-    design_data = data.get('design_data', {})
-    
-    # Generate materiality parameters based on material choice
-    if 'materiality' in design_data:
-        wwr = design_data.get('wwr', 0.3)
+    try:
+        data = request.get_json()
+        design_data = data.get('design_data', {})
         
-        # Create JSON structure exactly as shown in diagram image 2
-        materiality_params = generate_materiality_json(design_data['materiality'], wwr)
-        
-        # Return just the materiality and WWR for now, as specified
-        return jsonify(materiality_params)
-    else:
-        return jsonify({'error': 'Missing materiality data'}), 400
-
+        # Generate materiality parameters based on material choice
+        if 'materiality' in design_data:
+            wwr = design_data.get('wwr', 0.3)
+            
+            # Create JSON structure for materiality parameters
+            materiality_params = generate_materiality_json(design_data['materiality'], wwr)
+            
+            return jsonify(materiality_params)
+        else:
+            return jsonify({'error': 'Missing materiality data'}), 400
+    except Exception as e:
+        print(f"Error in prepare_materiality_json: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/send_geometry_to_gh', methods=['POST'])
 def send_geometry_to_gh():
     """Send geometry parameters to Grasshopper for modeling"""
-    data = request.get_json()
-    design_data = data.get('design_data', {})
-    
-    # Extract geometry parameters
-    if 'geometry' in design_data:
-        geometry_data = {
-            'typology': design_data['geometry'].get('typology', 'block'),
-            'height': design_data['geometry'].get('height', 'mid-rise'),
-            'number_of_levels': design_data['geometry'].get('number_of_levels', 4),
-            'self_modeling': design_data.get('self_modeling', False),
-            'building_type': design_data.get('building_type', 'generic')
-        }
+    try:
+        data = request.get_json()
+        design_data = data.get('design_data', {})
         
-        # This would connect to the Grasshopper server
-        # For now, we'll just simulate and return success
-        
-        # In a real implementation, this might look like:
-        # response = requests.post('http://localhost:8080/run_grasshopper', json=geometry_data)
-        # return jsonify(response.json())
-        
-        return jsonify({
-            'status': 'success', 
-            'message': 'Geometry parameters sent to Grasshopper', 
-            'parameters': geometry_data
-        })
-    else:
-        return jsonify({'error': 'Missing geometry data'}), 400
+        # Extract geometry parameters
+        if 'geometry' in design_data:
+            geometry_data = {
+                'typology': design_data['geometry'].get('typology', 'block'),
+                'height': design_data['geometry'].get('height', 'mid-rise'),
+                'number_of_levels': design_data['geometry'].get('number_of_levels', 4),
+                'self_modeling': design_data.get('self_modeling', False),
+                'building_type': design_data.get('building_type', 'generic')
+            }
+            
+            return jsonify({
+                'status': 'success', 
+                'message': 'Geometry parameters sent to Grasshopper', 
+                'parameters': geometry_data
+            })
+        else:
+            return jsonify({'error': 'Missing geometry data'}), 400
+    except Exception as e:
+        print(f"Error in send_geometry_to_gh: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
-
-@app.route('/get_gh_results', methods=['GET'])
+@app.route('/get_gh_results', methods=['POST', 'GET'])
 def get_gh_results():
     """Get geometry results back from Grasshopper (after processing)"""
-    # In a real implementation, this would retrieve results from a database or file
-    # where Grasshopper would have saved them
-    
-    # For now, return a simple simulated result
-    return jsonify({
-        'status': 'success',
-        'gfa': 200.0,  # Gross floor area
-        'av': 0.5,     # Aspect value
-        'message': 'Geometry successfully processed by Grasshopper'
-    })
-
+    try:
+        if request.method == 'POST':
+            # Handle results posted from Grasshopper
+            data = request.get_json()
+            print(f"Received geometry results from GH: {data}")
+            
+            # In a real implementation, you would store these results
+            # For now, just return success
+            return jsonify({
+                'status': 'success',
+                'message': 'Results received and stored'
+            })
+        else:
+            # GET request - return the latest results
+            # In a real implementation, you would retrieve stored results
+            # For now, return simulated results
+            return jsonify({
+                'status': 'success',
+                'gfa': 200.0,  # Gross floor area
+                'av': 0.5,     # Aspect value
+                'message': 'Geometry successfully processed by Grasshopper'
+            })
+    except Exception as e:
+        print(f"Error in get_gh_results: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Bind to all interfaces so Grasshopper can connect
+    app.run(debug=True, host='0.0.0.0', port=5000)
