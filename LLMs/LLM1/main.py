@@ -5,8 +5,8 @@ import os
 import shutil
 
 print("\n\U0001F44B Hello! I'm your design assistant.")
-print("I'll help you define early-stage building parameters like materials, climate, geometry, and more.")
-print("Feel free to describe what you want to build — and I'll ask for anything else I need!\n")
+print("I'll help you define early-stage building parameters for your architectural project.")
+print("Let's start by discussing what you'd like to build!\n")
 
 # Folder for storing session iterations
 SESSION_FOLDER = "design_iterations"
@@ -24,80 +24,69 @@ def save_design_iteration(data, count):
     print(f"\U0001F5C2️ Design parameters saved to {filename}")
 
 # Begin interaction
-messages = []
+current_state = "initial"
 design_data = {}
 iteration_count = 1
 
-MANDATORY_KEYS = ["materiality", "climate", "wwr", "geometry.typology", "geometry.height"]
+# First prompt from the conversation state manager
+next_state, prompt, _ = manage_conversation_state(current_state, "", {})
+print(f"\n{prompt}")
 
 while True:
-    user_input = input("\n📐 Describe your design idea, or just start with one aspect (e.g. 'a hotel made of wood'):\n> ")
-
-    if user_input.lower() in ["exit", "quit"]:
-        print("\U0001F44B Goodbye!")
-        exit()
-
-    messages.append({"role": "user", "content": user_input})
-    design_data = collect_design_parameters(user_input, messages)
-
-    # Check for missing mandatory fields
-    missing = []
-    for key in MANDATORY_KEYS:
-        parts = key.split(".")
-        ref = design_data
-        for p in parts:
-            ref = ref.get(p) if isinstance(ref, dict) else None
-            if ref is None:
-                missing.append(key)
-                break
-
-    if missing:
-        missing_prompt = "\n".join(
-            [f"Which value would you like to set for {m.replace('.', ' → ')}? If you're unsure, I can choose one for you." for m in missing]
-        )
-        print("\n❗ Missing parameters:")
-        print(missing_prompt)
-        continue
-    else:
-        save_design_iteration(design_data, iteration_count)
-        iteration_count += 1
-        break
-
-# Enter follow-up Q&A loop
-while True:
-    user_input = input("\n💬 Would you like to ask anything or change something? (type 'exit' to quit)\n> ")
+    user_input = input("\n> ")
 
     if user_input.lower() in ["exit", "quit"]:
         print("\U0001F44B Goodbye!")
         break
 
-    lowered = user_input.lower()
-    change_keywords = ["change", "replace", "switch", "update", "make it", "modify", "set", "turn into"]
-    improve_keywords = ["improve", "reduce", "maximize", "minimize", "optimize", "should i", "could i", "recommend", "how can i"]
-
-    if any(kw in lowered for kw in change_keywords):
-        result = suggest_change(user_input, design_data)
-        print("\n🛠 Change Instruction:")
-        print(result)
-        # Update data if it's a valid JSON change
-        try:
-            change = json.loads(result)
-            keys = change["target"].split(".")
-            ref = design_data
-            for k in keys[:-1]:
-                ref = ref[k]
-            ref[keys[-1]] = change["new_value"]
+    # Process the input based on the current state
+    current_state, response, design_data = manage_conversation_state(current_state, user_input, design_data)
+    
+    # Save iteration when we reach "complete" state or make changes to a complete design
+    if current_state == "complete":
+        # Check if design has all required parameters
+        required_params = ["materiality", "climate", "wwr"]
+        geometry_params = ["typology", "height", "number_of_levels"]
+        
+        has_required = all(param in design_data for param in required_params)
+        has_geometry = "geometry" in design_data and all(param in design_data["geometry"] for param in geometry_params)
+        
+        if has_required and (design_data.get("self_modeling", False) or has_geometry):
             save_design_iteration(design_data, iteration_count)
             iteration_count += 1
-        except:
-            pass
-
-    elif any(kw in lowered for kw in improve_keywords):
-        suggestion = suggest_improvements(user_input, design_data)
-        print("\n🧩 Suggestion:")
-        print(suggestion)
-
-    else:
-        reply = answer_user_query(user_input, design_data)
-        print("\n📊 Data Insight:")
-        print(reply)
+            
+        # If this is the first time reaching complete, generate final parameters
+        if iteration_count == 2:
+            # Generate full parameter set with correct structure
+            materiality_params = generate_materiality_json(design_data["materiality"], design_data.get("wwr", 0.3))
+            
+            # Save the final parameters for ML in exact format from diagram
+            ml_filename = os.path.join(SESSION_FOLDER, "ml_parameters.json")
+            with open(ml_filename, "w") as f:
+                json.dump(materiality_params, f, indent=2)
+            print(f"\n📊 ML parameters prepared and saved to {ml_filename}")
+            
+            # If the user isn't self-modeling, send to Grasshopper (simulate here)
+            if not design_data.get("self_modeling", False):
+                print("\n🔄 Sending materiality and WWR parameters to Grasshopper for geometric modeling...")
+                # In a real implementation, this would call the Flask endpoint_params = generate_materiality_json(design_data["materiality"], design_data.get("wwr", 0.3))
+                final_params = {
+                    "parameters": materiality_params,
+                    "geometry": design_data.get("geometry", {}),
+                    "climate": design_data.get("climate", "temperate"),
+                    "building_type": design_data.get("building_type", "generic")
+                }
+                
+                # Save the final parameters for ML
+                ml_filename = os.path.join(SESSION_FOLDER, "ml_parameters.json")
+                with open(ml_filename, "w") as f:
+                    json.dump(final_params, f, indent=2)
+                print(f"\n📊 ML parameters prepared and saved to {ml_filename}")
+                
+                # If the user isn't self-modeling, send to Grasshopper (simulate here)
+                if not design_data.get("self_modeling", False):
+                    print("\n🔄 Sending parameters to Grasshopper for geometric modeling...")
+                    # In a real implementation, this would call the Flask endpoint
+    
+    # Print the response
+    print(f"\n{response}")

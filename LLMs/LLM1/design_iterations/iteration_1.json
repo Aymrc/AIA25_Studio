@@ -1,10 +1,12 @@
 {
-  "materiality": "",
-  "climate": "hot-humid | cold | arid | temperate",
-  "wwr": 0,
+  "building_type": "a 6 storey hotel",
   "geometry": {
-    "typology": "courtyard | block | L-shape | U-shape",
-    "height": "low-rise | mid-rise | high-rise",
-    "number_of_levels": 0
-  }
+    "number_of_levels": 6,
+    "height": "mid-rise",
+    "typology": "L-shape"
+  },
+  "self_modeling": false,
+  "materiality": "concrete",
+  "climate": "cold",
+  "wwr": 0.46
 }
