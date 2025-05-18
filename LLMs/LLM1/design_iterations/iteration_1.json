@@ -1,0 +1,10 @@
+{
+  "materiality": "",
+  "climate": "hot-humid | cold | arid | temperate",
+  "wwr": 0,
+  "geometry": {
+    "typology": "courtyard | block | L-shape | U-shape",
+    "height": "low-rise | mid-rise | high-rise",
+    "number_of_levels": 0
+  }
+}
