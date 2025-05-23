@@ -72,3 +72,19 @@ def rag_call(question, embeddings, n_results):
 
     answer = rag_answer(question, prompt)
     return answer
+
+def sql_rag_call(question, embeddings, n_results):
+
+    print("Initiating RAG...")
+    # Embed our question
+    question_vector = get_embedding(question)
+
+    # Load the knowledge embeddings
+    index_lib = load_embeddings(embeddings)
+
+    # Retrieve the best vectors
+    scored_vectors = get_vectors(question_vector, index_lib, n_results)
+    relevant_name = "\n".join([vector['name'] for vector in scored_vectors])
+    relevant_description = "\n".join([vector['content'] for vector in scored_vectors])
+
+    return relevant_name, relevant_description
