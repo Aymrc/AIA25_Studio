@@ -49,6 +49,7 @@ def clean_llm_output(text):
     """Remove any <think>...</think> blocks from model responses."""
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
+
 def main():
     print("\n👋 " + clean_llm_output(query_intro()))
 
@@ -87,6 +88,7 @@ def main():
     finally:
         if watcher:
             watcher.stop_watching()
+
 
 if __name__ == "__main__":
     main()

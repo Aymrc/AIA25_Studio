@@ -13,6 +13,7 @@ def clean_llm_output(text: str) -> str:
     """Remove <think>...</think> blocks from LLM output."""
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
+
 class DesignFileHandler(FileSystemEventHandler):
     def __init__(self, target_files, design_data_callback=None):
         self.target_files = [Path(f).name for f in target_files]
