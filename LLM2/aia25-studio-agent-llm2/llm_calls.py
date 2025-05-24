@@ -1,7 +1,6 @@
 import json
 from server.config import *
-# from server.keys import OPENAI_API_KEY
- 
+from utils.sql_dataset import get_top_low_carbon_high_gfa
 
 def query_intro():
     """Prompt the user to ask about their design."""
@@ -14,7 +13,6 @@ def query_intro():
                 Greet the user briefly and say: 'What would you like to know about your design?'
                 Do not include any reasoning, chain-of-thought, or <think> tags. Just respond plainly.
                 """
-
             }
         ]
     )
@@ -48,29 +46,51 @@ def answer_user_query(user_query, design_data):
 
 
 def suggest_improvements(user_prompt, design_data):
-    """Give 1–2 brief, practical suggestions based on the design data."""
+    """Give 1–2 brief, practical suggestions based on the design data and SQL dataset insights."""
     design_data_json = json.dumps(design_data)
+
+    # Step 1: Get dataset-based reference examples
+    reference_examples = get_top_low_carbon_high_gfa(max_results=3)
+
+
+    if reference_examples:
+        formatted_examples = "\n".join(
+            [
+                f"- {row.get('Typology', 'Unknown')} | "
+                f"GFA: {row.get('GFA', 'N/A')} | "
+                f"GWP: {row.get('GWP total/m²GFA', row.get('GWP_total_per_m2_GFA', 'N/A'))}"
+                for row in reference_examples
+            ]
+        )
+        dataset_block = f"""
+Reference examples from other projects with high GFA and low carbon footprint:
+{formatted_examples}
+"""
+    else:
+        dataset_block = "\n(No dataset matches found — skipping example injection.)\n"
+
+    # Step 2: Build the system prompt
+    system_prompt = f"""
+You are a design advisor. Suggest practical improvements using this data:
+
+Current design:
+{design_data_json}
+{dataset_block}
+
+Answer the user's prompt in 1–2 short, specific suggestions.
+Be direct. No intros, no conclusions. Do not repeat the user prompt.
+Only suggest changes relevant to this design.
+"""
+
+    # Step 3: Call the LLM
     response = client.chat.completions.create(
         model=completion_model,
         messages=[
-            {
-                "role": "system",
-                "content": f"""
-                You are a design advisor. Suggest practical improvements using this data:
-
-                {design_data_json}
-
-                Answer the user's prompt in 1–2 short, specific suggestions.
-                Be direct. No intros, no conclusions. Do not repeat the user prompt.
-                Only suggest changes relevant to this design.
-                """
-            },
-            {
-                "role": "user",
-                "content": user_prompt
-            }
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
         ]
     )
+
     return response.choices[0].message.content
 
 
@@ -96,7 +116,6 @@ def suggest_change(user_prompt, design_data):
         }}
 
         ### Parameter definitions:
-
         - ew_par: Exterior Wall Partitions → BRICK=0, CONCRETE=1, EARTH=2, STRAW=3, TIMBER FRAME=4, TIMBER MASS=5  
         - ew_ins: Exterior Wall Insulation → CELLULOSE=0, CORK=1, EPS=2, GLASS WOOL=3, MINERAL WOOL=4, WOOD FIBER=5  
         - iw_par: Interior Wall Partitions → same as ew_par  
@@ -108,7 +127,7 @@ def suggest_change(user_prompt, design_data):
         - gfa: Gross Floor Area → float (no units)  
         - av: Air Volume → float
 
-        ### Language alias mapping (user input to material index):
+        ### Language alias mapping:
         - "wood" → TIMBER MASS (5)  
         - "wood frame" → TIMBER FRAME (4)  
         - "concrete" → CONCRETE (1)  
@@ -120,38 +139,6 @@ def suggest_change(user_prompt, design_data):
         - Respond with the full dictionary, even if the user only changes one thing.
         - Format gfa, wwr, av as floats (e.g., 4800.0). Do not return strings or include units.
         - No explanations. No extra text. Only JSON.
-
-        ### Examples:
-
-        If user says: “Change the material to wood”
-        Respond:
-        {{
-        "ew_par": 5,
-        "ew_ins": 0,
-        "iw_par": 5,
-        "es_ins": 1,
-        "is_par": 2,
-        "ro_par": 5,
-        "ro_ins": 0,
-        "wwr": 0.3,
-        "gfa": 200.0,
-        "av": 0.5
-        }}
-
-        If user says: “Change the GFA to 4800”
-        Respond:
-        {{
-        "ew_par": 0,
-        "ew_ins": 0,
-        "iw_par": 0,
-        "es_ins": 1,
-        "is_par": 0,
-        "ro_par": 0,
-        "ro_ins": 0,
-        "wwr": 0.3,
-        "gfa": 4800.0,
-        "av": 0.5
-        }}
 
         Use this project data if relevant:
         {design_data_text}

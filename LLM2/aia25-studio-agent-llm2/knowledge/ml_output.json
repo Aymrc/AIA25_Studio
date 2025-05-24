@@ -1,6 +1,13 @@
 {
-  "predicted_embodied_carbon": "385 kgCO₂e/m²",
-  "recommended_window_ratio": 0.42,
-  "carbon_optimization_score": 0.78,
-  "solar_gain_zone_1": "high"
+  "energy": {
+    "EUI_kWh_per_m2a": 85.3,
+    "Cooling_kWh_per_m2a": 21.7,
+    "Heating_kWh_per_m2a": 37.9
+  },
+  "carbon": {
+    "Operational_Carbon_kgCO2e_per_m2a": 12.1,
+    "A1_A3_per_m2_GFA": 320.5,
+    "A_D_per_m2_GFA": 490.0,
+    "GWP_total_per_m2_GFA": 502.4
+  }
 }
