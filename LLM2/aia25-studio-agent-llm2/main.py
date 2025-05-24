@@ -89,6 +89,5 @@ def main():
         if watcher:
             watcher.stop_watching()
 
-
 if __name__ == "__main__":
     main()
