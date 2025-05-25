@@ -25,7 +25,7 @@ body {
 }
 
 .box {
-	height: 150px;
+	/* height: 150px; */
 	width: 90%;
 	/* max-width: 600px; */
 	
@@ -40,10 +40,71 @@ body {
 	transition: width 0.3s ease;
 }
 
-#Chat {
-	min-height: 300px;
-}
+/* .box iframe {
+  width: 100%;
+  height: 550px;
+  border: none;
+} */
+
 
 #Viz {
 	min-height: 200px;
+}
+
+
+/* === CHAT with COPILOT === */
+
+#chatbox {
+  max-width: auto;
+  height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 10px;
+  background-color: #fefefe;
+}
+
+.user {
+  text-align: right;
+  font-weight:500;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+.bot {
+  text-align: left;
+  color: #333333;
+  margin-bottom: 8px;
+}
+
+.bot.typing {
+  font-style: italic;
+  color: #999;
+}
+
+
+/* === Viz grid === */
+.viz-grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.viz-tile {
+  width: 150px;
+  height: 100px;
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  color: #888;
+  text-align: center;
+  padding: 5px;
+}
+
+.viz-tile.empty {
+  font-style: italic;
 }
