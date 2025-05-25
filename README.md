@@ -1,3 +1,6 @@
+<img src="UI/copilot_icon.svg" alt="Copilot Logo" width="64"  align="left"/>
+<br>
+
 # Rhino Copilot // AIA25_Studio
 
 A local AI assistant for Rhino 3D.  
