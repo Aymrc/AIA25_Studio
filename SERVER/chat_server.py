@@ -34,7 +34,7 @@ def chat_endpoint(req: ChatRequest):
         content = response.json()["choices"][0]["message"]["content"]
         return {"response": content}
     except Exception as e:
-        print("❌ LLM error:", e)
+        print("LLM error:", e)
         return {"response": "Error contacting the local LLM."}
 
 if __name__ == "__main__":

@@ -3,12 +3,35 @@ import subprocess
 import os
 import webbrowser
 
+import Eto.Forms as forms
+import Eto.Drawing as drawing
+import Rhino.UI
+import System
+import os
+
+
+
+def show_copilot_ui():
+    dialog = forms.Form()
+    dialog.Title = "Rhino Copilot" # Check COpilot name / How are we calling it?
+    dialog.ClientSize = drawing.Size(600, 1000)
+    dialog.Topmost = True
+
+    web_view = forms.WebView()
+
+    html_path = os.path.abspath("UI/index.html")
+    uri = System.Uri("file:///" + html_path.replace("\\", "/"))
+
+    web_view.Url = uri
+    dialog.Content = web_view
+    dialog.Show()
+
 
 #  === Starts the server for LM Studio ===
 def start_backend():
     server_path = os.path.abspath("SERVER/chat_server.py")
 
-    # Use your installed Python
+    # Use your own installed Python
     python_path = "C:\Python312\python.exe"
 
     subprocess.Popen([python_path, server_path], creationflags=0)
@@ -17,10 +40,11 @@ def start_backend():
 # === This starts the UI ===
 def launch_copilot():
     start_backend()
+    show_copilot_ui()
     print("LLM server started")
 
     print("Launching Copilot...")
-    webbrowser.open("UI\index.html")
+    # webbrowser.open("UI\index.html")
 
 launch_copilot()
 
