@@ -4,9 +4,9 @@ import re
 import traceback
 from server.config import *
 
-# === TYPOLOGY VALIDATION RULES ===
+# === ENHANCED TYPOLOGY VALIDATION RULES ===
 TYPOLOGY_RULES = {
-    "block": {"width_min": 5, "width_max": 12, "depth_min": 5, "depth_max": 5},
+    "block": {"width_min": 5, "width_max": 12, "depth_min": 5, "depth_max": 12},
     "L-shape": {"width_min": 6, "width_max": 15, "depth_min": 6, "depth_max": 15},
     "U-shape": {"width_min": 6, "width_max": 15, "depth_min": 6, "depth_max": 15},
     "courtyard": {"width_min": 15, "width_max": float('inf'), "depth_min": 15, "depth_max": float('inf')}
@@ -101,43 +101,72 @@ def suggest_parameter_value(parameter_type, existing_data):
     
     return None
 
-def extract_all_parameters_from_input(user_input, current_state="unknown"):
-    """Enhanced extraction that catches all parameter mentions with context awareness + AI suggestions"""
+def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
+    """
+    ENHANCED parameter extraction that catches all parameter mentions with superior natural language processing
+    Now handles complex multi-parameter inputs and context awareness
+    """
     try:
         extracted = {}
         input_lower = user_input.lower().strip()
         
-        # Context-aware extraction - if we're asking for a specific thing, prioritize that
+        if not input_lower:
+            return extracted
+            
+        design_data = design_data or {}
+        
+        print(f"[EXTRACTION DEBUG] Input: '{user_input}'")
+        print(f"[EXTRACTION DEBUG] Current state: {current_state}")
+        
+        # === CONTEXT-AWARE SINGLE VALUE EXTRACTION ===
+        # When we're asking for a specific parameter and user gives just a number/word
         if current_state == "geometry_levels" and re.match(r'^\s*\d+\s*$', input_lower):
             levels = min(int(input_lower), MAX_LEVELS)
             extracted["geometry"] = {"number_of_levels": levels}
+            print(f"[EXTRACTION DEBUG] Context-aware levels: {levels}")
             return extracted
         
         if current_state == "geometry_width" and re.match(r'^\s*\d+\s*$', input_lower):
             width = round_to_voxel_multiple(float(input_lower))
             extracted["geometry"] = {"width_m": width}
+            print(f"[EXTRACTION DEBUG] Context-aware width: {width}")
             return extracted
             
         if current_state == "geometry_depth" and re.match(r'^\s*\d+\s*$', input_lower):
             depth = round_to_voxel_multiple(float(input_lower))
             extracted["geometry"] = {"depth_m": depth}
+            print(f"[EXTRACTION DEBUG] Context-aware depth: {depth}")
             return extracted
+        
+        if current_state == "geometry_typology":
+            # Match single word typology responses
+            for typology in ["block", "L-shape", "U-shape", "courtyard"]:
+                if typology.lower().replace("-", "").replace(" ", "") in input_lower.replace("-", "").replace(" ", ""):
+                    extracted["geometry"] = {"typology": typology}
+                    print(f"[EXTRACTION DEBUG] Context-aware typology: {typology}")
+                    return extracted
 
-        # AI SUGGESTION DETECTION
+        # === AI SUGGESTION DETECTION ===
         suggestion_patterns = [
             "choose for me", "you choose", "you decide", "surprise me", "recommend", 
             "suggest", "pick for me", "what do you think", "your choice", "up to you",
-            "i dont know", "not sure", "help me choose", "best option", "good choice"
+            "i dont know", "i don't know", "not sure", "help me choose", "best option", 
+            "good choice", "whatever", "anything", "default", "auto", "automatic"
         ]
         
         wants_ai_suggestion = any(pattern in input_lower for pattern in suggestion_patterns)
         
-        # Extract number of levels
+        # === MULTI-PARAMETER EXTRACTION FROM NATURAL LANGUAGE ===
+        
+        # 1. EXTRACT BUILDING LEVELS/STORIES
         level_patterns = [
-            r'(\d+)\s*(?:storey|story|level|floor)s?',
+            r'(\d+)\s*(?:storey|story|stories|level|floor)s?(?:\s+(?:building|structure))?',
             r'(\d+)\s*levels?',
             r'(\d+)[-\s]*level',
-            r'(\d+)[-\s]*storey'
+            r'(\d+)[-\s]*storey',
+            r'(\d+)\s*floors?',
+            r'(?:building\s+with\s+)?(\d+)\s+(?:level|floor|storey)',
+            r'(\d+)[-\s]*story(?:\s+building)?'
         ]
         for pattern in level_patterns:
             match = re.search(pattern, input_lower)
@@ -146,14 +175,27 @@ def extract_all_parameters_from_input(user_input, current_state="unknown"):
                 if "geometry" not in extracted:
                     extracted["geometry"] = {}
                 extracted["geometry"]["number_of_levels"] = levels
+                print(f"[EXTRACTION DEBUG] Found levels: {levels}")
                 break
         
-        # Extract typology
+        # 2. EXTRACT BUILDING TYPOLOGY (Enhanced patterns)
         typology_patterns = {
-            "L-shape": ["l-shape", "l shape", "l shaped", "l-shaped", "l building"],
-            "U-shape": ["u-shape", "u shape", "u shaped", "u-shaped", "u building"],
-            "courtyard": ["courtyard", "court yard", "court", "atrium"],
-            "block": ["block", "rectangular", "simple block", "box"]
+            "L-shape": [
+                "l-shape", "l shape", "l shaped", "l-shaped", "l building", "l-form", "l form",
+                "ell shape", "ell-shape", "l-type", "l type", "el shape", "el-shape"
+            ],
+            "U-shape": [
+                "u-shape", "u shape", "u shaped", "u-shaped", "u building", "u-form", "u form",
+                "horseshoe", "u-type", "u type", "horseshoe shape"
+            ],
+            "courtyard": [
+                "courtyard", "court yard", "court", "atrium", "central court", "inner court",
+                "courtyard building", "atrium building", "enclosed court", "internal courtyard"
+            ],
+            "block": [
+                "block", "rectangular", "simple block", "box", "square", "basic block",
+                "rectangular building", "box building", "simple", "basic", "standard"
+            ]
         }
         
         for typology, patterns in typology_patterns.items():
@@ -161,15 +203,25 @@ def extract_all_parameters_from_input(user_input, current_state="unknown"):
                 if "geometry" not in extracted:
                     extracted["geometry"] = {}
                 extracted["geometry"]["typology"] = typology
+                print(f"[EXTRACTION DEBUG] Found typology: {typology}")
                 break
         
-        # Extract dimensions - paired first
+        # 3. EXTRACT DIMENSIONS (Enhanced with multiple formats)
+        
+        # 3a. Paired dimensions (priority)
         dimension_patterns = [
-            r'(\d+)m?\s*(?:by|x|×)\s*(\d+)m?',
-            r'(\d+)\s*(?:meter|m)\s*(?:by|x|×)\s*(\d+)\s*(?:meter|m)?',
+            # Standard formats
+            r'(\d+)\s*m?\s*(?:by|x|×|and)\s*(\d+)\s*m?',
+            r'(\d+)\s*(?:meter|m)s?\s*(?:by|x|×|and)\s*(\d+)\s*(?:meter|m)s?',
             r'(\d+)\s*by\s*(\d+)',
-            r'(\d+)\s*wide.*?(\d+)\s*deep',
-            r'width.*?(\d+).*?depth.*?(\d+)'
+            # Natural language
+            r'(\d+)\s*(?:meter|m)s?\s*wide.*?(\d+)\s*(?:meter|m)s?\s*deep',
+            r'(\d+)\s*(?:meter|m)s?\s*long.*?(\d+)\s*(?:meter|m)s?\s*wide',
+            r'width.*?(\d+).*?depth.*?(\d+)',
+            r'length.*?(\d+).*?width.*?(\d+)',
+            # Specific order mentions
+            r'(\d+)\s*(?:meter|m)s?\s*in\s*width.*?(\d+)\s*(?:meter|m)s?\s*in\s*depth',
+            r'(\d+)\s*(?:meter|m)s?\s*width.*?(\d+)\s*(?:meter|m)s?\s*depth'
         ]
         
         dimensions_found = False
@@ -182,82 +234,170 @@ def extract_all_parameters_from_input(user_input, current_state="unknown"):
                     extracted["geometry"] = {}
                 extracted["geometry"]["width_m"] = round_to_voxel_multiple(width)
                 extracted["geometry"]["depth_m"] = round_to_voxel_multiple(depth)
+                print(f"[EXTRACTION DEBUG] Found paired dimensions: {width}x{depth}")
                 dimensions_found = True
                 break
         
-        # Individual width/depth only if no paired dimensions found
+        # 3b. Individual dimensions (only if no paired dimensions found)
         if not dimensions_found:
-            # Width patterns
-            if "width" in input_lower and "depth" not in input_lower:
-                width_match = re.search(r'(\d+)', input_lower)
-                if width_match:
-                    width = float(width_match.group(1))
+            # Width specific patterns
+            width_patterns = [
+                r'width.*?(\d+)\s*(?:meter|m)s?',
+                r'(\d+)\s*(?:meter|m)s?\s*wide',
+                r'width\s*(?:of\s*)?(\d+)',
+                r'(\d+)\s*(?:meter|m)s?\s*in\s*width'
+            ]
+            
+            for pattern in width_patterns:
+                match = re.search(pattern, input_lower)
+                if match and "depth" not in input_lower:  # Only if depth not mentioned
+                    width = float(match.group(1))
                     if "geometry" not in extracted:
                         extracted["geometry"] = {}
                     extracted["geometry"]["width_m"] = round_to_voxel_multiple(width)
+                    print(f"[EXTRACTION DEBUG] Found width: {width}")
+                    break
             
-            # Depth patterns
-            elif "depth" in input_lower and "width" not in input_lower:
-                depth_match = re.search(r'(\d+)', input_lower)
-                if depth_match:
-                    depth = float(depth_match.group(1))
+            # Depth specific patterns
+            depth_patterns = [
+                r'depth.*?(\d+)\s*(?:meter|m)s?',
+                r'(\d+)\s*(?:meter|m)s?\s*deep',
+                r'depth\s*(?:of\s*)?(\d+)',
+                r'(\d+)\s*(?:meter|m)s?\s*in\s*depth'
+            ]
+            
+            for pattern in depth_patterns:
+                match = re.search(pattern, input_lower)
+                if match and "width" not in input_lower:  # Only if width not mentioned
+                    depth = float(match.group(1))
                     if "geometry" not in extracted:
                         extracted["geometry"] = {}
                     extracted["geometry"]["depth_m"] = round_to_voxel_multiple(depth)
+                    print(f"[EXTRACTION DEBUG] Found depth: {depth}")
+                    break
         
-        # Extract building type
+        # 4. EXTRACT BUILDING TYPE (Enhanced patterns)
         building_patterns = {
-            "residential": ["residential", "apartment", "housing", "house", "home", "flat", "condo"],
-            "office": ["office", "commercial", "workplace", "business"],
-            "hotel": ["hotel", "hospitality", "accommodation"],
-            "mixed-use": ["mixed-use", "mixed use", "multi-use"],
-            "museum": ["museum", "gallery", "cultural"],
-            "hospital": ["hospital", "medical", "healthcare"],
-            "school": ["school", "educational", "university", "college"],
-            "retail": ["retail", "shop", "store", "shopping"],
-            "warehouse": ["warehouse", "storage", "industrial"],
-            "restaurant": ["restaurant", "cafe", "dining"]
+            "residential": [
+                "residential", "apartment", "housing", "house", "home", "flat", "condo",
+                "condominium", "apartment building", "residential building", "housing project",
+                "residential complex", "living", "dwelling"
+            ],
+            "office": [
+                "office", "commercial", "workplace", "business", "office building",
+                "commercial building", "corporate", "work", "administrative"
+            ],
+            "hotel": [
+                "hotel", "hospitality", "accommodation", "resort", "inn", "motel",
+                "hotel building", "hospitality building"
+            ],
+            "mixed-use": [
+                "mixed-use", "mixed use", "multi-use", "multiple use", "mixed function",
+                "mixed purpose", "combined use"
+            ],
+            "museum": [
+                "museum", "gallery", "cultural", "exhibition", "art museum", "cultural center",
+                "cultural building", "exhibition hall"
+            ],
+            "hospital": [
+                "hospital", "medical", "healthcare", "clinic", "medical center",
+                "health center", "medical building", "healthcare facility"
+            ],
+            "school": [
+                "school", "educational", "university", "college", "education", "academic",
+                "educational building", "campus", "learning center"
+            ],
+            "retail": [
+                "retail", "shop", "store", "shopping", "commercial retail", "shopping center",
+                "retail building", "storefront"
+            ],
+            "warehouse": [
+                "warehouse", "storage", "industrial", "logistics", "distribution",
+                "storage building", "industrial building"
+            ],
+            "restaurant": [
+                "restaurant", "cafe", "dining", "food service", "eatery", "bistro",
+                "restaurant building", "dining establishment"
+            ]
         }
         
         for building_type, patterns in building_patterns.items():
             if any(pattern in input_lower for pattern in patterns):
                 extracted["building_type"] = building_type
+                print(f"[EXTRACTION DEBUG] Found building type: {building_type}")
                 break
         
-        # Extract materials
+        # 5. EXTRACT MATERIALS (Enhanced patterns)
         material_patterns = {
-            "brick": ["brick", "masonry"],
-            "concrete": ["concrete", "cement"],
-            "earth": ["earth", "adobe", "mud"],
-            "straw": ["straw", "straw bale"],
-            "timber_frame": ["timber frame", "wood frame", "wooden frame"],
-            "timber_mass": ["timber mass", "mass timber", "timber", "wood", "wooden"]
+            "brick": [
+                "brick", "masonry", "brick walls", "brick construction", "brick building",
+                "masonry construction", "clay brick", "brickwork"
+            ],
+            "concrete": [
+                "concrete", "cement", "concrete walls", "concrete construction",
+                "reinforced concrete", "concrete building", "cement construction"
+            ],
+            "earth": [
+                "earth", "adobe", "mud", "earth construction", "earthen", "mud brick",
+                "adobe construction", "earth walls", "natural earth"
+            ],
+            "straw": [
+                "straw", "straw bale", "straw construction", "straw bale construction",
+                "straw walls", "bale construction"
+            ],
+            "timber_frame": [
+                "timber frame", "wood frame", "wooden frame", "frame construction",
+                "timber framing", "wood framing", "frame building"
+            ],
+            "timber_mass": [
+                "timber mass", "mass timber", "timber", "wood", "wooden", "solid timber",
+                "heavy timber", "solid wood", "timber construction", "wood construction",
+                "wooden construction", "timber building", "wood building"
+            ]
         }
         
         for material, patterns in material_patterns.items():
             if any(pattern in input_lower for pattern in patterns):
                 extracted["materiality"] = material
+                print(f"[EXTRACTION DEBUG] Found material: {material}")
                 break
         
-        # Extract climate
+        # 6. EXTRACT CLIMATE (Enhanced patterns)
         climate_patterns = {
-            "cold": ["cold", "winter", "freezing", "snow"],
-            "hot-humid": ["hot humid", "hot", "tropical", "humid", "summer"],
-            "arid": ["arid", "dry", "desert"],
-            "temperate": ["temperate", "mild", "moderate"]
+            "cold": [
+                "cold", "winter", "freezing", "snow", "cold climate", "winter climate",
+                "snowy", "frigid", "arctic", "cold weather", "cold environment"
+            ],
+            "hot-humid": [
+                "hot humid", "hot", "tropical", "humid", "summer", "hot climate",
+                "tropical climate", "humid climate", "hot and humid", "sweltering",
+                "muggy", "hot weather"
+            ],
+            "arid": [
+                "arid", "dry", "desert", "arid climate", "dry climate", "desert climate",
+                "hot dry", "dry environment", "drought"
+            ],
+            "temperate": [
+                "temperate", "mild", "moderate", "temperate climate", "mild climate",
+                "moderate climate", "balanced", "pleasant"
+            ]
         }
         
         for climate, patterns in climate_patterns.items():
             if any(pattern in input_lower for pattern in patterns):
                 extracted["climate"] = climate
+                print(f"[EXTRACTION DEBUG] Found climate: {climate}")
                 break
         
-        # Extract WWR
+        # 7. EXTRACT WWR (Window-to-Wall Ratio) (Enhanced patterns)
         wwr_patterns = [
-            r'(\d+)%?\s*(?:window|glazing|glass)',
-            r'(?:window|wwr).*?(\d+)%?',
+            r'(\d+)%?\s*(?:window|glazing|glass|windows)',
+            r'(?:window|wwr|glazing).*?(\d+)%?',
             r'(\d+)%?\s*wwr',
-            r'(\d+)%?\s*windows'
+            r'(\d+)%?\s*windows',
+            r'(\d+)\s*percent\s*(?:window|glass|glazing)',
+            r'window.*?ratio.*?(\d+)%?',
+            r'glazing.*?(\d+)%?'
         ]
         for pattern in wwr_patterns:
             match = re.search(pattern, input_lower)
@@ -265,28 +405,125 @@ def extract_all_parameters_from_input(user_input, current_state="unknown"):
                 percentage = float(match.group(1))
                 if percentage > 1:
                     percentage = percentage / 100
-                extracted["wwr"] = round(percentage, 2)
+                extracted["wwr"] = round(min(percentage, 0.9), 2)  # Cap at 90%
+                print(f"[EXTRACTION DEBUG] Found WWR: {extracted['wwr']}")
                 break
         
-        # Extract modeling preference
+        # 8. EXTRACT MODELING PREFERENCE (Enhanced patterns)
         modeling_patterns = {
-            False: ["help me model", "model it", "model for me", "you model", "do it for me", "generate it", "create it", "you help"],
-            True: ["i model", "myself", "i will model", "i do it", "let me model"]
+            False: [  # LLM should model
+                "help me model", "model it", "model for me", "you model", "do it for me",
+                "generate it", "create it", "you help", "model it for me", "build it",
+                "generate geometry", "create geometry", "make it", "you create",
+                "ai model", "auto model", "automatic modeling"
+            ],
+            True: [   # User will model
+                "i model", "myself", "i will model", "i do it", "let me model",
+                "i'll model", "manual", "by hand", "user model", "self model",
+                "i create", "i'll create", "i'll draw", "i draw", "manual modeling"
+            ]
         }
         
         for self_modeling, patterns in modeling_patterns.items():
             if any(pattern in input_lower for pattern in patterns):
                 extracted["self_modeling"] = self_modeling
+                print(f"[EXTRACTION DEBUG] Found modeling preference: {'self' if self_modeling else 'LLM'}")
                 break
         
-        # Mark if user wants AI suggestions
+        # === PARAMETER UPDATE DETECTION ===
+        # Detect when user wants to change existing parameters
+        update_patterns = [
+            r'change\s+(?:the\s+)?(\w+)\s+to\s+(.+)',
+            r'update\s+(?:the\s+)?(\w+)\s+to\s+(.+)',
+            r'set\s+(?:the\s+)?(\w+)\s+to\s+(.+)',
+            r'make\s+(?:the\s+)?(\w+)\s+(.+)',
+            r'(\w+)\s+should\s+be\s+(.+)',
+            r'new\s+(\w+)\s+(?:is\s+)?(.+)'
+        ]
+        
+        for pattern in update_patterns:
+            match = re.search(pattern, input_lower)
+            if match:
+                param_name = match.group(1).strip()
+                param_value = match.group(2).strip()
+                print(f"[EXTRACTION DEBUG] Update detected: {param_name} -> {param_value}")
+                
+                # Handle specific parameter updates
+                if param_name in ["width", "w"]:
+                    width_match = re.search(r'(\d+)', param_value)
+                    if width_match:
+                        width = round_to_voxel_multiple(float(width_match.group(1)))
+                        if "geometry" not in extracted:
+                            extracted["geometry"] = {}
+                        extracted["geometry"]["width_m"] = width
+                        
+                elif param_name in ["depth", "d", "length", "l"]:
+                    depth_match = re.search(r'(\d+)', param_value)
+                    if depth_match:
+                        depth = round_to_voxel_multiple(float(depth_match.group(1)))
+                        if "geometry" not in extracted:
+                            extracted["geometry"] = {}
+                        extracted["geometry"]["depth_m"] = depth
+                        
+                elif param_name in ["levels", "floors", "stories", "height"]:
+                    level_match = re.search(r'(\d+)', param_value)
+                    if level_match:
+                        levels = min(int(level_match.group(1)), MAX_LEVELS)
+                        if "geometry" not in extracted:
+                            extracted["geometry"] = {}
+                        extracted["geometry"]["number_of_levels"] = levels
+                        
+                elif param_name in ["typology", "shape", "type"]:
+                    for typology in ["block", "L-shape", "U-shape", "courtyard"]:
+                        if typology.lower().replace("-", "").replace(" ", "") in param_value.replace("-", "").replace(" ", ""):
+                            if "geometry" not in extracted:
+                                extracted["geometry"] = {}
+                            extracted["geometry"]["typology"] = typology
+                            break
+                            
+                elif param_name in ["material", "materials", "materiality"]:
+                    for material in ["brick", "concrete", "earth", "straw", "timber_frame", "timber_mass"]:
+                        if material.replace("_", " ") in param_value or material.replace("_", "") in param_value.replace(" ", ""):
+                            extracted["materiality"] = material
+                            break
+                            
+                elif param_name in ["wwr", "windows", "window", "glazing"]:
+                    wwr_match = re.search(r'(\d+)', param_value)
+                    if wwr_match:
+                        percentage = float(wwr_match.group(1))
+                        if percentage > 1:
+                            percentage = percentage / 100
+                        extracted["wwr"] = round(min(percentage, 0.9), 2)
+                        
+                elif param_name in ["climate"]:
+                    for climate in ["cold", "hot-humid", "arid", "temperate"]:
+                        if climate in param_value:
+                            extracted["climate"] = climate
+                            break
+                break
+        
+        # === AI SUGGESTION HANDLING ===
         if wants_ai_suggestion:
             extracted["wants_ai_suggestion"] = True
+            print(f"[EXTRACTION DEBUG] AI suggestion requested")
+            
+            # Handle "choose everything" requests
+            choose_all_patterns = [
+                "choose everything", "pick everything", "decide everything", "all parameters",
+                "complete it", "finish it", "make all choices", "fill everything",
+                "auto complete", "automatic", "default everything", "suggest all"
+            ]
+            
+            if any(pattern in input_lower for pattern in choose_all_patterns):
+                extracted["choose_all_parameters"] = True
+                print(f"[EXTRACTION DEBUG] Choose all parameters requested")
         
+        print(f"[EXTRACTION DEBUG] Final extracted: {extracted}")
         return extracted
         
     except Exception as e:
         print(f"Error in parameter extraction: {str(e)}")
+        traceback.print_exc()
         return {}
 
 def merge_design_data(existing_data, new_data):
@@ -299,8 +536,10 @@ def merge_design_data(existing_data, new_data):
                 merged["geometry"] = {}
             for geom_key, geom_value in value.items():
                 merged["geometry"][geom_key] = geom_value
+                print(f"[MERGE DEBUG] Updated geometry.{geom_key} = {geom_value}")
         else:
             merged[key] = value
+            print(f"[MERGE DEBUG] Updated {key} = {value}")
     
     # Auto-calculate height category if levels are provided
     if "geometry" in merged and "number_of_levels" in merged["geometry"]:
@@ -319,24 +558,32 @@ def determine_next_missing_parameter(design_data):
     
     # First check if we have any data at all - if not, ask the opening question
     if not design_data or len(design_data) == 0:
-        return "initial", "What would you like to build today?"
+        return "initial", "What would you like to build today? (Feel free to describe your building in detail - I can extract multiple parameters at once!)"
+    
+    # Check if user is actively drawing geometry
+    if design_data.get("user_drawing_detected", False) and not design_data.get("user_geometry_confirmed", False):
+        return "user_geometry_confirmation", "I see you're drawing geometry. Is your building design ready for analysis?"
+    
+    # If user confirmed their geometry, skip geometry collection
+    if design_data.get("user_geometry_confirmed", False):
+        design_data["self_modeling"] = True  # Set this automatically
     
     # Check modeling preference (most important after we know what they are building)
     if "self_modeling" not in design_data:
-        return "modeling_preference", "Will you model it yourself, or should I model it for you?"
+        return "modeling_preference", "Will you model the geometry yourself, or should I generate it for you? (You can also describe the building parameters now: typology, dimensions, levels)"
     
     # If LLM modeling, check geometry requirements
     if not design_data.get("self_modeling", True):
         geometry = design_data.get("geometry", {})
         
         if "typology" not in geometry:
-            return "geometry_typology", "What building shape? (block, L-shape, U-shape, courtyard)"
+            return "geometry_typology", "What building shape? (block, L-shape, U-shape, courtyard) - you can also include dimensions and levels in your answer"
         
         if "number_of_levels" not in geometry:
-            return "geometry_levels", f"How many levels? (1-{MAX_LEVELS})"
+            return "geometry_levels", f"How many levels? (1-{MAX_LEVELS}) - you can also specify width and depth if you know them"
             
         if "width_m" not in geometry:
-            return "geometry_width", "What width in meters?"
+            return "geometry_width", "What width in meters? (depth can be specified too)"
             
         if "depth_m" not in geometry:
             return "geometry_depth", "What depth in meters?"
@@ -347,12 +594,12 @@ def determine_next_missing_parameter(design_data):
             # Mark geometry as ready for generation
             design_data["geometry_ready"] = True
     
-    # Continue with other parameters (building type is optional now)
+    # Continue with other parameters
     if "materiality" not in design_data:
-        return "materiality", "What material? (brick, concrete, timber, earth, straw)"
+        return "materiality", "What material? (brick, concrete, timber, earth, straw) - you can also include climate and window percentage"
         
     if "climate" not in design_data:
-        return "climate", "What climate? (cold, hot, arid, temperate)"
+        return "climate", "What climate? (cold, hot-humid, arid, temperate) - window percentage can be added too"
         
     if "wwr" not in design_data:
         return "wwr", "What window percentage? (like 30% or 40%)"
@@ -360,25 +607,59 @@ def determine_next_missing_parameter(design_data):
     # Everything complete!
     return "complete", "Perfect! All parameters complete. Ready to generate!"
 
-def manage_conversation_state(current_state, user_input, design_data):
-    """
-    Smart conversation manager that extracts parameters and skips already-answered questions
-    Returns: (new_state, response, updated_design_data)
-    """
+def handle_ai_suggestions(extracted_params, design_data, current_state):
+    """Handle AI suggestions when user requests them"""
+    suggested_params = {}
     
-    # Handle empty input - KEY FOR INITIAL QUESTION
-    if not user_input.strip():
-        next_state, next_question = determine_next_missing_parameter(design_data)
-        return next_state, next_question, design_data
+    if not extracted_params.get("wants_ai_suggestion", False):
+        return suggested_params
     
-    # Extract parameters from user input
-    extracted_params = extract_all_parameters_from_input(user_input, current_state)
+    print(f"[AI SUGGESTION DEBUG] Handling suggestions for state: {current_state}")
     
-    # Handle AI suggestions if user wants them
-    if extracted_params.get("wants_ai_suggestion", False):
-        suggested_params = {}
+    # Handle "choose all" requests
+    if extracted_params.get("choose_all_parameters", False):
+        print(f"[AI SUGGESTION DEBUG] Choosing all parameters")
         
-        # Determine what parameter we're currently asking for
+        # Fill in ALL missing parameters
+        if "self_modeling" not in design_data:
+            suggested_params["self_modeling"] = False  # Default to LLM modeling
+        
+        if not design_data.get("self_modeling", True):
+            geometry = design_data.get("geometry", {})
+            if "typology" not in geometry:
+                if "geometry" not in suggested_params:
+                    suggested_params["geometry"] = {}
+                suggested_params["geometry"]["typology"] = suggest_parameter_value("typology", design_data)
+            
+            if "number_of_levels" not in geometry:
+                if "geometry" not in suggested_params:
+                    suggested_params["geometry"] = {}
+                suggested_params["geometry"]["number_of_levels"] = suggest_parameter_value("number_of_levels", design_data)
+            
+            if "width_m" not in geometry:
+                if "geometry" not in suggested_params:
+                    suggested_params["geometry"] = {}
+                suggested_params["geometry"]["width_m"] = suggest_parameter_value("width_m", design_data)
+            
+            if "depth_m" not in geometry:
+                if "geometry" not in suggested_params:
+                    suggested_params["geometry"] = {}
+                suggested_params["geometry"]["depth_m"] = suggest_parameter_value("depth_m", design_data)
+        
+        if "materiality" not in design_data:
+            suggested_params["materiality"] = suggest_parameter_value("materiality", design_data)
+        
+        if "climate" not in design_data:
+            suggested_params["climate"] = suggest_parameter_value("climate", design_data)
+        
+        if "wwr" not in design_data:
+            suggested_params["wwr"] = suggest_parameter_value("wwr", design_data)
+            
+        if "building_type" not in design_data:
+            suggested_params["building_type"] = suggest_parameter_value("building_type", design_data)
+    
+    else:
+        # Handle single parameter suggestions based on current state
         if current_state == "geometry_typology":
             suggested_value = suggest_parameter_value("typology", design_data)
             if suggested_value:
@@ -419,58 +700,105 @@ def manage_conversation_state(current_state, user_input, design_data):
             if suggested_value:
                 suggested_params["building_type"] = suggested_value
         
-        # Special case: if user says "choose everything" or similar
-        choose_all_patterns = [
-            "choose everything", "pick everything", "decide everything", "all parameters",
-            "complete it", "finish it", "make all choices", "fill everything"
-        ]
+        elif current_state == "modeling_preference":
+            suggested_params["self_modeling"] = False  # Default to LLM modeling
+    
+    if suggested_params:
+        print(f"[AI SUGGESTION DEBUG] Generated suggestions: {suggested_params}")
+    
+    return suggested_params
+
+def manage_conversation_state(current_state, user_input, design_data):
+    """
+    ENHANCED conversation manager with superior natural language processing and real-time updates
+    Returns: (new_state, response, updated_design_data)
+    """
+    
+    print(f"[CONVERSATION DEBUG] State: {current_state}, Input: '{user_input[:50]}...', Current data keys: {list(design_data.keys())}")
+    
+    # Handle empty input - KEY FOR INITIAL QUESTION
+    if not user_input.strip():
+        next_state, next_question = determine_next_missing_parameter(design_data)
+        print(f"[CONVERSATION DEBUG] Empty input -> {next_state}: {next_question}")
+        return next_state, next_question, design_data
+    
+    # === SPECIAL STATE HANDLING ===
+    
+    # Handle user geometry confirmation
+    if current_state == "user_geometry_confirmation":
+        confirmation_yes = any(word in user_input.lower() for word in ["yes", "y", "ready", "done", "finished", "complete", "ok", "confirm"])
+        confirmation_no = any(word in user_input.lower() for word in ["no", "n", "not ready", "still working", "not done", "wait"])
         
-        if any(pattern in user_input.lower() for pattern in choose_all_patterns):
-            # Fill in ALL missing parameters
-            if "self_modeling" not in design_data:
-                suggested_params["self_modeling"] = False  # Default to LLM modeling
+        if confirmation_yes:
+            design_data["user_geometry_confirmed"] = True
+            design_data["self_modeling"] = True
+            # Remove the detection flag
+            design_data.pop("user_drawing_detected", None)
             
-            if not design_data.get("self_modeling", True):
-                geometry = design_data.get("geometry", {})
-                if "typology" not in geometry:
-                    if "geometry" not in suggested_params:
-                        suggested_params["geometry"] = {}
-                    suggested_params["geometry"]["typology"] = suggest_parameter_value("typology", design_data)
-                
-                if "number_of_levels" not in geometry:
-                    if "geometry" not in suggested_params:
-                        suggested_params["geometry"] = {}
-                    suggested_params["geometry"]["number_of_levels"] = suggest_parameter_value("number_of_levels", design_data)
-                
-                if "width_m" not in geometry:
-                    if "geometry" not in suggested_params:
-                        suggested_params["geometry"] = {}
-                    suggested_params["geometry"]["width_m"] = suggest_parameter_value("width_m", design_data)
-                
-                if "depth_m" not in geometry:
-                    if "geometry" not in suggested_params:
-                        suggested_params["geometry"] = {}
-                    suggested_params["geometry"]["depth_m"] = suggest_parameter_value("depth_m", design_data)
+            next_state, next_question = determine_next_missing_parameter(design_data)
+            response = f"Perfect! I'll use your geometry. {next_question}"
+            print(f"[CONVERSATION DEBUG] User confirmed geometry -> {next_state}")
+            return next_state, response, design_data
             
-            if "materiality" not in design_data:
-                suggested_params["materiality"] = suggest_parameter_value("materiality", design_data)
-            
-            if "climate" not in design_data:
-                suggested_params["climate"] = suggest_parameter_value("climate", design_data)
-            
-            if "wwr" not in design_data:
-                suggested_params["wwr"] = suggest_parameter_value("wwr", design_data)
+        elif confirmation_no:
+            # Continue monitoring
+            response = "No problem! I'll keep monitoring. Let me know when your geometry is ready, or you can ask me to model it for you instead."
+            print(f"[CONVERSATION DEBUG] User geometry not ready, continuing to monitor")
+            return current_state, response, design_data
         
-        # Merge suggested parameters with extracted ones
+        # If unclear response, extract parameters but stay in confirmation state
+        else:
+            extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
+            if extracted_params:
+                design_data = merge_design_data(design_data, extracted_params)
+            response = "I didn't catch that. Is your geometry ready for analysis? (yes/no)"
+            return current_state, response, design_data
+    
+    # === MAIN PARAMETER EXTRACTION ===
+    extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
+    
+    # Handle AI suggestions
+    if extracted_params.get("wants_ai_suggestion", False):
+        suggested_params = handle_ai_suggestions(extracted_params, design_data, current_state)
+        # Merge suggested parameters with extracted ones (extracted takes priority)
         if suggested_params:
-            extracted_params = {**suggested_params, **extracted_params}  # Extracted takes priority
-            extracted_params["ai_suggested"] = True  # Mark that AI made suggestions
+            extracted_params = {**suggested_params, **extracted_params}
+            extracted_params["ai_suggested"] = True
+    
+    # === SPECIAL PARAMETER HANDLING ===
+    
+    # Handle "change modeling preference" during conversation
+    if "self_modeling" in extracted_params and "self_modeling" in design_data:
+        # User is changing their modeling preference
+        old_preference = "self-modeling" if design_data["self_modeling"] else "LLM-modeling"
+        new_preference = "self-modeling" if extracted_params["self_modeling"] else "LLM-modeling"
+        
+        if old_preference != new_preference:
+            design_data = merge_design_data(design_data, extracted_params)
+            
+            if extracted_params["self_modeling"]:
+                # User wants to model themselves now
+                response = f"Switched to self-modeling! You can start drawing your geometry in Rhino. I'll detect when you're ready."
+                # Clear any existing geometry generation flags
+                design_data.pop("geometry_ready", None)
+                design_data.pop("geometry_generated", None)
+                design_data["user_drawing_detected"] = True  # Trigger monitoring
+                return "user_geometry_confirmation", response, design_data
+            else:
+                # User wants LLM to model now
+                response = f"Switched to LLM modeling! "
+                # Check what geometry parameters we need
+                next_state, next_question = determine_next_missing_parameter(design_data)
+                response += next_question
+                return next_state, response, design_data
     
     # Merge with existing data
     if extracted_params:
         design_data = merge_design_data(design_data, extracted_params)
     
-    # Handle constraints and validation - BUT BE FLEXIBLE
+    # === CONSTRAINTS AND VALIDATION ===
+    
+    # Handle level constraints
     if "geometry" in design_data and "number_of_levels" in design_data["geometry"]:
         levels = design_data["geometry"]["number_of_levels"]
         if levels > MAX_LEVELS:
@@ -483,29 +811,37 @@ def manage_conversation_state(current_state, user_input, design_data):
     if "depth_m" in geometry:
         design_data["geometry"]["depth_m"] = round_to_voxel_multiple(geometry["depth_m"])
     
-    # CHECK FOR GEOMETRY GENERATION TRIGGER
+    # === GEOMETRY GENERATION TRIGGER ===
     should_trigger_geometry = False
+    geometry_just_completed = False
+    
     if (not design_data.get("self_modeling", True) and 
         "geometry" in design_data and 
         all(key in design_data["geometry"] for key in ["typology", "number_of_levels", "width_m", "depth_m"]) and
         not design_data.get("geometry_generated", False)):
         
         should_trigger_geometry = True
+        geometry_just_completed = True
         design_data["geometry_generated"] = True  # Mark as generated to avoid repeats
+        design_data["trigger_geometry_generation"] = True  # Flag for server
+        
+        print(f"[CONVERSATION DEBUG] Geometry generation triggered!")
     
-    # Determine what is still needed
+    # === DETERMINE NEXT STATE ===
     next_state, next_question = determine_next_missing_parameter(design_data)
     
-    # Create response acknowledging what we got
+    # === CREATE RESPONSE ===
     response_parts = []
     
-    if extracted_params:
+    # Acknowledge extracted parameters
+    if extracted_params and not extracted_params.get("wants_ai_suggestion", False):
         acknowledgments = []
         
-        # ONLY acknowledge building_type if user actually provided it
+        # Building type
         if "building_type" in extracted_params:
             acknowledgments.append(f"building type: {extracted_params['building_type']}")
         
+        # Geometry parameters
         if "geometry" in extracted_params:
             geom = extracted_params["geometry"]
             if "number_of_levels" in geom:
@@ -523,6 +859,7 @@ def manage_conversation_state(current_state, user_input, design_data):
             elif "depth_m" in geom:
                 acknowledgments.append(f"depth: {geom['depth_m']}m")
         
+        # Other parameters
         if "materiality" in extracted_params:
             acknowledgments.append(f"{extracted_params['materiality']} material")
         
@@ -537,16 +874,39 @@ def manage_conversation_state(current_state, user_input, design_data):
             acknowledgments.append(modeling_pref)
         
         if acknowledgments:
-            # Add AI suggestion indicator
-            prefix = "AI suggested: " if extracted_params.get("ai_suggested", False) else "Updated: "
-            response_parts.append(f"{prefix}{', '.join(acknowledgments)}.")
+            response_parts.append(f"Updated: {', '.join(acknowledgments)}.")
+    
+    # Handle AI suggestions acknowledgment
+    elif extracted_params.get("ai_suggested", False):
+        suggestion_items = []
+        
+        if "geometry" in extracted_params:
+            geom = extracted_params["geometry"]
+            for key, value in geom.items():
+                if key == "typology":
+                    suggestion_items.append(f"{value} shape")
+                elif key == "number_of_levels":
+                    suggestion_items.append(f"{value} levels")
+                elif key == "width_m":
+                    suggestion_items.append(f"{value}m width")
+                elif key == "depth_m":
+                    suggestion_items.append(f"{value}m depth")
+        
+        for key in ["materiality", "climate", "building_type"]:
+            if key in extracted_params:
+                suggestion_items.append(f"{extracted_params[key]} {key}")
+        
+        if "wwr" in extracted_params:
+            suggestion_items.append(f"{int(extracted_params['wwr']*100)}% windows")
+        
+        if suggestion_items:
+            response_parts.append(f"AI suggested: {', '.join(suggestion_items)}.")
     
     # Add geometry generation notification
-    if should_trigger_geometry:
-        response_parts.append("Geometry parameters complete! Generating 3D model...")
+    if should_trigger_geometry and geometry_just_completed:
+        response_parts.append("🎯 Geometry parameters complete! Generating 3D model...")
     
-    # ONLY do validation check if we have complete geometry AND we are complete
-    validation_warning = ""
+    # Add validation warning if needed (only at completion)
     if (next_state == "complete" and 
         "geometry" in design_data and 
         all(key in design_data["geometry"] for key in ["typology", "width_m", "depth_m"])):
@@ -557,25 +917,121 @@ def manage_conversation_state(current_state, user_input, design_data):
             design_data["geometry"]["depth_m"]
         )
         if not is_valid:
-            validation_warning = f"Note: {validation_msg}. You can adjust if needed. "
+            response_parts.append(f"⚠️ Note: {validation_msg}. You can adjust if needed.")
     
-    # Add validation warning if there is one (but do not block)
-    if validation_warning:
-        response_parts.append(validation_warning)
-    
-    # Check if complete or continue - ALWAYS PROGRESS
+    # Add next question or completion message
     if next_state == "complete":
-        response_parts.append("Ready to generate!")
-        return next_state, " ".join(response_parts), design_data
+        response_parts.append("🎉 All parameters collected! Ready to proceed.")
     else:
-        # ALWAYS ask the next question, do not get stuck on validation
         response_parts.append(next_question)
-        return next_state, " ".join(response_parts), design_data
+    
+    final_response = " ".join(response_parts)
+    
+    print(f"[CONVERSATION DEBUG] Final state: {next_state}, Response length: {len(final_response)}")
+    print(f"[CONVERSATION DEBUG] Geometry trigger: {should_trigger_geometry}")
+    
+    return next_state, final_response, design_data
 
-# === EXISTING HELPER FUNCTIONS ===
+# === ENHANCED HELPER FUNCTIONS ===
+
+def handle_real_time_parameter_update(parameter_name, new_value, design_data):
+    """Handle real-time updates to specific parameters"""
+    
+    try:
+        print(f"[REAL-TIME UPDATE] {parameter_name} -> {new_value}")
+        
+        updated_data = design_data.copy()
+        
+        if parameter_name in ["width", "width_m"]:
+            if "geometry" not in updated_data:
+                updated_data["geometry"] = {}
+            updated_data["geometry"]["width_m"] = round_to_voxel_multiple(float(new_value))
+            
+        elif parameter_name in ["depth", "depth_m", "length"]:
+            if "geometry" not in updated_data:
+                updated_data["geometry"] = {}
+            updated_data["geometry"]["depth_m"] = round_to_voxel_multiple(float(new_value))
+            
+        elif parameter_name in ["levels", "number_of_levels"]:
+            if "geometry" not in updated_data:
+                updated_data["geometry"] = {}
+            updated_data["geometry"]["number_of_levels"] = min(int(new_value), MAX_LEVELS)
+            
+        elif parameter_name == "typology":
+            if "geometry" not in updated_data:
+                updated_data["geometry"] = {}
+            updated_data["geometry"]["typology"] = new_value
+            
+        elif parameter_name == "materiality":
+            updated_data["materiality"] = new_value
+            
+        elif parameter_name == "climate":
+            updated_data["climate"] = new_value
+            
+        elif parameter_name == "wwr":
+            value = float(new_value)
+            if value > 1:
+                value = value / 100
+            updated_data["wwr"] = round(min(value, 0.9), 2)
+            
+        elif parameter_name == "building_type":
+            updated_data["building_type"] = new_value
+        
+        # Check if this update triggers geometry generation
+        if (not updated_data.get("self_modeling", True) and
+            parameter_name in ["width", "width_m", "depth", "depth_m", "levels", "number_of_levels", "typology"]):
+            
+            geometry = updated_data.get("geometry", {})
+            if all(key in geometry for key in ["typology", "number_of_levels", "width_m", "depth_m"]):
+                updated_data["trigger_geometry_generation"] = True
+                updated_data["geometry_generated"] = False  # Allow regeneration
+                print(f"[REAL-TIME UPDATE] Triggering geometry regeneration due to {parameter_name} change")
+        
+        return True, updated_data, f"Updated {parameter_name} to {new_value}"
+        
+    except Exception as e:
+        return False, design_data, f"Error updating {parameter_name}: {str(e)}"
+
+def get_parameter_summary(design_data):
+    """Get a formatted summary of current parameters"""
+    
+    summary_parts = []
+    
+    if "building_type" in design_data:
+        summary_parts.append(f"🏢 Type: {design_data['building_type']}")
+    
+    if "geometry" in design_data:
+        geom = design_data["geometry"]
+        geom_parts = []
+        
+        if "typology" in geom:
+            geom_parts.append(f"shape: {geom['typology']}")
+        if "number_of_levels" in geom:
+            geom_parts.append(f"levels: {geom['number_of_levels']}")
+        if "width_m" in geom and "depth_m" in geom:
+            geom_parts.append(f"size: {geom['width_m']}×{geom['depth_m']}m")
+            
+        if geom_parts:
+            summary_parts.append(f"📐 Geometry: {', '.join(geom_parts)}")
+    
+    if "materiality" in design_data:
+        summary_parts.append(f"🧱 Material: {design_data['materiality']}")
+    
+    if "climate" in design_data:
+        summary_parts.append(f"🌡️ Climate: {design_data['climate']}")
+    
+    if "wwr" in design_data:
+        summary_parts.append(f"🪟 Windows: {int(design_data['wwr']*100)}%")
+    
+    modeling_status = "👤 Self-modeling" if design_data.get("self_modeling", True) else "🤖 AI-modeling"
+    summary_parts.append(modeling_status)
+    
+    return " | ".join(summary_parts) if summary_parts else "No parameters set"
+
+# === LEGACY COMPATIBILITY FUNCTIONS ===
 
 def classify_input(user_input):
-    """Legacy function - now uses the smarter extraction"""
+    """Legacy function - now uses the enhanced extraction"""
     extracted = extract_all_parameters_from_input(user_input)
     return json.dumps(extracted)
 
