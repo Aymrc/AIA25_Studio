@@ -1,0 +1,13 @@
+{
+  "energy": {
+    "EUI_kWh_per_m2a": 85.3,
+    "Cooling_kWh_per_m2a": 21.7,
+    "Heating_kWh_per_m2a": 37.9
+  },
+  "carbon": {
+    "Operational_Carbon_kgCO2e_per_m2a": 12.1,
+    "A1_A3_per_m2_GFA": 320.5,
+    "A_D_per_m2_GFA": 490.0,
+    "GWP_total_per_m2_GFA": 502.4
+  }
+}

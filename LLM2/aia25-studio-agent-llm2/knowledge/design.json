@@ -1,0 +1,13 @@
+{
+  "materials": ["concrete", "glass", "timber"],
+  "number_of_levels": 4,
+  "embodied_carbon": "420 kgCO₂e/m²",
+  "solar_radiation_area": "380 m²",
+  "unit_counts": {
+    "3BD": 8,
+    "2BD": 12,
+    "1BD": 10
+  },
+  "GFA": "2400 m²",
+  "plot_dimensions": "30m x 40m"
+}
