@@ -1,4 +1,4 @@
-<img src="UI/copilot_icon_dark.svg" alt="Copilot Logo" width="64"  align="left"/>
+<img src="UI/copilot_icon_dark.svg" alt="Copilot Logo" width="48"  align="left"/>
 <br>
 
 # Rhino Copilot // AIA25_Studio
