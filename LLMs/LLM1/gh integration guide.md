@@ -1,158 +1,155 @@
-"""
-Complete Grasshopper Integration Guide
+# Complete Geometry Integration Setup Guide
 
-This guide explains how to set up the Python components in Grasshopper to integrate with your Flask LLM server.
-Follow these steps to create the necessary components and connect them in your Grasshopper definition.
-"""
+## Overview
+Your system now has complete geometry generation and analysis capabilities with three new Grasshopper Python nodes that integrate with your Flask server and LLM conversation system.
 
-# ========================
-# SETUP INSTRUCTIONS
-# ========================
+## Components Created
 
-"""
-1. REQUIRED PYTHON PACKAGES
+### 1. Updated `llm_calls.py`
+- ✅ Added typology validation rules (Block, L-shape, U-shape, Courtyard)
+- ✅ Added dimension validation with voxel size (3m) conversion
+- ✅ Added geometry states: `geometry_width`, `geometry_depth`, `geometry_levels`
+- ✅ Maximum 10 levels validation
+- ✅ Smart dimension rounding to voxel multiples
 
-Before starting, make sure you have these Python packages installed in your Rhino/Grasshopper Python environment:
-- requests
-- json
+### 2. Updated `gh_server.py` 
+- ✅ New endpoint: `/generate_geometry` - converts dimensions to voxel parameters
+- ✅ New endpoint: `/send_geometry_data` - receives GFA and compactness from Grasshopper
+- ✅ New endpoint: `/get_geometry_data` - retrieves latest geometry analysis
+- ✅ New endpoint: `/set_self_modeling` - updates modeling preference
+- ✅ Global geometry data storage with timestamps and source tracking
 
-You can install them using pip in the command line:
+### 3. Three New Grasshopper Python Nodes
+
+#### **Node 1: Geometry Generator**
+- **Purpose**: Converts LLM conversation data into voxel parameters
+- **Inputs**: `design_data_json`, `run`
+- **Outputs**: `width_voxels`, `depth_voxels`, `levels`, `status_message`, `trigger_generation`
+- **Function**: Validates dimensions, converts meters to voxels, triggers your voxel script
+
+#### **Node 2: Geometry Data Retriever** 
+- **Purpose**: Analyzes any geometry and sends data to ML pipeline
+- **Inputs**: `geometry` (Brep), `levels`, `source`, `run`
+- **Outputs**: `gfa`, `compactness`, `status_message`
+- **Function**: Calculates GFA = volume/3m, compactness = surface_area/volume
+
+#### **Node 3: Rhino Activity Listener**
+- **Purpose**: Detects user modeling activity and sets self_modeling=True
+- **Inputs**: `monitor`, `reset`
+- **Outputs**: `activity_detected`, `latest_geometry`, `self_modeling_triggered`, `status_message`
+- **Function**: Monitors Rhino document events, detects user geometry creation
+
+### 4. Updated `main.py`
+- ✅ Added geometry generation triggering 
+- ✅ Added geometry data checking and integration
+- ✅ Enhanced parameter summary display
+- ✅ Better status reporting
+
+## Setup Instructions
+
+### Step 1: Update Your Files
+1. Replace your `llm_calls.py` with the updated version
+2. Replace your `gh_server.py` with the updated version  
+3. Replace your `main.py` with the updated version (optional, for CLI testing)
+
+### Step 2: Create Grasshopper Components
+1. **Add three Python components** to your Grasshopper canvas
+2. **Copy each node's code** into the respective Python components
+3. **Set up inputs/outputs** as specified in each node
+4. **Connect the workflow**:
+   ```
+   LLM Conversation → Generator → Voxel Script → 3D Geometry → Data Retriever → ML Parameters
+                                                      ↗
+   User Drawing in Rhino → Activity Listener → Data Retriever → ML Parameters
+   ```
+
+### Step 3: Grasshopper Connections
+
+#### **For Node 1 (Generator)**:
+- Input `design_data_json`: Connect to your LLM conversation component output `c`
+- Input `run`: Connect to a Boolean toggle
+- Output `a,b,c`: Connect to your voxel script inputs (width, depth, levels)
+- Output `e`: Connect to trigger your voxel script execution
+
+#### **For Node 2 (Data Retriever)**:
+- Input `geometry`: Connect to ANY Brep output (voxel script output OR user-drawn geometry)
+- Input `levels`: Connect to number from Generator or manual input
+- Input `source`: Text input "llm" or "user"
+- Input `run`: Boolean toggle
+
+#### **For Node 3 (Activity Listener)**:
+- Input `monitor`: Boolean toggle (set to True to start monitoring)
+- Input `reset`: Boolean button (click to reset/cleanup)
+- Output `b`: Connect to Data Retriever's `geometry` input for user-drawn geometry
+- Output `c`: Use to trigger automatic self_modeling updates
+
+## Workflow Examples
+
+### **Scenario A: LLM Generates Geometry**
+1. User talks to LLM → selects "I want you to model it"
+2. LLM asks for typology, dimensions, levels
+3. Generator Node receives complete parameters → outputs voxel dimensions
+4. Your voxel script creates 3D geometry
+5. Data Retriever analyzes geometry → sends GFA/compactness to ML pipeline
+
+### **Scenario B: User Self-Models**
+1. User starts drawing in Rhino while talking to LLM
+2. Activity Listener detects geometry creation → sets `self_modeling=True`
+3. LLM adapts conversation (no geometry offers)
+4. Data Retriever analyzes user's geometry → sends GFA/compactness to ML pipeline
+
+### **Scenario C: Mixed/Switching**
+1. User can switch between modes anytime
+2. System always uses most recent geometry for analysis
+3. Both paths feed same ML parameter structure
+
+## Testing the Integration
+
+### Test 1: LLM Geometry Generation
+```bash
+# 1. Start Flask server
+python gh_server.py
+
+# 2. In Grasshopper: Connect Generator Node to your LLM conversation
+# 3. Talk to LLM: "I want to build a 4-level residential building, you model it"
+# 4. Provide: typology=block, width=18m, depth=15m
+# 5. Generator should output: width_voxels=6, depth_voxels=5, levels=4
 ```
-pip install requests
+
+### Test 2: Activity Listener
+```bash
+# 1. Set Activity Listener monitor=True
+# 2. Draw a box or surface in Rhino
+# 3. Listener should detect activity and output latest_geometry
+# 4. Check Flask server logs for self_modeling update
 ```
-(json is included in the standard library)
 
-2. COMPONENT OVERVIEW
+### Test 3: Data Retriever
+```bash
+# 1. Connect any Brep to Data Retriever
+# 2. Set levels=4, source="test"
+# 3. Should calculate GFA and compactness
+# 4. Check Flask server endpoint: GET http://127.0.0.1:5000/get_geometry_data
+```
 
-The integration consists of four main Python components:
+## Troubleshooting
 
-A. Conversation Component
-   - Handles the chat interaction with the LLM
-   - Maintains conversation state between runs
-   - Collects the design parameters
+### Common Issues:
+1. **"Server not running"** → Start `python gh_server.py` first
+2. **"No geometry provided"** → Check Brep connections in Grasshopper
+3. **"Listener not working"** → Click reset button, then set monitor=True
+4. **"Invalid dimensions"** → Check typology rules, ensure multiples of 3m
 
-B. Parameter Fetcher
-   - Requests the complete parameter set from the Flask server
-   - Prepares data for geometry generation
+### Debug Commands:
+```bash
+# Check if Flask server responds
+curl http://127.0.0.1:5000/
 
-C. Geometry Generator
-   - Creates 3D geometry based on design parameters
-   - Handles different typologies (block, L-shape, U-shape, courtyard)
-   - Calculates and returns metrics (GFA, aspect value)
+# Check latest geometry data
+curl http://127.0.0.1:5000/get_geometry_data
 
-D. Results Sender
-   - Sends the geometric results back to the Flask server
-   - Updates the ML parameters with the GH-generated geometric data
+# Test geometry generation
+curl -X POST http://127.0.0.1:5000/generate_geometry -H "Content-Type: application/json" -d '{"design_data": {"geometry": {"typology": "block", "width_m": 18, "depth_m": 15, "number_of_levels": 4}}}'
+```
 
-3. GRASSHOPPER SETUP
-
-Here's how to set up your Grasshopper definition:
-"""
-
-# ========================
-# CREATING THE COMPONENTS
-# ========================
-
-"""
-For each Python component:
-
-1. Add a new "Python Script" component to your Grasshopper canvas
-2. Double-click to open the editor
-3. Paste the corresponding code from the artifacts
-4. Set up the inputs and outputs as described below
-"""
-
-# ========================
-# CONVERSATION COMPONENT SETUP
-# ========================
-
-"""
-INPUTS:
-- input_text (string): Connect to a Panel or other text input source
-- run (boolean): Connect to a Button or Toggle
-- reset (boolean): Connect to a Button to reset the conversation
-
-OUTPUTS:
-- out (string): Connect to a Panel to display the LLM response
-- state (string): Optional - connect to a Panel to monitor conversation state
-- design_data (string): Optional - connect to a Panel to view collected parameters
-
-HOW TO USE:
-1. Type your building description in the text input
-2. Toggle the 'run' button to send to the LLM
-3. Continue the conversation by responding to LLM prompts
-4. When design is complete, the state will change to 'complete'
-"""
-
-# ========================
-# PARAMETER FETCHER SETUP
-# ========================
-
-"""
-INPUTS:
-- fetch (boolean): Connect to a Button or Toggle
-- design_id (string, optional): Connect to a Panel if you want to fetch a specific design
-
-OUTPUTS:
-- json_data (string): Connect to the Geometry Generator input
-- materiality (dictionary): Optional - connect to a Panel to view materiality parameters
-- geometry_params (dictionary): Optional - connect to a Panel to view geometry parameters
-- info (string): Connect to a Panel to display status information
-
-HOW TO USE:
-1. Once the conversation reaches 'complete' state, toggle the 'fetch' button
-2. The component will request the complete parameter set from the Flask server
-3. The output json_data will contain the parameters for geometry generation
-"""
-
-# ========================
-# GEOMETRY GENERATOR SETUP
-# ========================
-
-"""
-INPUTS:
-- design_json (string): Connect to the json_data output from Parameter Fetcher
-- run (boolean): Connect to a Button or Toggle
-
-OUTPUTS:
-- geometry (Rhino geometry): The generated 3D building model
-- gfa (float): Gross floor area of the generated model
-- av (float): Aspect value of the generated model
-- info (string): Connect to a Panel to display status information
-
-HOW TO USE:
-1. Once parameters are fetched, toggle the 'run' button
-2. The component will generate the appropriate geometry based on typology
-3. Geometry will appear in the Rhino viewport
-4. Metrics (GFA, aspect value) will be calculated and output
-"""
-
-# ========================
-# COMPLETE WORKFLOW
-# ========================
-
-"""
-Here's the complete workflow for using the integration:
-
-1. User describes the building they want to create via the Conversation Component
-2. LLM guides them through providing all necessary parameters
-3. When the conversation is complete, user activates Parameter Fetcher
-4. Design parameters are retrieved from the Flask server
-5. User activates Geometry Generator to create the 3D model
-6. Geometric metrics are calculated and sent back to the Flask server
-7. The ML algorithm uses the complete parameter set (materiality + geometry)
-
-TROUBLESHOOTING:
-
-- Connection errors: Make sure your Flask server is running on port 5000
-- Parameter errors: Check the Conversation Component state to ensure it reached 'complete'
-- Geometry errors: Verify the parameter values in the json_data output
-- Missing packages: Install required Python packages (requests, json)
-
-EXTENDING THE SYSTEM:
-
-- Add more typologies to the Geometry Generator
-- Create additional Python components for specific tasks
-- Add visualization elements for different material types
-- Implement more detailed geometry creation based on WWR values
-"""
+Your complete parametric design conversation system is now ready! 🚀
