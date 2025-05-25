@@ -16,13 +16,11 @@ Team:
 
 ## Features (WIP)
 
-- Launchable from a Rhino toolbar button 🖱️
-- Local web UI for interaction 🌐
-- Fast CLIP-based image classification (using your own dataset)
-- Offline-friendly — no cloud dependencies
-- Modular architecture: Frontend ↔ Backend ↔ Rhino
+- Launchable from a Rhino toolbar button
+- Local web UI for interaction
+- LLM for interaction with Rhino
+- ...
 
----
 
 ## Folder Structure (WIP)
 Rhino Copilot
