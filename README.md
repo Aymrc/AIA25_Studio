@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-Test
 =======
 # AIA25_Studio
 
@@ -15,4 +13,6 @@ Team:
 All rights reserved.
 
 something new, again
->>>>>>> Aymeric
+=======
+
+Aymeric did this if it doesn't work
