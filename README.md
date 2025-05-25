@@ -1,7 +1,7 @@
 # Rhino Copilot // AIA25_Studio
 
-A local AI assistant for Rhino 3D — powered by CLIP.  
-Copilot classifies design outputs like *towers*, *lines*, and *components* based on a visual dataset.
+A local AI assistant for Rhino 3D.  
+Copilot predicts design's sustainable KPI including GWP.
 
 
 This is the repo for AIA 25 Studio at IAAC for MaCAD.

@@ -3,12 +3,16 @@ import subprocess
 import os
 import webbrowser
 
+
+
 # === This starts the UI ===
 def launch_copilot():
     print("Launching Copilot...")
     webbrowser.open("UI\index.html")
 
 launch_copilot()
+
+
 
 
 # === This starts the Copilot ===
