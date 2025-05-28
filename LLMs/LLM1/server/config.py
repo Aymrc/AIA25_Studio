@@ -30,7 +30,7 @@ gpt4o = [
 # Notice how this model is running locally. Uses local server with LMStudio
 llama3 = [
         {
-            "model": "llama-3.1-tulu-3.1-8b", #change this to point to a new model
+            "model": "llama-3.1-tulu-3-8b", #change this to point to a new model
             'api_key': 'any string here is fine',
             'api_type': 'openai',
             'base_url': "http://127.0.0.1:1234",
