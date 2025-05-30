@@ -92,14 +92,64 @@
   			<div id="dataContent">No data yet.</div>
         </div>
 
+
+
         <div class="box" id="Viz">
 			<h3>Vizualisation</h3>
 
-			<!-- later on, add a script to update on image generation -->
   			<div id="vizGrid" class="viz-grid"> 
 				<div class="viz-tile empty">Waiting for image...</div>
-				<div class="viz-tile empty">Waiting for image...</div>
-				<div class="viz-tile empty">Waiting for image...</div>
+				<!-- basic grid placeholder -->
+
+				<!-- JS script for adding new tile when you image avaiable -->
+				<script>
+					function loadVizGallery() {
+					const grid = document.getElementById("vizGrid");
+					grid.innerHTML = "";
+
+					let i = 0;
+
+					const tryNext = () => {
+						const imgPath = `../KNOWLEDGE/V${i}.jpg`;
+						// checking for the version
+						// make sure the folder is right!
+
+						const img = new Image();
+						img.onload = function () {
+							const tile = document.createElement("div");
+							tile.className = "viz-tile";
+
+							const label = document.createElement("div");
+							label.className = "viz-label";
+							label.textContent = `V${i}`;
+
+							tile.appendChild(img);
+							tile.appendChild(label);
+
+							grid.appendChild(tile);
+
+							i++;
+							tryNext();
+						};
+
+						img.onerror = function () {
+						if (i === 0) {
+							const empty = document.createElement("div");
+							empty.className = "viz-tile empty";
+							empty.textContent = "No images yet.";
+							grid.appendChild(empty);
+						}
+						};
+
+						img.src = imgPath;
+					};
+
+					tryNext();
+					}
+
+					window.addEventListener("load", loadVizGallery);
+					</script>
+
 			</div>
 		</div>
 	</body>
