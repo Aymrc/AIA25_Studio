@@ -1,8 +1,31 @@
 import json
 import os
+import time
 from server.config import client, completion_model
-from utils.intent_router import classify_intent
-from utils.material_mapper import MaterialMapper
+
+# Try to import utility modules (they might not exist yet)
+try:
+    from utils.intent_router import classify_intent
+except ImportError:
+    def classify_intent(user_input):
+        # Simple fallback intent classification
+        if any(word in user_input.lower() for word in ['material', 'brick', 'concrete', 'timber', 'window', 'wwr']):
+            return "design_change"
+        elif any(word in user_input.lower() for word in ['data', 'show', 'current', 'parameters']):
+            return "data_query"
+        else:
+            return "design_change"
+
+try:
+    from utils.material_mapper import MaterialMapper
+except ImportError:
+    class MaterialMapper:
+        def map_materials_to_parameters(self, materials):
+            # Simple fallback material mapping
+            return {"ew_par": 0, "wwr": 0.3}
+        
+        def get_material_name(self, param_type, value):
+            return f"Material_{value}"
 
 class UnifiedLLMSystem:
     def __init__(self):
@@ -192,10 +215,34 @@ class UnifiedLLMSystem:
             
         except Exception as e:
             return f"Error retrieving data: {str(e)}"
+
+def handle_change_or_question(user_input, design_data):
     """Handle changes or questions in the Q&A phase"""
     try:
-        reply = answer_user_query(user_input, design_data)
+        # For now, use the unified system
+        llm_system = UnifiedLLMSystem()
+        reply = llm_system.process_user_input(user_input)
         return "complete", reply, design_data
     except Exception as e:
         print(f"Error in handle_change_or_question: {str(e)}")
         return "complete", "I'm having trouble answering that question. Could you try rephrasing it?", design_data
+
+# Main function for compatibility with the modular server
+def manage_conversation_state(current_state, user_input, design_data):
+    """Main entry point for conversation management"""
+    
+    if not user_input.strip():
+        # Return initial greeting
+        return "initial", "Hello! I'm your design assistant. What would you like to build today?", {}
+    
+    try:
+        # Use the unified LLM system
+        llm_system = UnifiedLLMSystem()
+        response = llm_system.process_user_input(user_input)
+        
+        # Return in expected format
+        return "active", response, design_data
+        
+    except Exception as e:
+        print(f"Error in manage_conversation_state: {str(e)}")
+        return "error", f"Sorry, I encountered an error: {str(e)}", design_data
