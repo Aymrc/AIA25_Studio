@@ -1,0 +1,25 @@
+{
+    "version": "V1",
+    "timestamp": "2025-05-30T09:43:53.195325",
+    "inputs": {
+        "ew_par": 0,
+        "ew_ins": 0,
+        "iw_par": 0,
+        "es_ins": 0,
+        "is_par": 0,
+        "ro_par": 0,
+        "ro_ins": 0,
+        "wwr": 0.3,
+        "av": 0.9,
+        "gfa": 0.0
+    },
+    "outputs": {
+        "Energy Intensity - EUI (kWh/sqm_GFA a)": 277.2384012099997,
+        "Cooling Demand (kWh/sqm_GFA a)": 207.93747215999966,
+        "Heating Demand (kWh/sqm_GFA a)": 0.0,
+        "Operational Carbon (kg CO2eq./sqm_GFA a)": 124.63432912000027,
+        "Embodied Carbon A1-A3 (kg CO2eq./sqm_GFA a)": 294.48501047000025,
+        "Embodied Carbon A-D (kg CO2eq./sqm_GFA a)": 299.334897608,
+        "GWP total (kg CO2eq./sqm_GFA a)": 423.92743831300004
+    }
+}
