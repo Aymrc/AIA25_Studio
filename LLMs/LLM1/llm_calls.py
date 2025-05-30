@@ -5,8 +5,22 @@ import re
 import traceback
 from server.config import client, completion_model
 
+try:
+    from utils.material_mapper import MaterialMapper
+except ImportError:
+    class MaterialMapper:
+        def map_simple_material_to_parameters(self, material):
+            mappings = {
+                "brick": {"ew_par": 0, "iw_par": 0},
+                "concrete": {"ew_par": 1, "iw_par": 1},
+                "earth": {"ew_par": 2, "iw_par": 2},
+                "straw": {"ew_par": 3, "iw_par": 3},
+                "timber_frame": {"ew_par": 4, "iw_par": 4, "is_par": 1, "ro_par": 1},
+                "timber_mass": {"ew_par": 5, "iw_par": 5, "is_par": 2, "ro_par": 2}
+            }
+            return mappings.get(material, {"ew_par": 0, "iw_par": 0})
+
 def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
-    """Extract parameters from user input - only what's actually mentioned"""
     try:
         extracted = {}
         input_lower = user_input.lower().strip()
@@ -19,7 +33,6 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
         print(f"[EXTRACTION DEBUG] Input: '{user_input}'")
         print(f"[EXTRACTION DEBUG] Current state: {current_state}")
         
-        # Context-aware single value extraction
         if current_state == "wwr" and re.match(r'^\s*\d+\s*(?:percent|%)?\s*$', input_lower):
             wwr_match = re.search(r'(\d+)', input_lower)
             if wwr_match:
@@ -30,7 +43,6 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Context-aware WWR: {extracted['wwr']}")
                 return extracted
         
-        # Context-aware material extraction
         if current_state == "materiality":
             for material in ["brick", "concrete", "earth", "straw", "timber_frame", "timber_mass", "timber", "wood"]:
                 if material in input_lower:
@@ -40,7 +52,6 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                     print(f"[EXTRACTION DEBUG] Context-aware material: {material}")
                     return extracted
         
-        # Building levels/stories
         level_patterns = [
             r'(\d+)\s*(?:storey|story|stories|level|floor)s?(?:\s+(?:building|structure))?',
             r'(\d+)\s*levels?',
@@ -60,7 +71,6 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Found levels: {levels}")
                 break
         
-        # Building type
         building_patterns = {
             "residential": ["residential", "apartment", "housing", "house", "home", "flat", "condo"],
             "office": ["office", "commercial", "workplace", "business", "office building"],
@@ -78,7 +88,6 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Found building type: {building_type}")
                 break
         
-        # Materials (enhanced patterns)
         material_patterns = {
             "brick": ["brick", "masonry", "brick walls", "bricks", "clay brick", "red brick"],
             "concrete": ["concrete", "cement", "concrete walls", "reinforced concrete"],
@@ -94,7 +103,6 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Found material: {material}")
                 break
         
-        # Climate
         climate_patterns = {
             "cold": ["cold", "winter", "freezing", "snow", "cold climate"],
             "hot-humid": ["hot humid", "hot", "tropical", "humid", "summer", "hot climate"],
@@ -108,7 +116,6 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Found climate: {climate}")
                 break
         
-        # WWR (Window-to-Wall Ratio) - enhanced patterns
         wwr_patterns = [
             r'(\d+)%?\s*(?:window|glazing|glass|windows)',
             r'(?:window|wwr|glazing).*?(\d+)%?',
@@ -126,7 +133,6 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
             if match:
                 percentage = float(match.group(1))
                 
-                # Handle decimal format
                 if pattern == r'^\s*0\.(\d+)\s*$':
                     percentage = float(f"0.{match.group(1)}") * 100
                 
@@ -145,8 +151,59 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
         traceback.print_exc()
         return {}
 
+def create_ml_dictionary(design_data):
+    try:
+        mapper = MaterialMapper()
+        
+        ml_dict = {
+            "ew_par": 0,
+            "ew_ins": 0,
+            "iw_par": 0,
+            "es_ins": 1,
+            "is_par": 0,
+            "ro_par": 0,
+            "ro_ins": 0,
+            "wwr": 0.3
+        }
+        
+        if "materiality" in design_data:
+            material = design_data["materiality"]
+            print(f"[ML DICT] Processing material: {material}")
+            
+            material_params = mapper.map_simple_material_to_parameters(material)
+            ml_dict.update(material_params)
+            print(f"[ML DICT] Material parameters: {material_params}")
+        
+        if "wwr" in design_data:
+            ml_dict["wwr"] = design_data["wwr"]
+            print(f"[ML DICT] WWR: {design_data['wwr']}")
+        
+        ml_dict["last_updated"] = time.time()
+        
+        print(f"[ML DICT] Partial dictionary (geometry data pending): {ml_dict}")
+        return ml_dict
+        
+    except Exception as e:
+        print(f"[ML DICT] Error creating ML dictionary: {e}")
+        return None
+
+def save_ml_dictionary(ml_dict):
+    try:
+        knowledge_folder = "knowledge"
+        os.makedirs(knowledge_folder, exist_ok=True)
+        
+        filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
+        with open(filepath, 'w') as f:
+            json.dump(ml_dict, f, indent=2)
+        
+        print(f"[ML DICT] Saved to {filepath}")
+        return True
+        
+    except Exception as e:
+        print(f"[ML DICT] Error saving: {e}")
+        return False
+
 def merge_design_data(existing_data, new_data):
-    """Merge new extracted data with existing design data"""
     merged = existing_data.copy()
     
     for key, value in new_data.items():
@@ -163,29 +220,20 @@ def merge_design_data(existing_data, new_data):
     return merged
 
 def determine_next_missing_parameter(design_data):
-    """Determine what parameter is still missing"""
-    
-    # Material selection (first required parameter)
     if "materiality" not in design_data:
         return "materiality", "What material would you like to use? (brick, concrete, timber, earth, straw)"
         
-    # Climate context
     if "climate" not in design_data:
         return "climate", "What climate will this building be in? (cold, hot-humid, arid, temperate)"
         
-    # Window percentage
     if "wwr" not in design_data:
         return "wwr", "What percentage of windows would you like? (e.g., 30%, 40%)"
     
-    # Everything complete
-    return "complete", "Great! I have all the basic parameters. Ready to proceed with your design!"
+    return "complete", "🎉 Perfect! All basic parameters collected. Generating ML dictionary..."
 
 def manage_conversation_state(current_state, user_input, design_data):
-    """Main conversation manager - step by step parameter collection"""
-    
     print(f"[CONVERSATION DEBUG] State: {current_state}, Input: '{user_input[:50]}...', Current data keys: {list(design_data.keys())}")
     
-    # Handle empty input - return original greeting
     if not user_input.strip():
         if not design_data:
             return "initial", "Hello! I'm your design assistant. What would you like to build today?", design_data
@@ -193,20 +241,15 @@ def manage_conversation_state(current_state, user_input, design_data):
             next_state, next_question = determine_next_missing_parameter(design_data)
             return next_state, next_question, design_data
     
-    # Extract parameters from current input
     extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
     
-    # Merge with existing data
     if extracted_params:
         design_data = merge_design_data(design_data, extracted_params)
     
-    # Determine next state and question
     next_state, next_question = determine_next_missing_parameter(design_data)
     
-    # Create response
     response_parts = []
     
-    # Acknowledge what was extracted
     if extracted_params:
         acknowledgments = []
         
@@ -230,9 +273,18 @@ def manage_conversation_state(current_state, user_input, design_data):
         if acknowledgments:
             response_parts.append(f"Got it! {', '.join(acknowledgments)}.")
     
-    # Add next question or completion message
     if next_state == "complete":
         response_parts.append("🎉 Perfect! All basic parameters collected.")
+        
+        ml_dict = create_ml_dictionary(design_data)
+        if ml_dict:
+            save_success = save_ml_dictionary(ml_dict)
+            if save_success:
+                response_parts.append("✅ Material parameters ready! Geometry data will be added when you create/analyze the building geometry in Rhino.")
+            else:
+                response_parts.append("⚠️ Parameters collected but dictionary save failed.")
+        else:
+            response_parts.append("⚠️ Parameters collected but dictionary creation failed.")
     else:
         response_parts.append(next_question)
     
@@ -243,7 +295,6 @@ def manage_conversation_state(current_state, user_input, design_data):
     return next_state, final_response, design_data
 
 def handle_change_or_question(user_input, design_data):
-    """Handle changes or questions"""
     try:
         state, reply, updated_data = manage_conversation_state("active", user_input, design_data)
         return state, reply, updated_data

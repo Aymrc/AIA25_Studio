@@ -35,8 +35,54 @@ class MaterialMapper:
         for category, materials in self.material_mappings.items():
             self.value_to_material[category] = {v: k for k, v in materials.items()}
     
+    def map_simple_material_to_parameters(self, simple_material):
+        """Convert simple material category to detailed ML parameters"""
+        
+        # Default parameters structure
+        parameters = {
+            "ew_par": 0,   # External wall partition
+            "ew_ins": 0,   # External wall insulation
+            "iw_par": 0,   # Internal wall partition  
+            "es_ins": 1,   # External slab insulation (default)
+            "is_par": 0,   # Internal slab partition
+            "ro_par": 0,   # Roof partition
+            "ro_ins": 0    # Roof insulation
+        }
+        
+        # Map simple material to detailed parameters
+        material_lower = simple_material.lower()
+        
+        # External and internal wall partitions (same material)
+        if material_lower in self.material_mappings["Ext.Wall_Partition"]:
+            wall_value = self.material_mappings["Ext.Wall_Partition"][material_lower]
+            parameters["ew_par"] = wall_value
+            parameters["iw_par"] = wall_value
+        
+        # Roof and slab materials based on main material
+        if material_lower in ["timber_frame", "timber_mass"]:
+            # Timber buildings
+            if material_lower == "timber_frame":
+                parameters["is_par"] = 1  # Timber frame slab
+                parameters["ro_par"] = 1  # Timber frame roof
+            else:  # timber_mass
+                parameters["is_par"] = 2  # Timber mass slab
+                parameters["ro_par"] = 2  # Timber mass roof
+        else:
+            # Non-timber buildings default to concrete structure
+            parameters["is_par"] = 0  # Concrete slab
+            parameters["ro_par"] = 0  # Concrete roof
+        
+        # Default insulation (can be enhanced based on climate later)
+        # For now, using defaults:
+        # ew_ins = 0 (cellulose)
+        # es_ins = 1 (xps) 
+        # ro_ins = 0 (cellulose)
+        
+        print(f"[MATERIAL MAPPER] {simple_material} -> {parameters}")
+        return parameters
+    
     def map_materials_to_parameters(self, extracted_materials):
-        """Convert extracted materials to parameter dictionary"""
+        """Convert extracted materials to parameter dictionary (existing method)"""
         parameters = {}
         
         # Mapping logic
