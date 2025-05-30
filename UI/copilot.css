@@ -1,0 +1,103 @@
+.copTitle {
+	font-size: 64px;
+	font-weight: bold;
+	background: linear-gradient(to right, #add8e6, #4682b4, #da70d6, #ff8c00, #ffd700);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	display: inline-block;
+
+	position: absolute;
+    top: 20px;
+	left: 20px;
+}
+
+
+body {
+	display: flex;
+    flex-direction: column;
+	align-items: center;
+
+	height: 100vh;
+	margin: 0;
+	padding-top: 100px;
+	background: white;
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+.box {
+	/* height: 150px; */
+	width: 90%;
+	/* max-width: 600px; */
+	
+	background: rgb(250, 250, 250);
+	border: 1px solid rgb(227, 227, 227);
+	margin-top: 10px;
+	border-radius: 10px;
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+	padding: 12px;
+
+
+	transition: width 0.3s ease;
+}
+
+#Viz {
+	min-height: 200px;
+}
+
+
+/* === CHAT with COPILOT === */
+
+#chatbox {
+  max-width: auto;
+  height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 10px;
+  background-color: #fefefe;
+}
+
+.user {
+  text-align: right;
+  font-weight:500;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+.bot {
+  text-align: left;
+  color: #333333;
+  margin-bottom: 8px;
+}
+
+.bot.typing {
+  font-style: italic;
+  color: #999;
+}
+
+
+/* === Viz grid === */
+.viz-grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.viz-tile {
+  width: 150px;
+  height: 100px;
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  color: #888;
+  text-align: center;
+  padding: 5px;
+}
+
+.viz-tile.empty {
+  font-style: italic;
+}
