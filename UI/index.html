@@ -94,6 +94,18 @@
 		<!-- DATA VIZ -->
         <div class="box" id="Data">
             <h3>GWP Trend</h3>
+
+			<label for="metricSelect">Select Metric:</label>
+			<select id="metricSelect">
+				<option value="GWP total (kg CO2e/m²a GFA)">GWP total</option>
+				<option value="Operational Carbon (kg CO2e/m²a GFA)">Op. Carbon</option>
+				<option value="Embodied Carbon A-D (kg CO2e/m²a GFA)">EC A-D</option>
+				<option value="Energy Intensity - EUI (kWh/m²a)">EUI</option>
+				<option value="Cooling Demand (kWh/m²a)">Cooling</option>
+				<option value="Heating Demand (kWh/m²a)">Heating</option>
+			</select>
+
+
   			<div id="gwp-plot" style="width:100%; height:400px;"></div>
         </div>
 
@@ -164,6 +176,7 @@
 		<script>
 			window.addEventListener("load", () => {
 				console.log("DOM fully loaded. Checking gwpData...");
+				const select = document.getElementById("metricSelect");
 
 				if (!window.gwpData || gwpData.length === 0) {
 					console.warn("No gwpData found or empty.");
@@ -172,45 +185,113 @@
 				}
 
 				console.log("Plotting with data:", gwpData);
-
-				const x = gwpData.map(d => d.version);
-				const y = gwpData.map(d => d.gwp);
-
-				const minGWP = Math.min(...y);
-				const maxGWP = Math.max(...y);
-
-				const trace = {
-					x: x,
-					y: y,
-					type: 'scatter',
-					mode: 'markers', // 'lines+markers'
-					marker: {
-						size: 15,
-						color: y,
-						colorscale: [
-							[0, 'da70d6'],
-							[0.5, 'ffd700'],
-							[1, 'add8e6']
-						],
-						reversescale: true,          // Green = low, Red = high
-						cmin: minGWP,
-						cmax: maxGWP,
-						colorbar: {
-							title: 'GWP',
-							thickness: 15
-						}
-					},
-					hovertemplate: "Version: %{x}<br>GWP: %{y} kg CO₂e/m²a GFA<extra></extra>",
-					// line: { shape: 'linear' }
+				
+				// short name for display use
+				const displayNames = { 
+					"GWP total (kg CO2e/m²a GFA)": "GWP total",
+					"Operational Carbon (kg CO2e/m²a GFA)": "Op. Carbon",
+					"Embodied Carbon A-D (kg CO2e/m²a GFA)": "EC A-D",
+					"Energy Intensity - EUI (kWh/m²a)": "EUI",
+					"Cooling Demand (kWh/m²a)": "Cooling",
+					"Heating Demand (kWh/m²a)": "Heating",
 				};
+
+				// const metricName = "GWP total";
+
+
+				function plotMetric(metricName){
+					const filtered = gwpData.filter(d => typeof d[metricName] === "number" && !isNaN(d[metricName]));
+
+					const x = filtered.map(d => d.version);
+					const y = filtered.map(d => d[metricName]);
+
+
+					const min = Math.min(...y);
+					const max = Math.max(...y);
+					
+					const minIndex = y.indexOf(min);
+					const maxIndex = y.indexOf(max);
+					
+					const shortName = displayNames[metricName] || metricName;
+
+					const trace = {
+						x: x,
+						y: y,
+						type: 'scatter',
+						mode: 'markers', // 'lines+markers'
+						marker: {
+							size: 15,
+							color: y,
+							colorscale: [
+								[0, 'da70d6'],
+								[0.5, 'ffd700'],
+								[1, 'add8e6']
+							],
+							reversescale: true,
+							cmin: min,
+							cmax: max,
+							colorbar: {
+								title: {
+									text: metricName,
+									font: {
+									size: 12
+									}
+								},
+								thickness: 15
+								}
+						},
+						hovertemplate: `Version: %{x}<br>${metricName}: %{y} kg CO₂e/m²a GFA<extra></extra>`,
+						// line: { shape: 'linear' }
+					};
 				
 
-				Plotly.newPlot('gwp-plot', [trace], {
-					title: 'Global Warming Potential per Design Iteration',
-					xaxis: { title: 'Version', fixedrange: false, range: [-0.5, 4.5], tickmode: 'linear' }, // fixed width instead of zooming out for each iteration
-					yaxis: { title: 'GWP (kg CO₂e/m²a)', fixedrange: false, range: [-0, maxGWP + 20]},
-					dragmode: 'pan',
-					margin: { t: 40 }
+					Plotly.newPlot('gwp-plot', [trace], {
+						title: `${metricName} per Design Iteration`,
+						xaxis: {
+							title: 'Version',
+							fixedrange: false,
+							range: [-0.5, 4.5],
+							tickmode: 'linear'
+						}, // fixed width instead of zooming out for each iteration
+						yaxis: {
+							title: `${metricName} (kg CO₂e/m²a)`,
+							fixedrange: false,
+							range: [-0, max + 20]
+						},
+						dragmode: 'pan',
+						margin: { t: 40 },
+						
+						annotations: [
+						{
+							x: x[minIndex],
+							y: min,
+							text: "Best",
+							showarrow: false,
+							arrowhead: 0,
+							ax: 0,
+							// ay: -20,
+							yshift: -15,
+							font: { color: 'green', size: 12 }
+						},
+						{
+							x: x[maxIndex],
+							y: max,
+							text: "", // had tag but issue for other metrics
+							showarrow: false,
+							arrowhead: 0,
+							ax: 0,
+							// ay: -20,
+							yshift: -15,
+							font: { color: 'red', size: 12 }
+						}
+					]
+					});
+				}
+
+				plotMetric(select.value);
+
+				select.addEventListener("change", () => {
+					plotMetric(select.value);
 				});
 			});
 		</script>

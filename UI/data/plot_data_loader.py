@@ -9,18 +9,43 @@ import os
 json_folder = "Knowledge/Optioneering"
 output_js = "UI/data/plot_data.js"
 
+metrics = {
+    "GWP total (kg CO2e/m²a GFA)": "GWP total",
+    "Operational Carbon (kg CO2e/m²a GFA)": "Op. Carbon",
+    "Embodied Carbon A-D (kg CO2e/m²a GFA)": "EC A-D",
+    "Energy Intensity - EUI (kWh/m²a)": "EUI",
+    "Cooling Demand (kWh/m²a)": "Cooling",
+    "Heating Demand (kWh/m²a)": "Heating"
+}
+
 data_points = []
+
 
 for filename in sorted(os.listdir(json_folder)):
     if filename.endswith(".json") and filename.startswith("V"):
         version = filename[:-5]
-        with open(os.path.join(json_folder, filename), "r", encoding="utf-8") as f:
-            data = json.load(f)
-            try:
-                gwp = data["outputs"]["GWP total (kg CO2e/m²a GFA)"]
-                data_points.append({"version": version, "gwp": gwp})
-            except Exception as e:
-                print(f"Skipping {filename}: {e}")
+        filepath = os.path.join(json_folder, filename)
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            outputs = data.get("outputs", {})
+            entry = {"version": version}
+
+            for metric in metrics:
+                # Fuzzy match the metric key
+                for key, val in outputs.items():
+                    if key.startswith(metric):
+                        entry[key] = round(val, 2)
+                        break
+
+            data_points.append(entry)
+
+        except Exception as e:
+            print(f"Skipping {filename}: {e}")
+
+
 
 with open(output_js, "w", encoding="utf-8") as out:
     out.write("window.gwpData = ")

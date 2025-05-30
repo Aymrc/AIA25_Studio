@@ -36,23 +36,8 @@ def start_backend():
 
     subprocess.Popen([python_path, server_path], creationflags=0)
 
-
-# === This starts the UI ===
-def launch_copilot():
-    start_backend()
-    show_copilot_ui()
-    print("LLM server started")
-
-    print("Launching Copilot...")
-    # webbrowser.open("UI\index.html")
-
-launch_copilot()
-
-
-
-
 # === This starts the Copilot ===
-def launch():
+def launchLLM():
     print("launchCopilot.py is running ...")
     print("Checking for script path...")
     
@@ -67,4 +52,17 @@ def launch():
         print(" - Python path:", python_path)
         print(" - Script path:", script_path)
 
-launch()
+# === This starts the UI ===
+def launch_copilot():
+    start_backend()
+    show_copilot_ui()
+    launchLLM()
+    print("LLM server started")
+
+    print("Launching Copilot...")
+    # webbrowser.open("UI\index.html")
+
+
+
+launch_copilot()
+launchLLM()
