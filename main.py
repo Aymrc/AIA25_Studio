@@ -16,6 +16,21 @@ def show_copilot_ui():
     dialog.ClientSize = drawing.Size(600, 1000)
     dialog.Topmost = True
 
+    # icon
+    icon_path = os.path.abspath("UI/assets/copilot_icon_dark.ico")
+    if os.path.exists(icon_path):
+        dialog.Icon = drawing.Icon(icon_path)
+    else:
+        print("Icon not found at:", icon_path)
+
+    # start positoin position 
+    screen = Rhino.UI.RhinoEtoApp.MainWindow.Screen
+    screen_width = screen.WorkingArea.Width
+    screen_height = screen.WorkingArea.Height
+    x = int(screen.WorkingArea.X + screen_width * 0.75 - dialog.ClientSize.Width / 2) # change the 0.75 to change the position in x axis
+    y = int(screen.WorkingArea.Y + (screen_height - dialog.ClientSize.Height) / 2)
+    dialog.Location = drawing.Point(x, y)
+
     web_view = forms.WebView()
 
     html_path = os.path.abspath("UI/index.html")
