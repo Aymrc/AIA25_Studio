@@ -53,6 +53,7 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         print(f"⚠️ Could not load materials.json: {e}")
         materials_map = {}
 
+
     # Determine next version number
     existing_versions = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
     existing_numbers = [int(f[1:-5]) for f in existing_versions if f[1:-5].isdigit()]
@@ -98,7 +99,8 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         print(f"✅ Saved version file: {json_path}")
     except Exception as e:
         print(f"⚠️ Failed to save JSON version: {e}")
-
+    
+    return version_name
 
 # ============================
 # MAIN EXECUTION
@@ -160,3 +162,11 @@ except Exception as e:
 
 # Save versioned output
 save_version_json(inputs, prediction, labels, json_folder)
+
+
+
+# Capture .png of iteration
+from UTILS.SaveState_image import capture_viewport
+version_name = save_version_json(inputs, prediction, labels, json_folder)
+
+capture_viewport(version_name, json_folder)
