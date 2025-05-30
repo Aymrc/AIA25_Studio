@@ -1,19 +1,23 @@
-# -*- coding: utf-8 -*-
 import subprocess
 import os
 import webbrowser
 
-import Eto.Forms as forms
-import Eto.Drawing as drawing
-import Rhino.UI
-import System
-import os
-
-
+try:
+    import Eto.Forms as forms
+    import Eto.Drawing as drawing
+    import Rhino.UI
+    import System
+    ETO_AVAILABLE = True
+except ImportError:
+    ETO_AVAILABLE = False
 
 def show_copilot_ui():
+    if not ETO_AVAILABLE:
+        print("Eto forms not available - running server only")
+        return
+        
     dialog = forms.Form()
-    dialog.Title = "Rhino Copilot" # Check COpilot name / How are we calling it?
+    dialog.Title = "Rhino Copilot"
     dialog.ClientSize = drawing.Size(600, 1000)
     dialog.Topmost = True
 
@@ -26,45 +30,60 @@ def show_copilot_ui():
     dialog.Content = web_view
     dialog.Show()
 
-
-#  === Starts the server for LM Studio ===
 def start_backend():
-    server_path = os.path.abspath("SERVER/chat_server.py")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    server_path = os.path.join(script_dir, "gh_server.py")
 
-    # Use your own installed Python
-    python_path = "C:\Python312\python.exe"
+    python_path = "C:\\Python312\\python.exe"
 
-    subprocess.Popen([python_path, server_path], creationflags=0)
+    if not os.path.exists(python_path):
+        print("Python not found at:", python_path)
+        return False
+        
+    if not os.path.exists(server_path):
+        print("Server script not found at:", server_path)
+        return False
 
+    try:
+        subprocess.Popen([python_path, server_path], 
+                        cwd=script_dir,
+                        creationflags=subprocess.CREATE_NEW_CONSOLE)
+        print("Server started successfully!")
+        return True
+    except Exception as e:
+        print("Error starting server:", str(e))
+        return False
 
-# === This starts the UI ===
 def launch_copilot():
-    start_backend()
-    show_copilot_ui()
-    print("LLM server started")
+    print("Starting Rhino Copilot...")
+    
+    if start_backend():
+        print("LLM server started")
+        if ETO_AVAILABLE:
+            show_copilot_ui()
+        else:
+            print("Server running at http://127.0.0.1:5000")
+    else:
+        print("Failed to start server")
 
-    print("Launching Copilot...")
-    # webbrowser.open("UI\index.html")
-
-launch_copilot()
-
-
-
-
-# === This starts the Copilot ===
 def launch():
-    print("launchCopilot.py is running ...")
+    print("launchCopilot.py is running...")
     print("Checking for script path...")
     
-    python_path = "C:\Python312\python.exe" # this makes sure Rhino uses Python3 instead of iron python 
-    script_path = "/SERVER/chat_server.py" # here, place the python scripts you want to run
-
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    python_path = "C:\\Python312\\python.exe"
+    script_path = os.path.join(script_dir, "gh_server.py")
 
     if os.path.exists(python_path) and os.path.exists(script_path):
-        subprocess.Popen([python_path, script_path], creationflags=0)
+        subprocess.Popen([python_path, script_path], 
+                        cwd=script_dir,
+                        creationflags=subprocess.CREATE_NEW_CONSOLE)
+        print("Server launched successfully")
     else:
         print("File not found")
         print(" - Python path:", python_path)
         print(" - Script path:", script_path)
 
+# Main execution
+launch_copilot()
 launch()

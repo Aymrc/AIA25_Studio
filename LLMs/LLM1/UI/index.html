@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+		<title>Cop:lot</title>
+		<link rel="stylesheet" href="copilot.css">
+
+		<link rel="icon" type="image/png" href="copilot_icon.svg">
+		<script defer src="index.js"></script>
+
+	</head>
+
+	<body>
+        <div class="copTitle">Cop:lot</div>
+
+
+        <div class="box" id="Chat">
+			<h2>Copilot Chat</h2>
+				<div id="chatbox">
+					<!-- placeholder for the UI chatbot / don't write here -->
+				</div>
+				
+				<!-- user input -->
+				<div id="input">
+					<input type="text" id="message" placeholder="Type your question..." style="width: 70%;">
+					<button onclick="sendMessage()">Send</button>
+				</div>
+
+				<!-- script for chatbot calling server -->
+				<script>
+				async function sendMessage() {
+					const input = document.getElementById("message");
+					const chatbox = document.getElementById("chatbox");
+
+					const userMsg = input.value.trim();
+					if (!userMsg) return;
+
+					addToChat("user", userMsg);
+					input.value = "";
+
+
+					// "Copilot is typing ..."
+					const typingMsg = document.createElement("div");
+					typingMsg.className = "bot typing";
+					typingMsg.textContent = "Copilot is typing...";
+					chatbox.appendChild(typingMsg);
+					chatbox.scrollTop = chatbox.scrollHeight;
+
+
+					try {
+					const res = await fetch("http://localhost:5000/chat", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ message: userMsg })
+					});
+
+					const data = await res.json();
+
+					// Show copilot message (typing)
+					chatbox.removeChild(typingMsg);
+
+					addToChat("bot", data.response);
+					} catch (err) {
+					console.error("Fetch error:", err);
+					addToChat("bot", "Error contacting the assistant.");
+					}
+				}
+
+				function addToChat(role, text) {
+					const chat = document.getElementById("chatbox");
+					const msg = document.createElement("div");
+					msg.className = role;
+					msg.textContent = (role === "user" ? "User: " : "Copilot: ") + text;
+					chat.appendChild(msg);
+					chat.scrollTop = chat.scrollHeight;
+				}
+
+				document.getElementById("message").addEventListener("keydown", function(event) {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					sendMessage();
+				}
+				});
+				</script>
+		</div>
+
+        <div class="box" id="Data">
+            <h3>Data</h3>
+  			<div id="dataContent">No data yet.</div>
+        </div>
+
+
+
+        <div class="box" id="Viz">
+			<h3>Vizualisation</h3>
+
+  			<div id="vizGrid" class="viz-grid"> 
+				<div class="viz-tile empty">Waiting for image...</div>
+				<!-- basic grid placeholder -->
+
+				<!-- JS script for adding new tile when you image avaiable -->
+				<script>
+					function loadVizGallery() {
+					const grid = document.getElementById("vizGrid");
+					grid.innerHTML = "";
+
+					let i = 0;
+
+					const tryNext = () => {
+						const imgPath = `../KNOWLEDGE/V${i}.png`;
+						// checking for the version
+						// make sure the folder is right!
+
+						const img = new Image();
+						img.onload = function () {
+							const tile = document.createElement("div");
+							tile.className = "viz-tile";
+
+							const label = document.createElement("div");
+							label.className = "viz-label";
+							label.textContent = `V${i}`;
+
+							tile.appendChild(img);
+							tile.appendChild(label);
+
+							grid.appendChild(tile);
+
+							i++;
+							tryNext();
+						};
+
+						img.onerror = function () {
+						if (i === 0) {
+							const empty = document.createElement("div");
+							empty.className = "viz-tile empty";
+							empty.textContent = "No images yet.";
+							grid.appendChild(empty);
+						}
+						};
+
+						img.src = imgPath;
+					};
+
+					tryNext();
+					}
+
+					window.addEventListener("load", loadVizGallery);
+					</script>
+
+			</div>
+		</div>
+	</body>
+</html>
