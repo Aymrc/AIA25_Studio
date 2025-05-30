@@ -10,12 +10,7 @@ import datetime
 # from UTILS.SaveState_image import capture_viewport
 
 
-def capture_viewport_to_knowledge(version_name="unnamed"): # takes the input "version name" from the calling file
-    import rhinoscriptsyntax as rs
-    import scriptcontext as sc
-    import Rhino
-    import System
-
+def capture_viewport(version_name="unnamed"): # takes the input "version name" from the calling file
     base_dir = os.path.dirname(__file__)
     knowledge_dir = os.path.abspath(os.path.join(base_dir, "..", "KNOWLEDGE")) # check sub-folder thing
     os.makedirs(knowledge_dir, exist_ok=True)
