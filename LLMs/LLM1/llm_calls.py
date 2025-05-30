@@ -1,248 +1,252 @@
 import json
 import os
 import time
+import re
+import traceback
 from server.config import client, completion_model
 
-# Try to import utility modules (they might not exist yet)
-try:
-    from utils.intent_router import classify_intent
-except ImportError:
-    def classify_intent(user_input):
-        # Simple fallback intent classification
-        if any(word in user_input.lower() for word in ['material', 'brick', 'concrete', 'timber', 'window', 'wwr']):
-            return "design_change"
-        elif any(word in user_input.lower() for word in ['data', 'show', 'current', 'parameters']):
-            return "data_query"
-        else:
-            return "design_change"
-
-try:
-    from utils.material_mapper import MaterialMapper
-except ImportError:
-    class MaterialMapper:
-        def map_materials_to_parameters(self, materials):
-            # Simple fallback material mapping
-            return {"ew_par": 0, "wwr": 0.3}
+def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
+    """Extract parameters from user input - only what's actually mentioned"""
+    try:
+        extracted = {}
+        input_lower = user_input.lower().strip()
         
-        def get_material_name(self, param_type, value):
-            return f"Material_{value}"
-
-class UnifiedLLMSystem:
-    def __init__(self):
-        self.material_mapper = MaterialMapper()
-        self.knowledge_folder = "knowledge"
-        self.ensure_knowledge_folder()
+        if not input_lower:
+            return extracted
+            
+        design_data = design_data or {}
         
-    def ensure_knowledge_folder(self):
-        """Create knowledge folder structure"""
-        os.makedirs(self.knowledge_folder, exist_ok=True)
+        print(f"[EXTRACTION DEBUG] Input: '{user_input}'")
+        print(f"[EXTRACTION DEBUG] Current state: {current_state}")
         
-        # Initialize files
-        files = {
-            "design_parameters.json": {},
-            "rhino_geometry.json": {},
-            "compiled_ml_data.json": {},
-            "conversation_history.json": []
+        # Context-aware single value extraction
+        if current_state == "wwr" and re.match(r'^\s*\d+\s*(?:percent|%)?\s*$', input_lower):
+            wwr_match = re.search(r'(\d+)', input_lower)
+            if wwr_match:
+                percentage = float(wwr_match.group(1))
+                if percentage > 1:
+                    percentage = percentage / 100
+                extracted["wwr"] = round(min(percentage, 0.9), 2)
+                print(f"[EXTRACTION DEBUG] Context-aware WWR: {extracted['wwr']}")
+                return extracted
+        
+        # Context-aware material extraction
+        if current_state == "materiality":
+            for material in ["brick", "concrete", "earth", "straw", "timber_frame", "timber_mass", "timber", "wood"]:
+                if material in input_lower:
+                    if material in ["timber", "wood"]:
+                        material = "timber_mass"
+                    extracted["materiality"] = material
+                    print(f"[EXTRACTION DEBUG] Context-aware material: {material}")
+                    return extracted
+        
+        # Building levels/stories
+        level_patterns = [
+            r'(\d+)\s*(?:storey|story|stories|level|floor)s?(?:\s+(?:building|structure))?',
+            r'(\d+)\s*levels?',
+            r'(\d+)[-\s]*level',
+            r'(\d+)[-\s]*storey',
+            r'(\d+)\s*floors?',
+            r'(?:building\s+with\s+)?(\d+)\s+(?:level|floor|storey)',
+            r'(\d+)[-\s]*story(?:\s+building)?'
+        ]
+        for pattern in level_patterns:
+            match = re.search(pattern, input_lower)
+            if match:
+                levels = min(int(match.group(1)), 10)
+                if "geometry" not in extracted:
+                    extracted["geometry"] = {}
+                extracted["geometry"]["number_of_levels"] = levels
+                print(f"[EXTRACTION DEBUG] Found levels: {levels}")
+                break
+        
+        # Building type
+        building_patterns = {
+            "residential": ["residential", "apartment", "housing", "house", "home", "flat", "condo"],
+            "office": ["office", "commercial", "workplace", "business", "office building"],
+            "hotel": ["hotel", "hospitality", "accommodation", "resort", "inn", "motel"],
+            "mixed-use": ["mixed-use", "mixed use", "multi-use", "multiple use"],
+            "museum": ["museum", "gallery", "cultural", "exhibition", "art museum"],
+            "hospital": ["hospital", "medical", "healthcare", "clinic", "medical center"],
+            "school": ["school", "educational", "university", "college", "education"],
+            "retail": ["retail", "shop", "store", "shopping", "commercial retail"]
         }
         
-        for filename, default_content in files.items():
-            filepath = os.path.join(self.knowledge_folder, filename)
-            if not os.path.exists(filepath):
-                with open(filepath, 'w') as f:
-                    json.dump(default_content, f, indent=2)
-    
-    def process_user_input(self, user_input):
-        """Main processing pipeline"""
+        for building_type, patterns in building_patterns.items():
+            if any(pattern in input_lower for pattern in patterns):
+                extracted["building_type"] = building_type
+                print(f"[EXTRACTION DEBUG] Found building type: {building_type}")
+                break
         
-        # Save conversation
-        self.save_conversation_turn(user_input)
-        
-        # Classify intent
-        intent = classify_intent(user_input)
-        print(f"🔍 Intent: {intent}")
-        
-        # Route based on intent
-        if intent == "design_change":
-            return self.handle_material_wwr_input(user_input)
-        elif intent == "data_query":
-            return self.handle_data_query(user_input)
-        elif intent == "suggestion":
-            return "Suggestions will be available in the next phase."
-        else:
-            return self.handle_material_wwr_input(user_input)  # Default to material extraction
-    
-    def handle_material_wwr_input(self, user_input):
-        """Extract materials AND window-to-wall ratio"""
-        
-        # Extract both materials and WWR
-        extracted_data = self.extract_materials_and_wwr(user_input)
-        
-        if not extracted_data.get("materials") and not extracted_data.get("wwr"):
-            return "I couldn't identify materials or window ratio. Try: 'brick walls with 40% windows'"
-        
-        # Map materials to parameters
-        parameters = {}
-        
-        if extracted_data.get("materials"):
-            material_params = self.material_mapper.map_materials_to_parameters(extracted_data["materials"])
-            parameters.update(material_params)
-        
-        if extracted_data.get("wwr"):
-            parameters["wwr"] = extracted_data["wwr"]
-        
-        # Save parameters
-        self.save_design_parameters(parameters)
-        
-        # Create response
-        response_parts = []
-        if extracted_data.get("materials"):
-            materials_list = ", ".join([f"{k}: {v}" for k, v in extracted_data["materials"].items()])
-            response_parts.append(f"Materials: {materials_list}")
-        
-        if extracted_data.get("wwr"):
-            response_parts.append(f"Window ratio: {extracted_data['wwr']*100:.0f}%")
-        
-        return f"✅ Saved - {' | '.join(response_parts)}"
-    
-    def extract_materials_and_wwr(self, user_input):
-        """Enhanced extraction for materials + WWR"""
-        
-        system_prompt = """
-        Extract building materials and window-to-wall ratio from user input.
-        Return ONLY a JSON object with this structure:
-        
-        {
-            "materials": {
-                "wall_material": "brick|concrete|earth|straw|timber_frame|timber_mass",
-                "wall_insulation": "cellulose|cork|eps|glass_wool|mineral_wool|wood_fiber",
-                "roof_material": "concrete|timber_frame|timber_mass", 
-                "roof_insulation": "cellulose|cork|eps|extruded_glas|glass_wool|mineral_wool|wood_fiber|xps",
-                "slab_material": "concrete|timber_frame|timber_mass",
-                "slab_insulation": "extruded_glas|xps"
-            },
-            "wwr": 0.3
+        # Materials (enhanced patterns)
+        material_patterns = {
+            "brick": ["brick", "masonry", "brick walls", "bricks", "clay brick", "red brick"],
+            "concrete": ["concrete", "cement", "concrete walls", "reinforced concrete"],
+            "earth": ["earth", "adobe", "mud", "earthen", "clay", "rammed earth", "cob"],
+            "straw": ["straw", "straw bale", "hay", "strawbale", "straw walls"],
+            "timber_frame": ["timber frame", "wood frame", "wooden frame", "frame construction"],
+            "timber_mass": ["timber mass", "mass timber", "timber", "wood", "wooden", "solid timber", "heavy timber", "logs"]
         }
         
-        For materials: Only include keys where materials are clearly specified.
-        For WWR: Extract percentages like "40% windows", "30% glazing", "0.4 window ratio" → convert to decimal (0.4).
-        If no WWR mentioned, omit the "wwr" key.
-        Use exact material names from the lists above.
-        """
+        for material, patterns in material_patterns.items():
+            if any(pattern in input_lower for pattern in patterns):
+                extracted["materiality"] = material
+                print(f"[EXTRACTION DEBUG] Found material: {material}")
+                break
         
-        try:
-            response = client.chat.completions.create(
-                model=completion_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ]
-            )
-            
-            result = json.loads(response.choices[0].message.content)
-            return result
-            
-        except Exception as e:
-            print(f"Extraction error: {e}")
-            return {}
+        # Climate
+        climate_patterns = {
+            "cold": ["cold", "winter", "freezing", "snow", "cold climate"],
+            "hot-humid": ["hot humid", "hot", "tropical", "humid", "summer", "hot climate"],
+            "arid": ["arid", "dry", "desert", "arid climate", "dry climate"],
+            "temperate": ["temperate", "mild", "moderate", "temperate climate"]
+        }
+        
+        for climate, patterns in climate_patterns.items():
+            if any(pattern in input_lower for pattern in patterns):
+                extracted["climate"] = climate
+                print(f"[EXTRACTION DEBUG] Found climate: {climate}")
+                break
+        
+        # WWR (Window-to-Wall Ratio) - enhanced patterns
+        wwr_patterns = [
+            r'(\d+)%?\s*(?:window|glazing|glass|windows)',
+            r'(?:window|wwr|glazing).*?(\d+)%?',
+            r'(\d+)%?\s*wwr',
+            r'(\d+)\s*percent\s*(?:window|glass|glazing)',
+            r'^\s*(\d+)\s*$',
+            r'^\s*(\d+)\s*percent\s*$',
+            r'^\s*(\d+)%\s*$',
+            r'^\s*0\.(\d+)\s*$',
+            r'(\d+)\s*percent'
+        ]
+        
+        for pattern in wwr_patterns:
+            match = re.search(pattern, input_lower)
+            if match:
+                percentage = float(match.group(1))
+                
+                # Handle decimal format
+                if pattern == r'^\s*0\.(\d+)\s*$':
+                    percentage = float(f"0.{match.group(1)}") * 100
+                
+                if percentage > 1:
+                    percentage = percentage / 100
+                    
+                extracted["wwr"] = round(min(percentage, 0.9), 2)
+                print(f"[EXTRACTION DEBUG] Found WWR: {extracted['wwr']}")
+                break
+        
+        print(f"[EXTRACTION DEBUG] Final extracted: {extracted}")
+        return extracted
+        
+    except Exception as e:
+        print(f"Error in parameter extraction: {str(e)}")
+        traceback.print_exc()
+        return {}
+
+def merge_design_data(existing_data, new_data):
+    """Merge new extracted data with existing design data"""
+    merged = existing_data.copy()
     
-    def save_design_parameters(self, parameters):
-        """Save parameters to knowledge folder"""
-        filepath = os.path.join(self.knowledge_folder, "design_parameters.json")
-        
-        # Load existing
-        try:
-            with open(filepath, 'r') as f:
-                existing = json.load(f)
-        except:
-            existing = {}
-        
-        # Update with timestamp
-        existing.update(parameters)
-        existing["last_updated"] = time.time()
-        
-        # Save
-        with open(filepath, 'w') as f:
-            json.dump(existing, f, indent=2)
-        
-        print(f"💾 Parameters saved: {parameters}")
+    for key, value in new_data.items():
+        if key == "geometry":
+            if "geometry" not in merged:
+                merged["geometry"] = {}
+            for geom_key, geom_value in value.items():
+                merged["geometry"][geom_key] = geom_value
+                print(f"[MERGE DEBUG] Updated geometry.{geom_key} = {geom_value}")
+        else:
+            merged[key] = value
+            print(f"[MERGE DEBUG] Updated {key} = {value}")
     
-    def save_conversation_turn(self, user_input):
-        """Save conversation history"""
-        filepath = os.path.join(self.knowledge_folder, "conversation_history.json")
-        
-        try:
-            with open(filepath, 'r') as f:
-                history = json.load(f)
-        except:
-            history = []
-        
-        history.append({
-            "timestamp": time.time(),
-            "user_input": user_input,
-            "intent": classify_intent(user_input)
-        })
-        
-        # Keep last 50 conversations
-        if len(history) > 50:
-            history = history[-50:]
-        
-        with open(filepath, 'w') as f:
-            json.dump(history, f, indent=2)
+    return merged
+
+def determine_next_missing_parameter(design_data):
+    """Determine what parameter is still missing"""
     
-    def handle_data_query(self, user_input):
-        """Handle data queries"""
-        try:
-            # Load current compiled data
-            compiled_path = os.path.join(self.knowledge_folder, "compiled_ml_data.json")
-            with open(compiled_path, 'r') as f:
-                data = json.load(f)
-            
-            if not data:
-                return "No design data available yet. Please specify materials and window ratio first."
-            
-            # Simple data display
-            summary = []
-            if "ew_par" in data:
-                summary.append(f"Wall material: {self.material_mapper.get_material_name('ew_par', data['ew_par'])}")
-            if "wwr" in data:
-                summary.append(f"Window ratio: {data['wwr']*100:.0f}%")
-            if "gfa" in data:
-                summary.append(f"GFA: {data['gfa']:.1f}m²")
-            if "av" in data:
-                summary.append(f"Compactness: {data['av']:.3f}")
-            
-            return " | ".join(summary) if summary else "No parameters set yet."
-            
-        except Exception as e:
-            return f"Error retrieving data: {str(e)}"
+    # Material selection (first required parameter)
+    if "materiality" not in design_data:
+        return "materiality", "What material would you like to use? (brick, concrete, timber, earth, straw)"
+        
+    # Climate context
+    if "climate" not in design_data:
+        return "climate", "What climate will this building be in? (cold, hot-humid, arid, temperate)"
+        
+    # Window percentage
+    if "wwr" not in design_data:
+        return "wwr", "What percentage of windows would you like? (e.g., 30%, 40%)"
+    
+    # Everything complete
+    return "complete", "Great! I have all the basic parameters. Ready to proceed with your design!"
+
+def manage_conversation_state(current_state, user_input, design_data):
+    """Main conversation manager - step by step parameter collection"""
+    
+    print(f"[CONVERSATION DEBUG] State: {current_state}, Input: '{user_input[:50]}...', Current data keys: {list(design_data.keys())}")
+    
+    # Handle empty input - return original greeting
+    if not user_input.strip():
+        if not design_data:
+            return "initial", "Hello! I'm your design assistant. What would you like to build today?", design_data
+        else:
+            next_state, next_question = determine_next_missing_parameter(design_data)
+            return next_state, next_question, design_data
+    
+    # Extract parameters from current input
+    extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
+    
+    # Merge with existing data
+    if extracted_params:
+        design_data = merge_design_data(design_data, extracted_params)
+    
+    # Determine next state and question
+    next_state, next_question = determine_next_missing_parameter(design_data)
+    
+    # Create response
+    response_parts = []
+    
+    # Acknowledge what was extracted
+    if extracted_params:
+        acknowledgments = []
+        
+        if "building_type" in extracted_params:
+            acknowledgments.append(f"building type: {extracted_params['building_type']}")
+        
+        if "geometry" in extracted_params:
+            geom = extracted_params["geometry"]
+            if "number_of_levels" in geom:
+                acknowledgments.append(f"{geom['number_of_levels']} levels")
+        
+        if "materiality" in extracted_params:
+            acknowledgments.append(f"{extracted_params['materiality']} material")
+        
+        if "climate" in extracted_params:
+            acknowledgments.append(f"{extracted_params['climate']} climate")
+        
+        if "wwr" in extracted_params:
+            acknowledgments.append(f"{int(extracted_params['wwr']*100)}% windows")
+        
+        if acknowledgments:
+            response_parts.append(f"Got it! {', '.join(acknowledgments)}.")
+    
+    # Add next question or completion message
+    if next_state == "complete":
+        response_parts.append("🎉 Perfect! All basic parameters collected.")
+    else:
+        response_parts.append(next_question)
+    
+    final_response = " ".join(response_parts)
+    
+    print(f"[CONVERSATION DEBUG] Final state: {next_state}, Response: {final_response}")
+    
+    return next_state, final_response, design_data
 
 def handle_change_or_question(user_input, design_data):
-    """Handle changes or questions in the Q&A phase"""
+    """Handle changes or questions"""
     try:
-        # For now, use the unified system
-        llm_system = UnifiedLLMSystem()
-        reply = llm_system.process_user_input(user_input)
-        return "complete", reply, design_data
+        state, reply, updated_data = manage_conversation_state("active", user_input, design_data)
+        return state, reply, updated_data
     except Exception as e:
         print(f"Error in handle_change_or_question: {str(e)}")
-        return "complete", "I'm having trouble answering that question. Could you try rephrasing it?", design_data
-
-# Main function for compatibility with the modular server
-def manage_conversation_state(current_state, user_input, design_data):
-    """Main entry point for conversation management"""
-    
-    if not user_input.strip():
-        # Return initial greeting
-        return "initial", "Hello! I'm your design assistant. What would you like to build today?", {}
-    
-    try:
-        # Use the unified LLM system
-        llm_system = UnifiedLLMSystem()
-        response = llm_system.process_user_input(user_input)
-        
-        # Return in expected format
-        return "active", response, design_data
-        
-    except Exception as e:
-        print(f"Error in manage_conversation_state: {str(e)}")
-        return "error", f"Sorry, I encountered an error: {str(e)}", design_data
+        return "active", "I'm having trouble with that. Could you try rephrasing?", design_data
