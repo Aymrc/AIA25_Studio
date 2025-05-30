@@ -33,6 +33,7 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
         print(f"[EXTRACTION DEBUG] Input: '{user_input}'")
         print(f"[EXTRACTION DEBUG] Current state: {current_state}")
         
+        # Only use context-aware single-word extraction for simple inputs
         if current_state == "wwr" and re.match(r'^\s*\d+\s*(?:percent|%)?\s*$', input_lower):
             wwr_match = re.search(r'(\d+)', input_lower)
             if wwr_match:
@@ -43,14 +44,7 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Context-aware WWR: {extracted['wwr']}")
                 return extracted
         
-        if current_state == "materiality":
-            for material in ["brick", "concrete", "earth", "straw", "timber_frame", "timber_mass", "timber", "wood"]:
-                if material in input_lower:
-                    if material in ["timber", "wood"]:
-                        material = "timber_mass"
-                    extracted["materiality"] = material
-                    print(f"[EXTRACTION DEBUG] Context-aware material: {material}")
-                    return extracted
+        # REMOVED the early return for materials - let it continue with full extraction
         
         level_patterns = [
             r'(\d+)\s*(?:storey|story|stories|level|floor)s?(?:\s+(?:building|structure))?',
@@ -117,6 +111,7 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 break
         
         wwr_patterns = [
+            r'wwr:\s*(\d+)',  # Added this pattern for "wwr: 60"
             r'(\d+)%?\s*(?:window|glazing|glass|windows)',
             r'(?:window|wwr|glazing).*?(\d+)%?',
             r'(\d+)%?\s*wwr',
@@ -177,8 +172,6 @@ def create_ml_dictionary(design_data):
         if "wwr" in design_data:
             ml_dict["wwr"] = design_data["wwr"]
             print(f"[ML DICT] WWR: {design_data['wwr']}")
-        
-        ml_dict["last_updated"] = time.time()
         
         print(f"[ML DICT] Partial dictionary (geometry data pending): {ml_dict}")
         return ml_dict
