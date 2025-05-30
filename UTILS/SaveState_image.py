@@ -10,7 +10,7 @@ import datetime
 # from UTILS.SaveState_image import capture_viewport
 
 
-def capture_viewport_to_knowledge(version_name, folder): # takes the input "version name" from the calling file
+def capture_viewport(version_name, folder): # takes the input "version name" from the calling file
     os.makedirs(folder, exist_ok=True)
 
     #file name to be similar to the iteration.json
