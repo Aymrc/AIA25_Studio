@@ -9,8 +9,10 @@
 		<link rel="stylesheet" href="copilot.css">
 
 		<link rel="icon" type="image/png" href="copilot_icon.svg">
-		<script defer src="index.js"></script>
 
+		<!-- plotly for the plot in data tab -->
+		<script src="https://cdn.plot.ly/plotly-2.27.1.min.js"></script>
+		<script src="data/plot_data.js"></script>
 	</head>
 
 	<body>
@@ -18,7 +20,7 @@
 
 
         <div class="box" id="Chat">
-			<h2>Copilot Chat</h2>
+			<!-- <h2>Copilot Chat</h2> -->
 				<div id="chatbox">
 					<!-- placeholder for the UI chatbot / don't write here -->
 				</div>
@@ -87,13 +89,17 @@
 				</script>
 		</div>
 
+
+
+		<!-- DATA VIZ -->
         <div class="box" id="Data">
-            <h3>Data</h3>
-  			<div id="dataContent">No data yet.</div>
+            <h3>GWP Trend</h3>
+  			<div id="gwp-plot" style="width:100%; height:400px;"></div>
         </div>
 
 
 
+		<!-- GALLERY -->
         <div class="box" id="Viz">
 			<h3>Vizualisation</h3>
 
@@ -110,7 +116,7 @@
 					let i = 0;
 
 					const tryNext = () => {
-						const imgPath = `../KNOWLEDGE/V${i}.jpg`;
+						const imgPath = `../KNOWLEDGE/Optioneering/V${i}.png`;
 						// checking for the version
 						// make sure the folder is right!
 
@@ -151,6 +157,65 @@
 					</script>
 
 			</div>
+			
 		</div>
+
+		<!-- script for plotly -->
+		<script>
+			window.addEventListener("load", () => {
+				console.log("DOM fully loaded. Checking gwpData...");
+
+				if (!window.gwpData || gwpData.length === 0) {
+					console.warn("No gwpData found or empty.");
+					document.getElementById("gwp-plot").innerText = "No data yet.";
+					return;
+				}
+
+				console.log("Plotting with data:", gwpData);
+
+				const x = gwpData.map(d => d.version);
+				const y = gwpData.map(d => d.gwp);
+
+				const minGWP = Math.min(...y);
+				const maxGWP = Math.max(...y);
+
+				const trace = {
+					x: x,
+					y: y,
+					type: 'scatter',
+					mode: 'markers', // 'lines+markers'
+					marker: {
+						size: 15,
+						color: y,
+						colorscale: [
+							[0, 'green'],
+							[0.5, 'orange'],
+							[1, 'red']
+						],
+						reversescale: false,          // Green = low, Red = high
+						cmin: minGWP,
+						cmax: maxGWP,
+						colorbar: {
+							title: 'GWP',
+							thickness: 15
+						}
+					},
+					hovertemplate: "Version: %{x}<br>GWP: %{y} kg CO₂e/m²a GFA<extra></extra>",
+					// line: { shape: 'linear' }
+				};
+				
+
+				Plotly.newPlot('gwp-plot', [trace], {
+					title: 'Global Warming Potential per Design Iteration',
+					xaxis: { title: 'Version', fixedrange: false, range: [-0.5, 4.5], tickmode: 'linear' }, // fixed width instead of zooming out for each iteration
+					yaxis: { title: 'GWP (kg CO₂e/m²a)', fixedrange: false, range: [-0, maxGWP + 20]},
+					dragmode: 'pan',
+					margin: { t: 40 }
+				});
+			});
+		</script>
+
+
+
 	</body>
 </html>
