@@ -10,10 +10,9 @@ import System
 import os
 
 
-
 def show_copilot_ui():
     dialog = forms.Form()
-    dialog.Title = "Rhino Copilot" # Check COpilot name / How are we calling it?
+    dialog.Title = "Rhino Copilot" # Check Copilot name / How are we calling it?
     dialog.ClientSize = drawing.Size(600, 1000)
     dialog.Topmost = True
 
@@ -35,6 +34,7 @@ def start_backend():
     python_path = "C:\Python312\python.exe"
 
     subprocess.Popen([python_path, server_path], creationflags=0)
+    return python_path #improve it!
 
 # === This starts the Copilot ===
 def launchLLM():

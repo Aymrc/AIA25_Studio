@@ -25,14 +25,5 @@ window.gwpData = [
     "Energy Intensity - EUI (kWh/m\u00b2a)": 361.81,
     "Cooling Demand (kWh/m\u00b2a)": 292.6,
     "Heating Demand (kWh/m\u00b2a)": 0.0
-  },
-  {
-    "version": "V3",
-    "GWP total (kg CO2e/m\u00b2a GFA)": 300,
-    "Operational Carbon (kg CO2e/m\u00b2a GFA)": 162.91,
-    "Embodied Carbon A-D (kg CO2e/m\u00b2a GFA)": 409.92,
-    "Energy Intensity - EUI (kWh/m\u00b2a)": 361.81,
-    "Cooling Demand (kWh/m\u00b2a)": 292.6,
-    "Heating Demand (kWh/m\u00b2a)": 0.0
   }
 ];
