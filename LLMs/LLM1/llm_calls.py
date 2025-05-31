@@ -5,6 +5,14 @@ import re
 import traceback
 from server.config import client, completion_model
 
+# Try to import César's SQL dataset utility
+try:
+    from utils.sql_dataset import get_top_low_carbon_high_gfa
+    SQL_DATASET_AVAILABLE = True
+except ImportError:
+    SQL_DATASET_AVAILABLE = False
+    print("SQL dataset not available - running without database features")
+
 try:
     from utils.material_mapper import MaterialMapper
 except ImportError:
@@ -19,6 +27,10 @@ except ImportError:
                 "timber_mass": {"ew_par": 5, "iw_par": 5, "is_par": 2, "ro_par": 2}
             }
             return mappings.get(material, {"ew_par": 0, "iw_par": 0})
+
+# ==========================================
+# PHASE 1 FUNCTIONS (Your System)
+# ==========================================
 
 def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
     try:
@@ -44,8 +56,7 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Context-aware WWR: {extracted['wwr']}")
                 return extracted
         
-        # REMOVED the early return for materials - let it continue with full extraction
-        
+        # Level patterns
         level_patterns = [
             r'(\d+)\s*(?:storey|story|stories|level|floor)s?(?:\s+(?:building|structure))?',
             r'(\d+)\s*levels?',
@@ -65,6 +76,7 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Found levels: {levels}")
                 break
         
+        # Building type patterns
         building_patterns = {
             "residential": ["residential", "apartment", "housing", "house", "home", "flat", "condo"],
             "office": ["office", "commercial", "workplace", "business", "office building"],
@@ -82,6 +94,7 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Found building type: {building_type}")
                 break
         
+        # Material patterns
         material_patterns = {
             "brick": ["brick", "masonry", "brick walls", "bricks", "clay brick", "red brick"],
             "concrete": ["concrete", "cement", "concrete walls", "reinforced concrete"],
@@ -97,6 +110,7 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Found material: {material}")
                 break
         
+        # Climate patterns
         climate_patterns = {
             "cold": ["cold", "winter", "freezing", "snow", "cold climate"],
             "hot-humid": ["hot humid", "hot", "tropical", "humid", "summer", "hot climate"],
@@ -110,8 +124,9 @@ def extract_all_parameters_from_input(user_input, current_state="unknown", desig
                 print(f"[EXTRACTION DEBUG] Found climate: {climate}")
                 break
         
+        # WWR patterns
         wwr_patterns = [
-            r'wwr:\s*(\d+)',  # Added this pattern for "wwr: 60"
+            r'wwr:\s*(\d+)',
             r'(\d+)%?\s*(?:window|glazing|glass|windows)',
             r'(?:window|wwr|glazing).*?(\d+)%?',
             r'(\d+)%?\s*wwr',
@@ -294,3 +309,162 @@ def handle_change_or_question(user_input, design_data):
     except Exception as e:
         print(f"Error in handle_change_or_question: {str(e)}")
         return "active", "I'm having trouble with that. Could you try rephrasing?", design_data
+
+# ==========================================
+# PHASE 2 FUNCTIONS (César's System)
+# ==========================================
+
+def query_intro():
+    """Prompt the user to ask about their design."""
+    response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {
+                "role": "system",
+                "content": """
+                Greet the user briefly and say: 'What would you like to know about your design?'
+                Do not include any reasoning, chain-of-thought, or <think> tags. Just respond plainly.
+                """
+            }
+        ]
+    )
+    return response.choices[0].message.content
+
+def answer_user_query(user_query, design_data):
+    """Return a precise, factual answer using available project data."""
+    design_data_json = json.dumps(design_data)
+    response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {
+                "role": "system",
+                "content": f"""
+                You are a technical assistant. Answer the user's question using only this data:
+
+                {design_data_json}
+
+                Respond in 1–2 concise sentences. If the answer isn't in the data, say so directly.
+                Avoid unnecessary explanations.
+                """
+            },
+            {
+                "role": "user",
+                "content": user_query
+            }
+        ]
+    )
+    return response.choices[0].message.content
+
+def suggest_improvements(user_prompt, design_data):
+    """Give 1–2 brief, practical suggestions based on the design data and SQL dataset insights."""
+    design_data_json = json.dumps(design_data)
+
+    # Step 1: Get dataset-based reference examples (if available)
+    if SQL_DATASET_AVAILABLE:
+        try:
+            reference_examples = get_top_low_carbon_high_gfa(max_results=3)
+        except Exception as e:
+            print(f"Error accessing SQL dataset: {e}")
+            reference_examples = []
+    else:
+        reference_examples = []
+
+    if reference_examples:
+        formatted_examples = "\n".join(
+            [
+                f"- {row.get('Typology', 'Unknown')} | "
+                f"GFA: {row.get('GFA', 'N/A')} | "
+                f"GWP: {row.get('GWP total/m²GFA', row.get('GWP_total_per_m2_GFA', 'N/A'))}"
+                for row in reference_examples
+            ]
+        )
+        dataset_block = f"""
+Reference examples from other projects with high GFA and low carbon footprint:
+{formatted_examples}
+"""
+    else:
+        dataset_block = "\n(No dataset matches found — skipping example injection.)\n"
+
+    # Step 2: Build the system prompt
+    system_prompt = f"""
+You are a design advisor. Suggest practical improvements using this data:
+
+Current design:
+{design_data_json}
+{dataset_block}
+
+Answer the user's prompt in 1–2 short, specific suggestions.
+Be direct. No intros, no conclusions. Do not repeat the user prompt.
+Only suggest changes relevant to this design.
+"""
+
+    # Step 3: Call the LLM
+    response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+
+    return response.choices[0].message.content
+
+def suggest_change(user_prompt, design_data):
+    """Interpret user's design change request and return a structured parameter dictionary."""
+    design_data_text = json.dumps(design_data)
+
+    system_prompt = f"""
+        You are a design assistant. The user will request a design change. You must respond ONLY with a JSON object that represents a complete parameter configuration.
+
+        ### Output format (mandatory structure):
+        {{
+            "ew_par": 0,
+            "ew_ins": 0,
+            "iw_par": 0,
+            "es_ins": 1,
+            "is_par": 0,
+            "ro_par": 0,
+            "ro_ins": 0,
+            "wwr": 0.3,
+            "gfa": 200.0,
+            "av": 0.5
+        }}
+
+        ### Parameter definitions:
+        - ew_par: Exterior Wall Partitions → BRICK=0, CONCRETE=1, EARTH=2, STRAW=3, TIMBER FRAME=4, TIMBER MASS=5  
+        - ew_ins: Exterior Wall Insulation → CELLULOSE=0, CORK=1, EPS=2, GLASS WOOL=3, MINERAL WOOL=4, WOOD FIBER=5  
+        - iw_par: Interior Wall Partitions → same as ew_par  
+        - es_ins: Exterior Slabs Insulation → EXPANDED GLASS=0, XPS=1  
+        - is_par: Interior Slabs → CONCRETE=0, TIMBER FRAME=1, TIMBER MASS=2  
+        - ro_par: Roof Slabs → CONCRETE=0, TIMBER FRAME=1, TIMBER MASS=2  
+        - ro_ins: Roof Insulation → CELLULOSE=0, CORK=1, EPS=2, EXPANDED GLASS=3, GLASS WOOL=4, MINERAL WOOL=5, WOOD FIBER=6, XPS=7  
+        - wwr: Window-to-Wall Ratio → float (0.0–1.0)  
+        - gfa: Gross Floor Area → float (no units)  
+        - av: Air Volume → float
+
+        ### Language alias mapping:
+        - "wood" → TIMBER MASS (5)  
+        - "wood frame" → TIMBER FRAME (4)  
+        - "concrete" → CONCRETE (1)  
+        - "brick" → BRICK (0)  
+        - "earth" → EARTH (2)  
+        - "straw" → STRAW (3)
+
+        ### Output rules:
+        - Respond with the full dictionary, even if the user only changes one thing.
+        - Format gfa, wwr, av as floats (e.g., 4800.0). Do not return strings or include units.
+        - No explanations. No extra text. Only JSON.
+
+        Use this project data if relevant:
+        {design_data_text}
+        """
+
+    response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+
+    return response.choices[0].message.content

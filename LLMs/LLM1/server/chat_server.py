@@ -130,3 +130,4 @@ if __name__ == "__main__":
     print("🚀 Starting Simple Modular Server...")
     print(f"🤖 LLM Available: {LLM_AVAILABLE}")
     uvicorn.run(app, host="127.0.0.1", port=5000)
+    
