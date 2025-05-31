@@ -41,12 +41,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Simple conversation state + Phase 2 detection
+# Global conversation state + Phase 2 detection
 conversation_state = {
     "current_state": "initial",
     "design_data": {},
     "conversation_history": [],
-    "phase": 1  # Added phase tracking
+    "phase": 1
 }
 
 # Phase 2 detection
@@ -206,7 +206,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 def chat_endpoint(req: ChatRequest):
-    """Your working LLM system + Phase 2 detection"""
+    """Enhanced LLM system with full Phase 2 functionality"""
     global phase2_activated, conversation_state
     
     if not LLM_AVAILABLE:
@@ -218,7 +218,7 @@ def chat_endpoint(req: ChatRequest):
         print(f"[CHAT] Input: '{user_input}'")
         print(f"[CHAT] Phase: {conversation_state.get('phase', 1)}")
         print(f"[CHAT] Phase2 activated: {phase2_activated}")
-        print(f"[CHAT] ML file exists: {check_for_ml_output()}")
+        print(f"[CHAT] ML file exists: {os.path.exists('knowledge/ml_output.json')}")
         
         # Check for Phase 2 activation ONLY if Phase 1 is complete
         if (not phase2_activated and 
@@ -247,53 +247,118 @@ def chat_endpoint(req: ChatRequest):
                 "error": False
             }
         
-        # If Phase 2 is active, handle Phase 2 queries
+        # ===== PHASE 2 PROCESSING =====
         if phase2_activated and conversation_state.get("phase") == 2:
+            print("🔍 [PHASE 2] Starting Phase 2 processing...")
+            
             try:
+                # Classify intent for Phase 2
                 intent = classify_phase2_intent(user_input)
-                print(f"[PHASE 2] Intent: {intent}")
+                print(f"🔍 [PHASE 2] Intent classified as: {intent}")
                 
                 # Get current design data
                 design_data = conversation_state.get("design_data", {})
+                print(f"🔍 [PHASE 2] Design data keys: {list(design_data.keys())}")
                 
-                # Handle different intents with your LLM functions
-                if intent == "carbon_query":
-                    response = llm_calls.answer_user_query(user_input, design_data)
-                elif intent == "improvement_suggestion":
-                    response = llm_calls.suggest_improvements(user_input, design_data)
-                elif intent == "design_change":
-                    response = llm_calls.suggest_change(user_input, design_data)
+                # Load ML results from file - FORCE LOAD
+                print("🔍 [PHASE 2] Starting ML data loading...")
+                ml_data = {}
+                ml_file = "knowledge/ml_output.json"
+                
+                print(f"🔍 [PHASE 2] Checking file: {ml_file}")
+                print(f"🔍 [PHASE 2] File exists: {os.path.exists(ml_file)}")
+                
+                if os.path.exists(ml_file):
+                    try:
+                        with open(ml_file, 'r') as f:
+                            ml_data = json.load(f)
+                        print(f"✅ [PHASE 2] Successfully loaded ML data with keys: {list(ml_data.keys())}")
+                        
+                        if 'carbon' in ml_data:
+                            print(f"✅ [PHASE 2] Carbon data found: {ml_data['carbon']}")
+                        if 'energy' in ml_data:
+                            print(f"✅ [PHASE 2] Energy data found: {ml_data['energy']}")
+                            
+                    except Exception as e:
+                        print(f"❌ [PHASE 2] Error reading ML file: {e}")
+                        return {
+                            "response": f"❌ Error reading ML analysis file: {str(e)}",
+                            "phase": 2,
+                            "error": False
+                        }
                 else:
-                    response = llm_calls.answer_user_query(user_input, design_data)
+                    print("❌ [PHASE 2] ML output file does not exist!")
+                    return {
+                        "response": "❌ No ML analysis data found. Please ensure the ML analysis has completed and ml_output.json exists.",
+                        "phase": 2,
+                        "error": False
+                    }
                 
-                # Add to history
+                # Create comprehensive data package for Phase 2 functions
+                comprehensive_data = {
+                    # Original design parameters
+                    "building_parameters": design_data,
+                    
+                    # ML Analysis Results
+                    "carbon_analysis": ml_data.get('carbon', {}),
+                    "energy_analysis": ml_data.get('energy', {}),
+                    
+                    # Full ML data
+                    "ml_results": ml_data,
+                    
+                    # Metadata
+                    "analysis_complete": True,
+                    "data_source": "ml_output.json"
+                }
+                
+                print(f"✅ [PHASE 2] Comprehensive data package created:")
+                print(f"   - Building parameters: {list(comprehensive_data['building_parameters'].keys())}")
+                print(f"   - Carbon analysis: {list(comprehensive_data['carbon_analysis'].keys())}")
+                print(f"   - Energy analysis: {list(comprehensive_data['energy_analysis'].keys())}")
+                
+                # Handle different intents with proper data
+                print(f"🔍 [PHASE 2] Calling LLM function for intent: {intent}")
+                
+                if intent == "carbon_query":
+                    response = llm_calls.answer_user_query(user_input, comprehensive_data)
+                elif intent == "improvement_suggestion":
+                    response = llm_calls.suggest_improvements(user_input, comprehensive_data)
+                elif intent == "design_change":
+                    response = llm_calls.suggest_change(user_input, comprehensive_data)
+                else:
+                    response = llm_calls.answer_user_query(user_input, comprehensive_data)
+                
+                print(f"✅ [PHASE 2] LLM response received: {response[:200]}...")
+                
+                # Add to conversation history
                 conversation_state["conversation_history"].append({
                     "user": user_input,
                     "assistant": response,
                     "phase": 2,
-                    "intent": intent
+                    "intent": intent,
+                    "timestamp": time.time()
                 })
-                
-                print(f"[PHASE 2] Response: {response[:100]}...")
                 
                 return {
                     "response": response,
                     "phase": 2,
                     "state": "analysis",
                     "intent": intent,
-                    "design_data": design_data,
+                    "design_data": comprehensive_data,
                     "error": False
                 }
                 
             except Exception as e:
-                print(f"[PHASE 2] Error: {e}")
+                print(f"❌ [PHASE 2] Major error: {e}")
+                import traceback
+                traceback.print_exc()
                 return {
-                    "response": f"Phase 2 processing error: {str(e)}. You can still ask questions about your design.",
+                    "response": f"❌ Phase 2 processing error: {str(e)}. Please check server logs.",
                     "phase": 2,
-                    "error": False
+                    "error": True
                 }
         
-        # Phase 1 Logic - Your existing working system
+        # ===== PHASE 1 PROCESSING =====
         current_state = conversation_state["current_state"]
         design_data = conversation_state["design_data"]
         
@@ -314,7 +379,8 @@ def chat_endpoint(req: ChatRequest):
             "user": user_input,
             "assistant": response,
             "state": new_state,
-            "phase": 1
+            "phase": 1,
+            "timestamp": time.time()
         })
         
         print(f"[PHASE 1] Response: {response[:100]}...")
@@ -414,20 +480,41 @@ def reset_ml_flag():
             "success": False
         }
 
-@app.post("/debug_ml_status")
-def debug_ml_status():
-    """Debug endpoint to check ML detection status"""
+@app.post("/debug_phase2_data")
+def debug_phase2_data():
+    """Debug endpoint to see exactly what data Phase 2 functions receive"""
     try:
+        # Get current design data
+        design_data = conversation_state.get("design_data", {})
+        
+        # Load ML results
+        ml_data = {}
         ml_file = "knowledge/ml_output.json"
-        flag_file = "knowledge/ml_processed.flag"
+        if os.path.exists(ml_file):
+            with open(ml_file, 'r') as f:
+                ml_data = json.load(f)
+        
+        # Combine data (same as Phase 2)
+        combined_data = {
+            "building_parameters": design_data,
+            "carbon_analysis": ml_data.get('carbon', {}),
+            "energy_analysis": ml_data.get('energy', {}),
+            "ml_results": ml_data,
+            "analysis_complete": True,
+            "data_source": "ml_output.json"
+        }
         
         return {
-            "ml_file_exists": os.path.exists(ml_file),
-            "flag_file_exists": os.path.exists(flag_file),
-            "can_trigger_phase2": check_for_ml_output(),
-            "phase1_complete": conversation_state.get("current_state") == "complete",
-            "phase2_activated": phase2_activated,
-            "current_phase": conversation_state.get("phase", 1)
+            "design_data": design_data,
+            "ml_data": ml_data,
+            "combined_data": combined_data,
+            "data_summary": {
+                "has_ml_file": os.path.exists(ml_file),
+                "ml_data_keys": list(ml_data.keys()) if ml_data else [],
+                "carbon_available": bool(ml_data.get('carbon')),
+                "energy_available": bool(ml_data.get('energy')),
+                "design_params": list(design_data.keys())
+            }
         }
     except Exception as e:
         return {
@@ -438,15 +525,16 @@ def debug_ml_status():
 def health_check():
     return {
         "status": "ok", 
-        "message": "Rhino Copilot Server with Phase 2", 
+        "message": "Rhino Copilot Server with Full Phase 2", 
         "llm_available": LLM_AVAILABLE,
         "phase": conversation_state.get("phase", 1),
         "phase2_activated": phase2_activated,
-        "ml_output_exists": check_for_ml_output()
+        "ml_output_exists": os.path.exists("knowledge/ml_output.json"),
+        "watchdog_available": WATCHDOG_AVAILABLE
     }
 
 if __name__ == "__main__":
-    print("🚀 Starting Rhino Copilot Server with Phase 2...")
+    print("🚀 Starting Rhino Copilot Server with Full Phase 2...")
     print(f"🤖 LLM Available: {LLM_AVAILABLE}")
     print(f"📁 ML Output Exists: {os.path.exists('knowledge/ml_output.json')}")
     print(f"🔍 Watchdog Available: {WATCHDOG_AVAILABLE}")
