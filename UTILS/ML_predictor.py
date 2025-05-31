@@ -3,6 +3,18 @@ import json
 import joblib
 import warnings
 from datetime import datetime
+import re
+import shutil
+
+# ============================
+# PATH CONFIGURATION
+# ============================
+script_dir = os.path.dirname(__file__)
+compiled_input_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "compiled_ml_data.json"))
+materials_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "materials.json"))
+json_folder = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "Optioneering"))
+model_path = r"C:\Users\CDH\Documents\Trabajo\IAAC\AIA\Studio\model\gwp_model_rf_av&gfa.pkl"  # GFA+AV-based
+
 
 # ============================
 # FUNCTION: Predict Outputs
@@ -11,16 +23,6 @@ from datetime import datetime
 _loaded_model = None  # global model cache
 
 def predict_outputs(inputs: dict, model_path: str) -> list:
-    """
-    Loads model and predicts output from given inputs.
-
-    Args:
-        inputs (dict): Input parameter dictionary.
-        model_path (str): Path to the .pkl model file.
-
-    Returns:
-        list: Model prediction output.
-    """
     global _loaded_model
 
     if not os.path.exists(model_path):
@@ -47,12 +49,11 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
 
     # Load materials decoding
     try:
-        with open("Knowledge\materials.json", "r", encoding="utf-8") as mat_file:
+        with open(materials_path, "r", encoding="utf-8") as mat_file:
             materials_map = json.load(mat_file)
     except Exception as e:
         print(f"⚠️ Could not load materials.json: {e}")
         materials_map = {}
-
 
     # Determine next version number
     existing_versions = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
@@ -67,13 +68,11 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
     for short_key, value in inputs.items():
         full_key = input_name_map.get(short_key, short_key)
 
-        # If it's a material input
         if full_key in materials_map:
             inputs_raw[full_key] = value
             decoded_value = materials_map[full_key].get(str(value), f"Unknown ({value})")
             inputs_decoded[full_key] = decoded_value
         else:
-            # For numeric values like WWR, AV, GFA
             inputs_raw[full_key] = value
             inputs_decoded[full_key] = value
 
@@ -83,7 +82,6 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         for label, value in zip(labels, outputs)
     } if outputs else "Prediction failed"
 
-    # Final structure
     version_data = {
         "version": version_name,
         "timestamp": datetime.now().isoformat(),
@@ -92,7 +90,6 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         "outputs": formatted_outputs
     }
 
-    # Save JSON
     try:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(version_data, f, indent=4, ensure_ascii=False)
@@ -106,7 +103,6 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
 # MAIN EXECUTION
 # ============================
 
-# Friendly names for JSON output
 input_name_map = {
     "ew_par": "Ext.Wall_Partition",
     "ew_ins": "Ext.Wall_Insulation",
@@ -120,9 +116,7 @@ input_name_map = {
     "gfa": "Gross-Floor-Area"
 }
 
-
-# Input values (customize here)
-inputs = {
+default_inputs = {
     "ew_par": 1,
     "ew_ins": 2,
     "iw_par": 1,
@@ -135,7 +129,15 @@ inputs = {
     "gfa": 200.0
 }
 
-# Output labels
+# Load and merge input
+try:
+    with open(compiled_input_path, "r", encoding="utf-8") as f:
+        loaded_inputs = json.load(f)
+        inputs = {**default_inputs, **loaded_inputs}
+except Exception as e:
+    print(f"⚠️ Failed to load compiled_ml_data.json, using default inputs: {e}")
+    inputs = default_inputs
+
 labels = [
     "Energy Intensity - EUI (kWh/m²a)",
     "Cooling Demand (kWh/m²a)",
@@ -146,9 +148,33 @@ labels = [
     "GWP total (kg CO2e/m²a GFA)"
 ]
 
-# Paths
-model_path = r"C:\Users\User\Documents\IAAC\Module03\Encoding\ML\gwp_model_rf_av&gfa.pkl" #GFA+AV-based
-json_folder = r"Knowledge\Optioneering"
+# CONFIGURATION
+source_folder = 'knowledge\Optioneering'
+destination_folder = 'LLMs\LLM1\knowledge'
+destination_filename = 'ml_output.json'  # Set your target filename here
+# Regex pattern to extract version like V1, V2, V10, etc.
+version_pattern = re.compile(r'V(\d+)', re.IGNORECASE)
+def get_version(filename):
+    match = version_pattern.search(filename)
+    return int(match.group(1)) if match else -1
+def find_latest_version_file(folder):
+    files = os.listdir(folder)
+    versioned_files = [(f, get_version(f)) for f in files if get_version(f) != -1]
+    if not versioned_files:
+        return None
+    # Sort by version number
+    latest_file = max(versioned_files, key=lambda x: x[1])[0]
+    return os.path.join(folder, latest_file)
+def copy_latest_version():
+    latest_file_path = find_latest_version_file(source_folder)
+    if latest_file_path:
+        dest_path = os.path.join(destination_folder, destination_filename)
+        shutil.copy2(latest_file_path, dest_path)
+        print(f"Copied: {latest_file_path} -> {dest_path}")
+    else:
+        print("No versioned files found.")
+# Run the function
+copy_latest_version()
 
 # Run prediction and save version
 try:
@@ -161,12 +187,12 @@ except Exception as e:
     prediction = []
 
 # Save versioned output
-save_version_json(inputs, prediction, labels, json_folder)
-
-
-
-# Capture .png of iteration
-from UTILS.SaveState_image import capture_viewport
 version_name = save_version_json(inputs, prediction, labels, json_folder)
 
-capture_viewport(version_name, json_folder)
+# Capture .png of iteration
+try:
+    sys.path.append(script_dir)
+    from SaveState_image import capture_viewport
+    capture_viewport(version_name, json_folder)
+except Exception as e:
+    print(f"⚠️ Failed to capture viewport: {e}")
