@@ -127,7 +127,7 @@ inputs = {
     "es_ins": 1,
     "is_par": 0,
     "ro_par": 0,
-    "ro_ins": 7,
+    "ro_ins": 5,
     "wwr": 0.9,
     "av": 0.9,
     "gfa": 200.0
