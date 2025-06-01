@@ -109,11 +109,26 @@ def show_copilot_ui():
     dialog.ClientSize = drawing.Size(600, 1000)
     dialog.Topmost = True
 
+    # icon
+    icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
+    if os.path.exists(icon_path):
+        dialog.Icon = drawing.Icon(icon_path)
+    else:
+        print("Icon not found at:", icon_path)
+
+    # start positoin position 
+    screen = Rhino.UI.RhinoEtoApp.MainWindow.Screen
+    screen_width = screen.WorkingArea.Width
+    screen_height = screen.WorkingArea.Height
+    x = int(screen.WorkingArea.X + screen_width * 0.75 - dialog.ClientSize.Width / 2) # change the 0.75 to change the position in x axis
+    y = int(screen.WorkingArea.Y + (screen_height - dialog.ClientSize.Height) / 2)
+    dialog.Location = drawing.Point(x, y)
+
     web_view = forms.WebView()
 
     # Always use script-relative paths
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    html_path = os.path.join(script_dir, "UI", "index.html")
+    html_path = os.path.join(script_dir, "ui", "index.html")
     
     print("Looking for HTML at: " + str(html_path))
     
@@ -129,13 +144,13 @@ def show_copilot_ui():
         return False
 
 def start_backend():
-    """Start the backend server"""
+    # Start the backend server
     print("Starting Rhino Copilot backend...")
     
     # Get script-relative paths (works regardless of working directory)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     server_path = os.path.join(script_dir, "server", "chat_server.py")
-    python_path = get_universal_python_path()
+    python_path = get_universal_python_path() #universal vs python3
     
     print("Script directory: " + str(script_dir))
     print("Server path: " + str(server_path))
@@ -179,7 +194,7 @@ def start_backend():
         return False
 
 def launch_copilot():
-    """Universal launcher that works for any Rhino user"""
+    # Universal launcher that works for any Rhino user
     print("=" * 60)
     print("RHINO COPILOT - UNIVERSAL LAUNCHER")
     print("=" * 60)
@@ -208,7 +223,7 @@ def launch_copilot():
         print("Please check the error messages above")
 
 def launch():
-    """Legacy compatibility function"""
+    # Legacy compatibility function
     launch_copilot()
 
 # Main execution - works for any user

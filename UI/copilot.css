@@ -123,3 +123,8 @@ body {
 .viz-tile {
   position: relative;
 }
+
+.viz-tile.latest {
+  border: 3px solid #00cc66; /* green highlight */
+  box-shadow: 0 0 10px rgba(0, 204, 102, 0.5);
+}
