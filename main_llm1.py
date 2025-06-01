@@ -8,6 +8,15 @@ import Eto.Drawing as drawing
 import Rhino.UI
 import System
 
+def install_requirements_if_needed():
+    req_file = "requirements.txt"
+    if os.path.exists(req_file):
+        print("Checking/installing requirements...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file])
+    else:
+        print("requirements.txt not found!")
+install_requirements_if_needed()
+
 def get_universal_python_path():
     """Universal Python detection that works for ANY user on ANY system"""
     
