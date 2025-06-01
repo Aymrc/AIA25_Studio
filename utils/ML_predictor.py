@@ -127,7 +127,7 @@ default_inputs = {
     "ro_ins": 7,
     "wwr": 0.9,
     "av": 0.9,
-    "gfa": 200.0
+    "gfa": 1000.0
 }
 
 # Load and merge input
@@ -149,33 +149,6 @@ labels = [
     "GWP total (kg CO2e/m²a GFA)"
 ]
 
-# CONFIGURATION
-source_folder = r'knowledge\iterations'
-destination_folder = 'knowledge'
-destination_filename = 'ml_output.json'  # Set your target filename here
-# Regex pattern to extract version like V1, V2, V10, etc.
-version_pattern = re.compile(r'V(\d+)', re.IGNORECASE)
-def get_version(filename):
-    match = version_pattern.search(filename)
-    return int(match.group(1)) if match else -1
-def find_latest_version_file(folder):
-    files = os.listdir(folder)
-    versioned_files = [(f, get_version(f)) for f in files if get_version(f) != -1]
-    if not versioned_files:
-        return None
-    # Sort by version number
-    latest_file = max(versioned_files, key=lambda x: x[1])[0]
-    return os.path.join(folder, latest_file)
-def copy_latest_version():
-    latest_file_path = find_latest_version_file(source_folder)
-    if latest_file_path:
-        dest_path = os.path.join(destination_folder, destination_filename)
-        shutil.copy2(latest_file_path, dest_path)
-        print(f"Copied: {latest_file_path} -> {dest_path}")
-    else:
-        print("No versioned files found.")
-# Run the function
-copy_latest_version()
 
 # Run prediction and save version
 try:
@@ -189,6 +162,39 @@ except Exception as e:
 
 # Save versioned output
 version_name = save_version_json(inputs, prediction, labels, json_folder)
+
+
+
+# CONFIGURATION
+source_folder = r'knowledge\iterations'
+destination_folder = 'knowledge'
+destination_filename = 'ml_output.json'  # Set your target filename here
+# Regex pattern to extract version like V1, V2, V10, etc.
+version_pattern = re.compile(r'V(\d+)', re.IGNORECASE)
+def get_version(filename):
+    match = version_pattern.search(filename)
+    return int(match.group(1)) if match else -1
+
+def find_latest_version_file(folder):
+    files = os.listdir(folder)
+    versioned_files = [(f, get_version(f)) for f in files if get_version(f) != -1]
+    if not versioned_files:
+        return None
+    # Sort by version number
+    latest_file = max(versioned_files, key=lambda x: x[1])[0]
+    return os.path.join(folder, latest_file)
+
+def copy_latest_version():
+    latest_file_path = find_latest_version_file(source_folder)
+    if latest_file_path:
+        dest_path = os.path.join(destination_folder, destination_filename)
+        shutil.copy2(latest_file_path, dest_path)
+        print(f"Copied: {latest_file_path} -> {dest_path}")
+    else:
+        print("No versioned files found.")
+
+copy_latest_version()
+
 
 # Capture .png of iteration
 try:

@@ -1,6 +1,6 @@
 {
-    "version": "V21",
-    "timestamp": "2025-06-01T17:56:11.475229",
+    "version": "V20",
+    "timestamp": "2025-06-01T17:53:20.727532",
     "inputs_raw": {
         "Ext.Wall_Partition": 0,
         "Ext.Wall_Insulation": 0,
@@ -25,13 +25,5 @@
         "Compactness": 0.9,
         "Gross-Floor-Area": 1000.0
     },
-    "outputs": {
-        "Energy Intensity - EUI (kWh/m²a)": 277.24,
-        "Cooling Demand (kWh/m²a)": 207.94,
-        "Heating Demand (kWh/m²a)": 0.0,
-        "Operational Carbon (kg CO2e/m²a GFA)": 124.63,
-        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 154.19,
-        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 181.17,
-        "GWP total (kg CO2e/m²a GFA)": 297.9
-    }
+    "outputs": "Prediction failed"
 }

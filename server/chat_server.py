@@ -561,3 +561,10 @@ if __name__ == "__main__":
         time.sleep(1)  # Give it a moment to start
     
     uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
+
+
+
+
+
+# from utils.knowledge_compiler import KnowledgeCompiler
+# KnowledgeCompiler()

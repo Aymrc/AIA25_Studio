@@ -410,6 +410,24 @@ Only suggest changes relevant to this design.
     return response.choices[0].message.content
 
 def suggest_change(user_prompt, design_data):
+    import subprocess
+    # --- Trigger ML_predictor ---
+    script_dir = os.path.dirname(__file__)
+    predictor_path = os.path.normpath(os.path.join(script_dir, "utils", "ML_predictor.py"))
+
+    try:
+        print("\n🔧 Launching ML Predictor...\n")
+        result = subprocess.run(
+            ["python", predictor_path],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print(result.stdout)
+        print("\n✅ ML Predictor finished.\n")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ ML Predictor failed:\n{e.stderr}")
+
     """Interpret user's design change request and return a structured parameter dictionary."""
     design_data_text = json.dumps(design_data)
 
@@ -426,8 +444,6 @@ def suggest_change(user_prompt, design_data):
             "ro_par": 0,
             "ro_ins": 0,
             "wwr": 0.3,
-            "gfa": 200.0,
-            "av": 0.5
         }}
 
         ### Parameter definitions:
@@ -466,5 +482,5 @@ def suggest_change(user_prompt, design_data):
             {"role": "user", "content": user_prompt}
         ]
     )
-
+    
     return response.choices[0].message.content
