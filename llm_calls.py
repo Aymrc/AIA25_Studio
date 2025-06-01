@@ -410,23 +410,7 @@ Only suggest changes relevant to this design.
     return response.choices[0].message.content
 
 def suggest_change(user_prompt, design_data):
-    import subprocess
-    # --- Trigger ML_predictor ---
-    script_dir = os.path.dirname(__file__)
-    predictor_path = os.path.normpath(os.path.join(script_dir, "utils", "ML_predictor.py"))
-
-    try:
-        print("\n🔧 Launching ML Predictor...\n")
-        result = subprocess.run(
-            ["python", predictor_path],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        print(result.stdout)
-        print("\n✅ ML Predictor finished.\n")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ ML Predictor failed:\n{e.stderr}")
+    
 
     """Interpret user's design change request and return a structured parameter dictionary."""
     design_data_text = json.dumps(design_data)
@@ -483,4 +467,36 @@ def suggest_change(user_prompt, design_data):
         ]
     )
     
+    banana=response.choices[0].message.content
+    
+    # --- Overwrite ML input ---
+    
+    save_ml_dictionary(banana)
+
+    # --- Trigger ML_predictor.py ---
+    import subprocess
+    import os
+    import sys
+    def run_ml_predictor():
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        predictor_path = os.path.join(project_root, "utils", "ML_predictor.py")
+        python_path = sys.executable  # Current Python interpreter
+        try:
+            result = subprocess.run(
+                [python_path, predictor_path],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            print(":marca_de_verificación_blanca: ML Predictor output:\n", result.stdout)
+        except subprocess.CalledProcessError as e:
+            print(":x: ML Predictor failed:")
+            print(e.stderr)
+    # Call it
+    run_ml_predictor()
+
+
     return response.choices[0].message.content
+
+
