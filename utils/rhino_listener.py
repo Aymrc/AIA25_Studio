@@ -95,3 +95,4 @@ def setup_listeners():
     print("👂 Listener active — will debounce total update.")
 
 setup_listeners()
+Rhino.RhinoApp.WriteLine("🟢 Rhino listener is now active and watching geometry.")
