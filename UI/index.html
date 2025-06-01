@@ -33,6 +33,21 @@
 
 				<!-- script for chatbot calling server -->
 				<script>
+				// Load initial greeting when page loads
+				window.addEventListener("load", async function() {
+					try {
+						const res = await fetch("http://localhost:5000/initial_greeting");
+						const data = await res.json();
+						
+						if (data.response) {
+							addToChat("bot", data.response);
+						}
+					} catch (err) {
+						console.error("Could not load initial greeting:", err);
+						addToChat("bot", "Hello! I'm your design assistant. What would you like to build today?");
+					}
+				});
+				
 				async function sendMessage() {
 					const input = document.getElementById("message");
 					const chatbox = document.getElementById("chatbox");
