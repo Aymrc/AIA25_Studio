@@ -3,6 +3,9 @@
 
 watchdog>=3.0.0
 openai>=1.0.0
-flask>=2.0.0
+flask>=2.0.0 #not working?
 numpy>=1.23.0
 pillow>=10.0.0
+fastapi>=0.103.0
+uvicorn[standard]>=0.23.2
+# joblib>=
