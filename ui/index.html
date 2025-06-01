@@ -34,7 +34,7 @@
 				// Load initial greeting when page loads
 				window.addEventListener("load", async function() {
 					try {
-						const res = await fetch("http://localhost:5000/initial_greeting");
+						const res = await fetch("http://127.0.0.1:5001/initial_greeting");
 						const data = await res.json();
 						
 						if (data.response) {
@@ -64,9 +64,13 @@
 					chatbox.appendChild(typingMsg);
 					chatbox.scrollTop = chatbox.scrollHeight;
 
+					fetch("http://127.0.0.1:5001/")
+						.then(res => res.json())
+						.then(data => console.log("Server status:", data))
+						.catch(err => console.error("Status check failed:", err));
 
 					try {
-					const res = await fetch("http://localhost:5000/chat", {
+					const res = await fetch("http://127.0.0.1:5001/chat", {
 						method: "POST",
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify({ message: userMsg })

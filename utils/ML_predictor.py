@@ -5,6 +5,7 @@ import warnings
 from datetime import datetime
 import re
 import shutil
+import sys
 
 # ============================
 # PATH CONFIGURATION
@@ -12,8 +13,8 @@ import shutil
 script_dir = os.path.dirname(__file__)
 compiled_input_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "compiled_ml_data.json"))
 materials_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "materials.json"))
-json_folder = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "Optioneering"))
-model_path = r"C:\Users\CDH\Documents\Trabajo\IAAC\AIA\Studio\model\gwp_model_rf_av&gfa.pkl"  # GFA+AV-based
+json_folder = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "iterations"))
+model_path = r"C:\Users\broue\Documents\IAAC MaCAD\S3_AIA\Studio\gwp_model_rf_av&gfa.pkl"  # GFA+AV-based
 
 
 # ============================
@@ -149,7 +150,7 @@ labels = [
 ]
 
 # CONFIGURATION
-source_folder = 'knowledge\Optioneering'
+source_folder = 'knowledge\iterations'
 destination_folder = 'LLMs\LLM1\knowledge'
 destination_filename = 'ml_output.json'  # Set your target filename here
 # Regex pattern to extract version like V1, V2, V10, etc.

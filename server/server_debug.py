@@ -2,7 +2,7 @@
 import requests
 import json
 
-SERVER_URL = "http://127.0.0.1:5000"
+SERVER_URL = "http://127.0.0.1:5001"
 
 def test_server_health():
     """Test if server is responding"""

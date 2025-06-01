@@ -31,6 +31,18 @@ try:
 except ImportError as e:
     print(f"⚠️ LLM system not available: {e}")
     LLM_AVAILABLE = False
+# try:
+#     import llm_calls
+#     print("✅ llm_calls imported:", dir(llm_calls))  # 🔍 Check what it contains
+#     assert hasattr(llm_calls, "manage_conversation_state"), "Missing function: manage_conversation_state"
+#     assert hasattr(llm_calls, "answer_user_query"), "Missing function: answer_user_query"
+#     LLM_AVAILABLE = True
+#     print("✅ LLM system loaded successfully")
+# except Exception as e:
+#     print(f"⚠️ LLM system not available: {e}")
+#     llm_calls = None
+#     LLM_AVAILABLE = False
+
 
 app = FastAPI()
 
@@ -548,4 +560,4 @@ if __name__ == "__main__":
         watcher_thread.start()
         time.sleep(1)  # Give it a moment to start
     
-    uvicorn.run(app, host="127.0.0.1", port=5000)
+    uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port

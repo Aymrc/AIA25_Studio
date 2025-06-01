@@ -82,5 +82,9 @@ class KnowledgeCompiler:
         if os.path.exists(compiled_file):
             with open(compiled_file, 'r') as f:
                 return json.load(f)
+            
+            # path_ML = "utils\ML_predictor.py"
+            # subprocess.Popen([python_path, path_ML], creationflags=0, cwd=script_dir)
         else:
             return self.compile_all_data()
+         

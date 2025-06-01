@@ -164,7 +164,7 @@ def start_backend():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     server_path = os.path.join(script_dir, "server", "chat_server.py")
     python_path = get_universal_python_path() #universal vs python3
-    
+
     print("Script directory: " + str(script_dir))
     print("Server path: " + str(server_path))
     print("Python path: " + str(python_path))
@@ -191,9 +191,25 @@ def start_backend():
 
     # Start server with proper working directory
     try:
-        subprocess.Popen([python_path, server_path], creationflags=0, cwd=script_dir)
+        # subprocess.Popen([python_path, server_path], creationflags=0, cwd=script_dir)
+        # log = os.path.join(script_dir, "backend_launch.log")
+        print("Current script_dir:", script_dir) # debug print
+        print("Server path:", server_path)
+        print("Python path:", python_path)
+        print("LLMCALLS location expected at:", os.path.join(os.path.dirname(script_dir), "llm_calls.py"))
+        print("Setting working directory to:", os.path.dirname(script_dir))
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        server_path = os.path.join(project_root, "server", "chat_server.py")
+
+        subprocess.Popen(
+            [python_path, "-m", "server.chat_server"],
+            creationflags=0,
+            cwd=project_root
+        )
+
+
         print("Backend server started successfully!")
-        print("Server should be available at: http://localhost:5000")
+        print("Server should be available at: http://localhost:5001")
         return True
         
     except Exception as e:
@@ -235,7 +251,7 @@ def launch_copilot():
             print("SUCCESS: Rhino Copilot launched!")
         else:
             print("Backend running, but UI failed to load")
-            print("You can still access the server at: http://localhost:5000")
+            print("You can still access the server at: http://localhost:5001")
     else:
         print("FAILED: Could not start backend server")
         print("Please check the error messages above")
