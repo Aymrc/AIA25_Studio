@@ -410,11 +410,14 @@ Only suggest changes relevant to this design.
     return response.choices[0].message.content
 
 def suggest_change(user_prompt, design_data):
-    
+    import json
+    import os
+    import subprocess
+    import sys
+    import re
 
-    """Interpret user's design change request and return a structured parameter dictionary."""
+    # --- Prompt construction ---
     design_data_text = json.dumps(design_data)
-
     system_prompt = f"""
         You are a design assistant. The user will request a design change. You must respond ONLY with a JSON object that represents a complete parameter configuration.
 
@@ -428,6 +431,8 @@ def suggest_change(user_prompt, design_data):
             "ro_par": 0,
             "ro_ins": 0,
             "wwr": 0.3,
+            "av": 1.0,
+            "gfa": 1200.0
         }}
 
         ### Parameter definitions:
@@ -442,22 +447,15 @@ def suggest_change(user_prompt, design_data):
         - gfa: Gross Floor Area → float (no units)  
         - av: Air Volume → float
 
-        ### Language alias mapping:
-        - "wood" → TIMBER MASS (5)  
-        - "wood frame" → TIMBER FRAME (4)  
-        - "concrete" → CONCRETE (1)  
-        - "brick" → BRICK (0)  
-        - "earth" → EARTH (2)  
-        - "straw" → STRAW (3)
-
         ### Output rules:
-        - Respond with the full dictionary, even if the user only changes one thing.
-        - Format gfa, wwr, av as floats (e.g., 4800.0). Do not return strings or include units.
-        - No explanations. No extra text. Only JSON.
+        - Respond ONLY with a full dictionary (all 10 keys).
+        - No text or explanation.
+        - No comments, units, or stringified numbers.
+        - Respond in plain JSON format.
 
-        Use this project data if relevant:
+        Use this project data if helpful:
         {design_data_text}
-        """
+    """
 
     response = client.chat.completions.create(
         model=completion_model,
@@ -466,21 +464,64 @@ def suggest_change(user_prompt, design_data):
             {"role": "user", "content": user_prompt}
         ]
     )
-    
-    banana=response.choices[0].message.content
-    
-    # --- Overwrite ML input ---
-    
-    save_ml_dictionary(banana)
+
+    raw_response = response.choices[0].message.content
+
+    # --- Helper: extract first valid JSON block from LLM response ---
+    def extract_json_block(text):
+        match = re.search(r'\{[\s\S]*?\}', text)
+        return match.group(0).strip() if match else None
+
+    # --- Helper: validate and patch JSON ---
+    REQUIRED_KEYS = {
+        "ew_par", "ew_ins", "iw_par", "es_ins", "is_par",
+        "ro_par", "ro_ins", "wwr", "av", "gfa"
+    }
+
+    def parse_and_validate_model_response(response_text, default_inputs):
+        try:
+            parsed = json.loads(response_text)
+            if not isinstance(parsed, dict):
+                raise ValueError("Parsed content is not a dictionary.")
+
+            missing = REQUIRED_KEYS - parsed.keys()
+            for key in missing:
+                print(f"[VALIDATION] Missing key: {key} → filling from defaults")
+                parsed[key] = default_inputs[key]
+
+            # Ensure numeric types
+            for key in ["wwr", "av", "gfa"]:
+                parsed[key] = float(parsed[key]) if not isinstance(parsed[key], float) else parsed[key]
+            for key in REQUIRED_KEYS - {"wwr", "av", "gfa"}:
+                parsed[key] = int(parsed[key]) if not isinstance(parsed[key], int) else parsed[key]
+
+            return parsed
+
+        except Exception as e:
+            raise ValueError(f"Invalid model response: {e}")
+
+    # --- Validation and saving ---
+    cleaned_json = extract_json_block(raw_response)
+    default_inputs = {
+        "ew_par": 0, "ew_ins": 0, "iw_par": 0,
+        "es_ins": 1, "is_par": 0, "ro_par": 0, "ro_ins": 0,
+        "wwr": 0.3, "av": 1.0, "gfa": 1000.0
+    }
+
+    try:
+        validated_dict = parse_and_validate_model_response(cleaned_json, default_inputs)
+        save_ml_dictionary(validated_dict)
+    except ValueError as e:
+        print(f"❌ Error validating LLM output: {e}")
+        with open("invalid_llm_output.json", "w", encoding="utf-8") as f:
+            f.write(raw_response)
+        return "⚠️ I couldn't generate a valid parameter set. Please try again."
 
     # --- Trigger ML_predictor.py ---
-    import subprocess
-    import os
-    import sys
     def run_ml_predictor():
         project_root = os.path.dirname(os.path.abspath(__file__))
         predictor_path = os.path.join(project_root, "utils", "ML_predictor.py")
-        python_path = sys.executable  # Current Python interpreter
+        python_path = sys.executable
         try:
             result = subprocess.run(
                 [python_path, predictor_path],
@@ -489,15 +530,13 @@ def suggest_change(user_prompt, design_data):
                 text=True,
                 check=True
             )
-            print(":marca_de_verificación_blanca: ML Predictor output:\n", result.stdout)
+            print("✅ ML Predictor output:\n", result.stdout)
         except subprocess.CalledProcessError as e:
-            print(":x: ML Predictor failed:")
-            print(e.stderr)
-    # Call it
+            print("❌ ML Predictor failed:\n", e.stderr)
+
     run_ml_predictor()
 
-
-    return response.choices[0].message.content
+    return raw_response
 
 
 
