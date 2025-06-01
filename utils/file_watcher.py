@@ -40,7 +40,7 @@ class DesignFileHandler(FileSystemEventHandler):
         self.last_modified[file_name] = current_time
         # print(f"\n🔄 {file_name} has been modified!")
         self.handle_file_change(event.src_path, file_name)
-
+        self.handle_file_change2(event.src_path, file_name)
 
     def handle_file_change(self, file_path, file_name):
         try:
@@ -84,6 +84,50 @@ class DesignFileHandler(FileSystemEventHandler):
 
         except Exception as e:
             print(f"❌ Error processing file change: {e}")
+
+    def handle_file_change2(self, file_path, file_name):
+        try:
+            if file_name != "compiled_ml_data.json":
+                return  # Only trigger for this file
+
+            file_content = self.read_file_content(file_path)
+            current_design = self.design_data_callback() if self.design_data_callback else {}
+
+            auto_query = self.generate_auto_query(file_name, file_content, current_design)
+            print("\n🤖 Auto-generated insight:")
+            print(clean_llm_output(auto_query))
+
+            user_input = input("\n💭 How can I help you with this change?\n> ")
+            intent = classify_intent(user_input)
+
+            if intent == "design_change":
+                result = suggest_change(user_input, current_design)
+                print("\n💖 Change Instruction:")
+                print(clean_llm_output(result))
+
+            elif intent == "suggestion":
+                suggestion = suggest_improvements(user_input, current_design)
+                print("\n🧩 Suggestion:")
+                print(clean_llm_output(suggestion))
+
+            elif intent == "data_query":
+                kpis = get_kpis(current_design, user_input)
+                print("\n📊 KPI Insight:")
+                print(clean_llm_output(kpis))
+
+            elif intent == "fallback":
+                options = generate_paths(current_design)
+                print("\n🚀 Optioneering Suggestions:")
+                print(clean_llm_output(options))
+
+            else:
+                reply =answer_user_query(user_input, current_design)
+                print("\n📊 Data Insight:")
+                print(clean_llm_output(reply))
+
+        except Exception as e:
+            print(f"❌ Error processing file change: {e}")
+
 
 
     def read_file_content(self, file_path):

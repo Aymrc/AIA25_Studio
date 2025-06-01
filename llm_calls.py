@@ -500,3 +500,17 @@ def suggest_change(user_prompt, design_data):
     return response.choices[0].message.content
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

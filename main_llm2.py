@@ -22,6 +22,21 @@ def start_file_watcher():
     watcher.start_watching()
     return watcher
 
+def start_file_watcher():
+    base_path = os.path.dirname(__file__)
+    watch_dir = os.path.join(base_path, "knowledge")
+
+    if not os.path.exists(watch_dir):
+        raise FileNotFoundError(f"📁 Folder '{watch_dir}' not found. Please create it inside your project directory.")
+
+    watcher = FileWatcher(
+        watch_directory=watch_dir,
+        target_files=['compiled_ml_data.json'],
+        design_data_callback=get_combined_design_data
+    )
+
+    watcher.start_watching()
+    return watcher
 
 def main():
     watcher = start_file_watcher()
