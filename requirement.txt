@@ -2,6 +2,7 @@
 # pip install -r requirements.txt
 
 watchdog>=3.0.0
+openai>=1.0.0
 flask>=2.0.0
 numpy>=1.23.0
 pillow>10.0.0
