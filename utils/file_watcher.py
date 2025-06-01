@@ -38,7 +38,7 @@ class DesignFileHandler(FileSystemEventHandler):
                 return
 
         self.last_modified[file_name] = current_time
-        # print(f"\n🔄 {file_name} has been modified!")
+        print(f"\n🔄 {file_name} has been modified!")
         self.handle_file_change(event.src_path, file_name)
 
 

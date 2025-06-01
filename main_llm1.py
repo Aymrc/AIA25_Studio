@@ -8,19 +8,6 @@ import Eto.Drawing as drawing
 import Rhino.UI
 import System
 
-def install_requirements_if_needed():
-    req_file = "requirements.txt"
-    if os.path.exists(req_file):
-        print("Checking/installing requirements from requirements.txt...")
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file])
-            print("All requirements installed.")
-        except subprocess.CalledProcessError as e:
-            print("Failed to install requirements: {}".format(e))
-    else:
-        print("requirements.txt not found!")
-install_requirements_if_needed()
-
 def get_universal_python_path():
     """Universal Python detection that works for ANY user on ANY system"""
     
@@ -114,6 +101,23 @@ def get_universal_python_path():
     
     print("No Python installation found!")
     return None
+
+
+def install_requirements_if_needed():
+    python_path = get_universal_python_path()
+    req_file = "requirements.txt"
+    if os.path.exists(req_file):
+        print("Checking/installing requirements from requirements.txt...")
+        try:
+            subprocess.check_call([python_path, "-m", "pip", "install", "-r", req_file])
+
+            print("All requirements installed.")
+        except subprocess.CalledProcessError as e:
+            print("Failed to install requirements: {}".format(e))
+    else:
+        print("requirements.txt not found!")
+install_requirements_if_needed()
+
 
 def show_copilot_ui():
     """Show the Rhino Copilot UI"""
@@ -256,9 +260,9 @@ def launch_copilot():
         print("FAILED: Could not start backend server")
         print("Please check the error messages above")
 
-def launch():
-    # Legacy compatibility function
-    launch_copilot()
+# def launch():
+#     # Legacy compatibility function
+#     launch_copilot()
 
 # Main execution - works for any user
 launch_copilot()
