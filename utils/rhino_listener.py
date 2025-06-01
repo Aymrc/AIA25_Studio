@@ -62,7 +62,7 @@ def compute_total_metrics():
         "total_face_area": round(total_face_area, 3)
     }
 
-    post_json("http://127.0.0.1:5000/rhino_data", payload)
+    post_json("http://127.0.0.1:5050/rhino_data", payload)
 
 def debounce_refresh():
     global debounce_timer
@@ -95,3 +95,4 @@ def setup_listeners():
     print("👂 Listener active — will debounce total update.")
 
 setup_listeners()
+Rhino.RhinoApp.WriteLine("🟢 Rhino listener is now active and watching geometry.")

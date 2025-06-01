@@ -191,7 +191,12 @@ def start_backend():
         print("   " + str(python_path) + " -m pip install flask requests openai")
         print("2. Check Windows Defender/Antivirus settings")
         print("3. Run Rhino as Administrator")
-        return False
+        return False, python_path
+    
+def rhino_listener():
+    script_path = "utils\rhino_listener.py"
+    subprocess.Popen(get_universal_python_path(), script_path)
+    print("Rhino listener started successfully")
 
 def launch_copilot():
     # Universal launcher that works for any Rhino user
