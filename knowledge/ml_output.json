@@ -2,7 +2,7 @@
     "version": "V7",
     "timestamp": "2025-06-01T15:04:34.672272",
     "inputs_raw": {
-        "Ext.Wall_Partition": 0,
+        "Ext.Wall_Partition": 1,
         "Ext.Wall_Insulation": 0,
         "Int.Wall_Partition": 0,
         "Ext.Slab_Insulation": 1,
