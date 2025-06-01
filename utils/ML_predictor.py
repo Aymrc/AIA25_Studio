@@ -53,7 +53,7 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         with open(materials_path, "r", encoding="utf-8") as mat_file:
             materials_map = json.load(mat_file)
     except Exception as e:
-        print(f"⚠️ Could not load materials.json: {e}")
+        print(f"Could not load materials.json: {e}")
         materials_map = {}
 
     # Determine next version number
@@ -94,9 +94,9 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
     try:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(version_data, f, indent=4, ensure_ascii=False)
-        print(f"✅ Saved version file: {json_path}")
+        print(f"Saved version file: {json_path}")
     except Exception as e:
-        print(f"⚠️ Failed to save JSON version: {e}")
+        print(f"Failed to save JSON version: {e}")
     
     return version_name
 
@@ -136,7 +136,7 @@ try:
         loaded_inputs = json.load(f)
         inputs = {**default_inputs, **loaded_inputs}
 except Exception as e:
-    print(f"⚠️ Failed to load compiled_ml_data.json, using default inputs: {e}")
+    print(f"Failed to load compiled_ml_data.json, using default inputs: {e}")
     inputs = default_inputs
 
 labels = [
@@ -150,8 +150,8 @@ labels = [
 ]
 
 # CONFIGURATION
-source_folder = 'knowledge\iterations'
-destination_folder = 'LLMs\LLM1\knowledge'
+source_folder = r'knowledge\iterations'
+destination_folder = 'knowledge'
 destination_filename = 'ml_output.json'  # Set your target filename here
 # Regex pattern to extract version like V1, V2, V10, etc.
 version_pattern = re.compile(r'V(\d+)', re.IGNORECASE)
@@ -184,7 +184,7 @@ try:
     for label, value in zip(labels, prediction):
         print(f"{label}: {value:.2f}")
 except Exception as e:
-    print(f"⚠️ Prediction failed: {e}")
+    print(f"Prediction failed: {e}")
     prediction = []
 
 # Save versioned output
@@ -196,4 +196,4 @@ try:
     from SaveState_image import capture_viewport
     capture_viewport(version_name, json_folder)
 except Exception as e:
-    print(f"⚠️ Failed to capture viewport: {e}")
+    print(f"Failed to capture viewport: {e}")

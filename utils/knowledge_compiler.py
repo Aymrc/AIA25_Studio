@@ -83,8 +83,20 @@ class KnowledgeCompiler:
             with open(compiled_file, 'r') as f:
                 return json.load(f)
             
-            # path_ML = "utils\ML_predictor.py"
-            # subprocess.Popen([python_path, path_ML], creationflags=0, cwd=script_dir)
         else:
             return self.compile_all_data()
-         
+
+# path_ML = "utils\ML_predictor.py"
+    import subprocess
+    if __name__ == "__main__":
+          # Path to ML_predictor.py
+        script_dir = os.path.dirname(__file__)
+        predictor_path = os.path.normpath(os.path.join(script_dir, "", "ML_predictor.py"))
+        # Run the ML predictor script
+        try:
+            print("\n Launching ML Predictor...\n")
+            result = subprocess.run(["python", predictor_path], check=True, capture_output=True, text=True)
+            print(result.stdout)  # Output from ML_predictor
+            print("\n:white_tick: ML Predictor finished.\n")
+        except subprocess.CalledProcessError as e:
+            print(f":x: ML Predictor failed:\n{e.stderr}")
