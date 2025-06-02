@@ -7,6 +7,7 @@ import Eto.Forms as forms
 import Eto.Drawing as drawing
 import Rhino.UI
 import System
+import webbrowser   
 
 def get_universal_python_path():
     """Universal Python detection that works for ANY user on ANY system"""
@@ -163,7 +164,10 @@ def show_copilot_ui():
 def start_backend():
     # Start the backend server
     print("Starting Rhino Copilot backend...")
-    
+
+    # Double check that PORT is used
+    webbrowser.open("http://localhost:5001")
+ 
     # Get script-relative paths (works regardless of working directory)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     server_path = os.path.join(script_dir, "server", "chat_server.py")
@@ -226,10 +230,22 @@ def start_backend():
         print("3. Run Rhino as Administrator")
         return False, python_path
     
-def rhino_listener():
-    script_path = "utils\rhino_listener.py"
-    subprocess.Popen(get_universal_python_path(), script_path)
-    print("Rhino listener started successfully")
+# def rhino_listener():
+#     import Rhino
+
+#     listener_path = os.path.join(os.path.dirname(__file__), "utils", "rhino_listener.py")
+
+#     if not os.path.exists(listener_path):
+#         Rhino.RhinoApp.WriteLine("Rhino listener script not found: " + listener_path)
+#         return
+
+#     try:
+#         with open(listener_path, "r") as f:
+#             code = f.read()
+#             exec(code, globals())  # EXECUTES INSIDE RHINO'S PYTHON ENGINE
+#         Rhino.RhinoApp.WriteLine("Rhino listener loaded and running.")
+#     except Exception as e:
+#         Rhino.RhinoApp.WriteLine("Error executing Rhino listener: " + str(e))
 
 def launch_copilot():
     # Universal launcher that works for any Rhino user
@@ -244,6 +260,8 @@ def launch_copilot():
     backend_started = start_backend()
     
     if backend_started:
+        #rhino_listener()
+
         print("Waiting for server to initialize...")
         import time
         time.sleep(2)

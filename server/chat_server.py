@@ -453,6 +453,10 @@ def get_conversation_state():
         "conversation_history": conversation_state["conversation_history"][-5:]
     }
 
+@app.get("/ping")
+def ping():
+    return {"status": "alive"}
+
 @app.post("/trigger_phase2")
 def trigger_phase2():
     """Manually trigger Phase 2 for testing"""
@@ -532,6 +536,14 @@ def debug_phase2_data():
         return {
             "error": str(e)
         }
+
+
+@app.post("/rhino_data")
+def receive_rhino_data(data: dict):
+    print("Received data from Rhino:")
+    print(json.dumps(data, indent=2))
+    return {"status": "ok", "message": "Rhino data received."}
+
 
 @app.get("/")
 def health_check():
