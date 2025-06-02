@@ -1,26 +1,26 @@
 {
-    "version": "V4",
-    "timestamp": "2025-06-01T23:36:11.875779",
+    "version": "V0",
+    "timestamp": "2025-06-02T15:11:37.432008",
     "inputs_raw": {
-        "Ext.Wall_Partition": 4,
-        "Ext.Wall_Insulation": 6,
-        "Int.Wall_Partition": 4,
-        "Ext.Slab_Insulation": 1,
-        "Int.Slab_Partition": 0,
-        "Roof_Partition": 1,
-        "Roof_Insulation": 0,
+        "Ext.Wall_Partition": 5,
+        "Ext.Wall_Insulation": 1,
+        "Int.Wall_Partition": 5,
+        "Ext.Slab_Insulation": 0,
+        "Int.Slab_Partition": 2,
+        "Roof_Partition": 2,
+        "Roof_Insulation": 4,
         "Window-to-Wall_Ratio": 0.3,
         "Compactness": 1.0,
         "Gross-Floor-Area": 1200.0
     },
     "inputs_decoded": {
-        "Ext.Wall_Partition": "Timber_frame",
-        "Ext.Wall_Insulation": "Unknown (6)",
-        "Int.Wall_Partition": "Timber_frame",
-        "Ext.Slab_Insulation": "XPS",
-        "Int.Slab_Partition": "Concrete",
-        "Roof_Partition": "Timber_frame",
-        "Roof_Insulation": "Cellulose",
+        "Ext.Wall_Partition": "Timber_mass",
+        "Ext.Wall_Insulation": "Cork",
+        "Int.Wall_Partition": "Timber_mass",
+        "Ext.Slab_Insulation": "Extruded_Glas",
+        "Int.Slab_Partition": "Timber_mass",
+        "Roof_Partition": "Timber_mass",
+        "Roof_Insulation": "Glass_wool",
         "Window-to-Wall_Ratio": 0.3,
         "Compactness": 1.0,
         "Gross-Floor-Area": 1200.0
@@ -30,8 +30,8 @@
         "Cooling Demand (kWh/m²a)": 206.7,
         "Heating Demand (kWh/m²a)": 0.0,
         "Operational Carbon (kg CO2e/m²a GFA)": 124.19,
-        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 68.88,
-        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 88.16,
-        "GWP total (kg CO2e/m²a GFA)": 213.06
+        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": -537.77,
+        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 53.56,
+        "GWP total (kg CO2e/m²a GFA)": 172.67
     }
 }
