@@ -91,8 +91,8 @@ AIA25-Studio-Agent/
 To get started, clone this repository to your local machine:
 
 ```bash
-git clone https://github.com/your-username/aia25-studio-agent.git
-cd aia25-studio-agent
+git clone https://github.com/your-username/AIA25_Studio.git
+cd AIA25_Studio
 ```
 
 Then, install the required dependencies:
