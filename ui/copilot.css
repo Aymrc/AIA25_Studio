@@ -45,7 +45,7 @@ body {
 
 #chatbox {
   max-width: auto;
-  height: 400px;
+  height: 300px;
   overflow-y: auto;
   border: 1px solid #ccc;
   padding: 10px;

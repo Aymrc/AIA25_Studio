@@ -124,7 +124,7 @@ def show_copilot_ui():
     """Show the Rhino Copilot UI"""
     dialog = forms.Form()
     dialog.Title = "Rhino Copilot"
-    dialog.ClientSize = drawing.Size(600, 1000)
+    dialog.ClientSize = drawing.Size(500, 800)
     dialog.Topmost = True
 
     # icon
@@ -166,7 +166,7 @@ def start_backend():
     print("Starting Rhino Copilot backend...")
 
     # Double check that PORT is used
-    webbrowser.open("http://localhost:5001")
+    # webbrowser.open("http://localhost:5001")
  
     # Get script-relative paths (works regardless of working directory)
     script_dir = os.path.dirname(os.path.abspath(__file__))

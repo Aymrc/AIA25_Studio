@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "ew_par": 0,
   "ew_ins": 0,
   "iw_par": 0,
@@ -7,4 +8,16 @@
   "ro_par": 0,
   "ro_ins": 0,
   "wwr": 0.5
+=======
+  "ew_par": 5,
+  "ew_ins": 1,
+  "iw_par": 5,
+  "es_ins": 0,
+  "is_par": 2,
+  "ro_par": 2,
+  "ro_ins": 4,
+  "wwr": 0.3,
+  "av": 1.0,
+  "gfa": 1200.0
+>>>>>>> 8a5e25622fba6d2bd6fad31c87e710c50b5acb37
 }
