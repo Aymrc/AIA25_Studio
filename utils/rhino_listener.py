@@ -10,7 +10,15 @@ import time
 import os
 
 # === CONFIGURATION ===
-POST_URL = "http://127.0.0.1:5001/rhino_data"
+def get_post_url():
+    try:
+        with open("knowledge/active_port.txt", "r") as f:
+            port = f.read().strip()
+        return "http://127.0.0.1:{}/rhino_data".format(port)
+    except:
+        return "http://127.0.0.1:5001/rhino_data"
+
+POST_URL = get_post_url()
 debounce_timer = None
 is_running = False
 last_event_time = 0
@@ -127,7 +135,7 @@ def debounce_refresh():
         safe_compute()
 
     debounce_timer = threading.Thread(target=delayed_refresh)
-    debounce_timer.Start()
+    debounce_timer.start()
 
 # === EVENT HANDLERS ===
 def on_add(sender, e):

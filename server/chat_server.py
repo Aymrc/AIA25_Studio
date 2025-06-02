@@ -8,6 +8,7 @@ import json
 import time
 import threading
 from pathlib import Path
+import socket
 
 # Try to import watchdog for file monitoring
 try:
@@ -413,6 +414,14 @@ def chat_endpoint(req: ChatRequest):
     except Exception as e:
         print(f"[CHAT] Error: {e}")
         return {"response": f"Error: {str(e)}", "error": True}
+    
+
+    
+@app.get("/ping")
+def ping():
+    return {"status": "alive"}
+
+
 
 @app.get("/initial_greeting")
 def get_initial_greeting():
@@ -453,9 +462,6 @@ def get_conversation_state():
         "conversation_history": conversation_state["conversation_history"][-5:]
     }
 
-@app.get("/ping")
-def ping():
-    return {"status": "alive"}
 
 @app.post("/trigger_phase2")
 def trigger_phase2():
@@ -571,8 +577,34 @@ if __name__ == "__main__":
         watcher_thread = threading.Thread(target=start_watcher, daemon=True)
         watcher_thread.start()
         time.sleep(1)  # Give it a moment to start
+
+
+
+
+    def find_free_port(start=5000, max_tries=20):
+        for port in range(start, start + max_tries):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                if s.connect_ex(('127.0.0.1', port)) != 0:
+                    return port
+        raise RuntimeError("No free port found.")
+
+    port = int(os.getenv("COPILOT_PORT", 5000))
+
+    # Check if port is in use
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex(('127.0.0.1', port)) == 0:
+            print(f"⚠️ Port {port} is in use. Trying to find a free port...")
+            port = find_free_port(5001)
+
+    print(f"🚀 Launching server on port {port}...")
+    uvicorn.run(app, host="127.0.0.1", port=port)
+    with open("knowledge/active_port.txt", "w") as f:
+        f.write(str(port))
+
+
+
     
-    uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
+    #uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
 
 
 
