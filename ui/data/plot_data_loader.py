@@ -6,8 +6,8 @@ import os
 # from UTILS.plot_data_loader import generate_plot_data
 # generate_plot_data() 
 
-json_folder = "Knowledge/Optioneering"
-output_js = "UI/data/plot_data.js"
+json_folder = "knowledge\iterations"
+output_js = "ui/data/plot_data.js"
 
 metrics = {
     "GWP total (kg CO2e/m²a GFA)": "GWP total",
