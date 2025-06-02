@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+		<title>Cop:lot</title>
+		<link rel="stylesheet" href="copilot.css">
+
+		<link rel="icon" type="image/png" href="copilot_icon.svg">
+
+		<!-- plotly for the plot in data tab -->
+		<script src="https://cdn.plot.ly/plotly-2.27.1.min.js"></script>
+		<script src="data/plot_data.js"></script>
+	</head>
+
+	<body>
+        <div class="copTitle">Cop:lot</div>
+
+
+        <div class="box" id="Chat">
+			<!-- <h2>Copilot Chat</h2> -->
+				<div id="chatbox">
+					<!-- placeholder for the UI chatbot / don't write here -->
+				</div>
+				
+				<!-- user input -->
+				<div id="input">
+					<input type="text" id="message" placeholder="Type your question..." style="width: 70%;">
+					<button onclick="sendMessage()">Send</button>
+				</div>
+
+				<!-- script for chatbot calling server -->
+				<script>
+				// Load initial greeting when page loads
+				window.addEventListener("load", async function() {
+					try {
+						const res = await fetch("http://localhost:5000/initial_greeting");
+						const data = await res.json();
+						
+						if (data.response) {
+							addToChat("bot", data.response);
+						}
+					} catch (err) {
+						console.error("Could not load initial greeting:", err);
+						addToChat("bot", "Hello! I'm your design assistant. What would you like to build today?");
+					}
+				});
+				
+				async function sendMessage() {
+					const input = document.getElementById("message");
+					const chatbox = document.getElementById("chatbox");
+
+					const userMsg = input.value.trim();
+					if (!userMsg) return;
+
+					addToChat("user", userMsg);
+					input.value = "";
+
+
+					// "Copilot is typing ..."
+					const typingMsg = document.createElement("div");
+					typingMsg.className = "bot typing";
+					typingMsg.textContent = "Copilot is typing...";
+					chatbox.appendChild(typingMsg);
+					chatbox.scrollTop = chatbox.scrollHeight;
+
+
+					try {
+					const res = await fetch("http://localhost:5000/chat", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ message: userMsg })
+					});
+
+					const data = await res.json();
+
+					// Show copilot message (typing)
+					chatbox.removeChild(typingMsg);
+
+					addToChat("bot", data.response);
+					} catch (err) {
+					console.error("Fetch error:", err);
+					addToChat("bot", "Error contacting the assistant.");
+					}
+				}
+
+				function addToChat(role, text) {
+					const chat = document.getElementById("chatbox");
+					const msg = document.createElement("div");
+					msg.className = role;
+					msg.textContent = (role === "user" ? "User: " : "Copilot: ") + text;
+					chat.appendChild(msg);
+					chat.scrollTop = chat.scrollHeight;
+				}
+
+				document.getElementById("message").addEventListener("keydown", function(event) {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					sendMessage();
+				}
+				});
+				</script>
+		</div>
+
+
+
+		<!-- DATA VIZ -->
+        <div class="box" id="Data">
+            <h3>GWP Trend</h3>
+
+			<label for="metricSelect">Select Metric:</label>
+			<select id="metricSelect">
+				<option value="GWP total (kg CO2e/m²a GFA)">GWP total</option>
+				<option value="Operational Carbon (kg CO2e/m²a GFA)">Op. Carbon</option>
+				<option value="Embodied Carbon A-D (kg CO2e/m²a GFA)">EC A-D</option>
+				<option value="Energy Intensity - EUI (kWh/m²a)">EUI</option>
+				<option value="Cooling Demand (kWh/m²a)">Cooling</option>
+				<option value="Heating Demand (kWh/m²a)">Heating</option>
+			</select>
+
+
+  			<div id="gwp-plot" style="width:100%; height:400px;"></div>
+        </div>
+
+
+
+		<!-- GALLERY -->
+        <div class="box" id="Viz">
+			<h3>Vizualisation</h3>
+
+  			<div id="vizGrid" class="viz-grid"> 
+				<div class="viz-tile empty">Waiting for image...</div>
+				<!-- basic grid placeholder -->
+
+				<!-- JS script for adding new tile when you image avaiable -->
+				<script>
+					function loadVizGallery() {
+					const grid = document.getElementById("vizGrid");
+					grid.innerHTML = "";
+
+					let i = 0;
+
+					const tryNext = () => {
+						const imgPath = `../KNOWLEDGE/Optioneering/V${i}.png`;
+						// checking for the version
+						// make sure the folder is right!
+
+						const img = new Image();
+						img.onload = function () {
+							const tile = document.createElement("div");
+							tile.className = "viz-tile";
+
+							const label = document.createElement("div");
+							label.className = "viz-label";
+							label.textContent = `V${i}`;
+
+							tile.appendChild(img);
+							tile.appendChild(label);
+
+							grid.appendChild(tile);
+
+							i++;
+							tryNext();
+						};
+
+						img.onerror = function () {
+						if (i === 0) {
+							const empty = document.createElement("div");
+							empty.className = "viz-tile empty";
+							empty.textContent = "No images yet.";
+							grid.appendChild(empty);
+						}
+						};
+
+						img.src = imgPath;
+					};
+
+					tryNext();
+					}
+
+					window.addEventListener("load", loadVizGallery);
+					</script>
+
+			</div>
+			
+		</div>
+
+		<!-- script for plotly -->
+		<script>
+			window.addEventListener("load", () => {
+				console.log("DOM fully loaded. Checking gwpData...");
+				const select = document.getElementById("metricSelect");
+
+				if (!window.gwpData || gwpData.length === 0) {
+					console.warn("No gwpData found or empty.");
+					document.getElementById("gwp-plot").innerText = "No data yet.";
+					return;
+				}
+
+				console.log("Plotting with data:", gwpData);
+				
+				// short name for display use
+				const displayNames = { 
+					"GWP total (kg CO2e/m²a GFA)": "GWP total",
+					"Operational Carbon (kg CO2e/m²a GFA)": "Op. Carbon",
+					"Embodied Carbon A-D (kg CO2e/m²a GFA)": "EC A-D",
+					"Energy Intensity - EUI (kWh/m²a)": "EUI",
+					"Cooling Demand (kWh/m²a)": "Cooling",
+					"Heating Demand (kWh/m²a)": "Heating",
+				};
+
+				// const metricName = "GWP total";
+
+
+				function plotMetric(metricName){
+					const filtered = gwpData.filter(d => typeof d[metricName] === "number" && !isNaN(d[metricName]));
+
+					const x = filtered.map(d => d.version);
+					const y = filtered.map(d => d[metricName]);
+
+
+					const min = Math.min(...y);
+					const max = Math.max(...y);
+					
+					const minIndex = y.indexOf(min);
+					const maxIndex = y.indexOf(max);
+					
+					const shortName = displayNames[metricName] || metricName;
+
+					const trace = {
+						x: x,
+						y: y,
+						type: 'scatter',
+						mode: 'markers', // 'lines+markers'
+						marker: {
+							size: 15,
+							color: y,
+							colorscale: [
+								[0, 'da70d6'],
+								[0.5, 'ffd700'],
+								[1, 'add8e6']
+							],
+							reversescale: true,
+							cmin: min,
+							cmax: max,
+							colorbar: {
+								title: {
+									text: metricName,
+									font: {
+									size: 12
+									}
+								},
+								thickness: 15
+								}
+						},
+						hovertemplate: `Version: %{x}<br>${metricName}: %{y} kg CO₂e/m²a GFA<extra></extra>`,
+						// line: { shape: 'linear' }
+					};
+				
+
+					Plotly.newPlot('gwp-plot', [trace], {
+						title: `${metricName} per Design Iteration`,
+						xaxis: {
+							title: 'Version',
+							fixedrange: false,
+							range: [-0.5, 4.5],
+							tickmode: 'linear'
+						}, // fixed width instead of zooming out for each iteration
+						yaxis: {
+							title: `${metricName} (kg CO₂e/m²a)`,
+							fixedrange: false,
+							range: [-0, max + 20]
+						},
+						dragmode: 'pan',
+						margin: { t: 40 },
+						
+						annotations: [
+						{
+							x: x[minIndex],
+							y: min,
+							text: "Best",
+							showarrow: false,
+							arrowhead: 0,
+							ax: 0,
+							// ay: -20,
+							yshift: -15,
+							font: { color: 'add8e6', size: 12 }
+						},
+						{
+							x: x[maxIndex],
+							y: max,
+							text: "", // had tag but issue for other metrics
+							showarrow: false,
+							arrowhead: 0,
+							ax: 0,
+							// ay: -20,
+							yshift: -15,
+							font: { color: 'red', size: 12 }
+						}
+					]
+					});
+				}
+
+				plotMetric(select.value);
+
+				select.addEventListener("change", () => {
+					plotMetric(select.value);
+				});
+			});
+		</script>
+
+
+
+	</body>
+</html>

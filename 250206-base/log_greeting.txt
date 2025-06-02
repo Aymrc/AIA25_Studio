@@ -1,0 +1,5 @@
+=== Initial Greeting Called ===
+LLM_AVAILABLE = True
+llm_calls is None: False
+LLM responded successfully.
+Greeting: Hello! I'm your design assistant. What would you like to build today?
