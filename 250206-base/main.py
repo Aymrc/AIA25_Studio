@@ -161,12 +161,13 @@ def show_copilot_ui():
         print("HTML file not found: " + str(html_path))
         return False
 
+
 def start_backend():
     # Start the backend server
     print("Starting Rhino Copilot backend...")
 
     # Double check that PORT is used
-    webbrowser.open("http://localhost:5001")
+    # webbrowser.open("http://localhost:5001")
  
     # Get script-relative paths (works regardless of working directory)
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -229,23 +230,7 @@ def start_backend():
         print("2. Check Windows Defender/Antivirus settings")
         print("3. Run Rhino as Administrator")
         return False, python_path
-    
-# def rhino_listener():
-#     import Rhino
 
-#     listener_path = os.path.join(os.path.dirname(__file__), "utils", "rhino_listener.py")
-
-#     if not os.path.exists(listener_path):
-#         Rhino.RhinoApp.WriteLine("Rhino listener script not found: " + listener_path)
-#         return
-
-#     try:
-#         with open(listener_path, "r") as f:
-#             code = f.read()
-#             exec(code, globals())  # EXECUTES INSIDE RHINO'S PYTHON ENGINE
-#         Rhino.RhinoApp.WriteLine("Rhino listener loaded and running.")
-#     except Exception as e:
-#         Rhino.RhinoApp.WriteLine("Error executing Rhino listener: " + str(e))
 
 def launch_copilot():
     # Universal launcher that works for any Rhino user
@@ -278,9 +263,5 @@ def launch_copilot():
         print("FAILED: Could not start backend server")
         print("Please check the error messages above")
 
-# def launch():
-#     # Legacy compatibility function
-#     launch_copilot()
 
-# Main execution - works for any user
 launch_copilot()
