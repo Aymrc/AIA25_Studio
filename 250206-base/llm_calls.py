@@ -537,19 +537,3 @@ def suggest_change(user_prompt, design_data):
     run_ml_predictor()
 
     return raw_response
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

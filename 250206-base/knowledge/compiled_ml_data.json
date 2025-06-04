@@ -1,12 +1,12 @@
 {
-  "ew_par": 4,
-  "ew_ins": 6,
-  "iw_par": 4,
+  "ew_par": 0,
+  "ew_ins": 4,
+  "iw_par": 0,
   "es_ins": 1,
   "is_par": 0,
-  "ro_par": 1,
-  "ro_ins": 0,
-  "wwr": 0.3,
-  "av": 1.0,
-  "gfa": 1200.0
+  "ro_par": 0,
+  "ro_ins": 2,
+  "wwr": 0.35,
+  "av": 1200.0,
+  "gfa": 1500.0
 }
