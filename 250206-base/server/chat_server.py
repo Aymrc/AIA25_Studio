@@ -7,6 +7,9 @@ import os
 import json
 import time
 import threading
+# === START RHINO RECEIVER SERVER (new) 25.05.06 ===
+import subprocess
+# ========================================== ENDS
 from pathlib import Path
 
 # Try to import watchdog for file monitoring
@@ -390,6 +393,19 @@ def chat_endpoint(req: ChatRequest):
         if new_state == "complete":
             response += "\n\n✅ Phase 1 complete! When ML analysis runs, Phase 2 will activate automatically."
         
+
+
+            # === START RHINO RECEIVER SERVER (new) 25.05.06 ===
+            try:
+                predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+                subprocess.Popen(["python", predictor_path])
+                print("🚀 ML_predictor.py launched after Phase 1 completion")
+            except Exception as e:
+                print(f"❌ Failed to launch ML_predictor.py: {e}")
+            # ========================================== ENDS
+
+
+
         return {
             "response": response,
             "state": new_state,
