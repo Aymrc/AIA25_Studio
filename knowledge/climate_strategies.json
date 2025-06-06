@@ -1,0 +1,105 @@
+{
+  "1A-VeryHot_Humid": {
+    "energy_strategies": [
+      "Prioritise high-efficacy cooling equipment (SEER/EER > 19).",
+      "Use dedicated outdoor-air systems (DOAS) with heat-pipe or run-around dehumidification to decouple moisture from sensible load.",
+      "Employ high-albedo roofing (≥ 0.75) and reflective façades.",
+      "Specify low-SHGC glazing (≤ 0.25) with internal light shelves.",
+      "Maximise natural cross-ventilation where comfort criteria allow (night purge).",
+      "Limit internal gains: LED lighting, high-efficiency appliances."
+    ],
+    "carbon_strategies": [
+      "Replace concrete block with AAC or hollow-core CMU to cut embodied CO₂.",
+      "Use fly-ash (≥ 30 %) or slag blends in any cast-in-place concrete.",
+      "Favour aluminium window frames with recycled content ≥ 60 %.",
+      "Source cellulose or cork insulation (low embodied energy)."
+    ]
+  },
+
+  "2B-Hot_Dry": {
+    "energy_strategies": [
+      "Mass walls / exposed concrete floors for thermal lag (night flush).",
+      "Deep overhangs or vertical fins tuned for high-angle summer sun.",
+      "Evaporative pre-cooling of ventilation air where water supply allows.",
+      "Low-E, spectrally selective glazing with SHGC ≈ 0.38 and VT ≥ 0.5.",
+      "Roof insulation ≥ R-38 (6.7 m²·K/W) with cool-roof coating."
+    ],
+    "carbon_strategies": [
+      "Use ground-granulated slag cement in all structural concrete.",
+      "Earthen or adobe walls with lime-based render for façade mass.",
+      "Integrate rooftop PV to offset daytime cooling electricity."
+    ]
+  },
+
+  "3C-Warm_Marine": {
+    "energy_strategies": [
+      "High-performance envelope: R-21 walls, R-49 roof, U-0.30 windows.",
+      "Heat-pump water heaters (COP ≈ 3) to leverage mild ambient air.",
+      "Demand-controlled ventilation with enthalpy-wheel recovery.",
+      "Night-time free cooling with automated operable windows."
+    ],
+    "carbon_strategies": [
+      "Timber or hybrid timber-steel super-structure to cut embodied CO₂.",
+      "Mineral-wool insulation with > 70 % recycled content.",
+      "Specify low-GWP refrigerants (R-454B / R-1234ze) in VRF systems."
+    ]
+  },
+
+  "4A-Mixed_Humid": {
+    "energy_strategies": [
+      "Variable-capacity heat pumps with balanced-point optimisation.",
+      "Continuous exterior insulation (R-5.6 m²·K/W) to minimise thermal bridging.",
+      "Air-sealed envelope (≤ 0.4 ACH@50 Pa).",
+      "Triple-pane IGUs with warm-edge spacers (U ≤ 0.20).",
+      "ERV with 75 % sensible/latent effectiveness."
+    ],
+    "carbon_strategies": [
+      "Hybrid timber (GLT/CLT) floors instead of composite steel-deck.",
+      "Replace 40 % OPC with calcined-clay LC³ cement in foundations.",
+      "Design for deconstruction: bolted steel nodes, modular façades."
+    ]
+  },
+
+  "5A-Cool_Humid": {
+    "energy_strategies": [
+      "Ground-source or air-to-water heat pumps (COP_heating ≥ 4).",
+      "Wall R-value > 5.6 m²·K/W; roof R-value > 8.8 m²·K/W.",
+      "South-facing windows with SHGC ≈ 0.45 for winter solar gains.",
+      "Active solar-thermal pre-heat for domestic hot water."
+    ],
+    "carbon_strategies": [
+      "HVAC refrigerant charge ≤ 0.7 kg/kW to limit embodied GWP.",
+      "Bio-based insulation (cellulose or hemp) for thick wall assemblies.",
+      "On-site PV sized to net-zero annual electric load."
+    ]
+  },
+
+  "6A-Cold": {
+    "energy_strategies": [
+      "Super-insulated envelope: R-7.0 walls, R-10 roof, R-1.1 windows.",
+      "Passive-House-level airtightness (≤ 0.15 ACH@50 Pa).",
+      "Heat-recovery ventilator (HRV) ≥ 85 % sensible efficiency.",
+      "Ground-coupled heat pump with exhaust-air economiser."
+    ],
+    "carbon_strategies": [
+      "Cellulose dense-pack insulation; blown through service cavity.",
+      "Use wood-fibreboard sheathing (carbon-negative).",
+      "Prefabricated panels to reduce construction waste."
+    ]
+  },
+
+  "7/8-Very_Cold/Arctic": {
+    "energy_strategies": [
+      "Compact form factor (A/V ratio < 0.7) to minimise envelope losses.",
+      "Triple or quad IGUs with krypton fill (U ≈ 0.10).",
+      "Wall R ≥ 8.0 m²·K/W; roof R ≥ 12 m²·K/W.",
+      "Earth-tube or glycol ground-heat exchanger for pre-heating supply air.",
+      "Design for internal heat recovery (data/lighting waste heat)."
+    ],
+    "carbon_strategies": [
+      "Timber-frame + cellulose or wood-fibre insulation for low embodied CO₂.",
+      "Avoid high-GWP refrigerants; use CO₂ or propane heat-pump technology.",
+      "Off-site prefab modules to reduce cold-weather site work."
+    ]
+  }
+}
