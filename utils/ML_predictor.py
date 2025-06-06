@@ -6,7 +6,6 @@ from datetime import datetime
 import re
 import shutil
 import sys
-import sklearn
 
 # ============================
 # PATH CONFIGURATION
@@ -15,7 +14,14 @@ script_dir = os.path.dirname(__file__)
 compiled_input_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "compiled_ml_data.json"))
 materials_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "materials.json"))
 json_folder = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "iterations"))
-model_path = r"C:\Users\CDH\Documents\Trabajo\IAAC\AIA\Studio\model\gwp_model_rf_av&gfa.pkl"  # GFA+AV-based
+
+
+#Paths to ML-models (uncomment yours to get it working)
+#model_path = r"C:\Users\broue\Documents\IAAC MaCAD\S3_AIA\Studio\gwp_model_rf_av&gfa.pkl"  # Aymeric
+#model_path = r"C:\Users\CDH\Documents\Trabajo\IAAC\AIA\Studio\model\gwp_model_rf_av&gfa.pkl"  # César
+model_path = r"C:\Users\User\Documents\IAAC\Module03\Encoding\ML\gwp_model_rf_av&gfa.pkl"  # Andrés
+#model_path = ?  # Joaquin
+#model_path = ? # Marco
 
 
 # ============================
