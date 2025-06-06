@@ -3,8 +3,6 @@
 
 # Rhino Copilot // AIA25_Studio
 
-JAJAJAJAJAJAJAJ
-
 A local AI assistant for Rhino 3D.  
 Copilot predicts design's sustainable KPI including GWP.
 
