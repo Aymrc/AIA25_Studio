@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cop:lot - Chat</title>
+
+    <link rel="stylesheet" href="copilot_common.css">
+    <link rel="stylesheet" href="copilot_data.css">
+
+    <link rel="icon" type="image/png" href="assets/copilot_icon.svg">
+</head>
+
+    <body>
+        <div class="glow-line"></div>
+
+        <div class="copTitle">Copilot Data</div>
+
+        <!-- layer composition material -->
+        <div class="tableComp">
+            <h3>Building Composition</h3>
+        </div>
+
+        <!-- plot GWP & other metrics -->
+        <div class="plotGWP">
+            <h3>GWP Trend</h3>
+
+			<label for="metricSelect">Select Metric:</label>
+			<select id="metricSelect">
+				<option value="GWP total (kg CO2e/m²a GFA)">GWP total</option>
+				<option value="Operational Carbon (kg CO2e/m²a GFA)">Op. Carbon</option>
+				<option value="Embodied Carbon A-D (kg CO2e/m²a GFA)">EC A-D</option>
+				<option value="Energy Intensity - EUI (kWh/m²a)">EUI</option>
+				<option value="Cooling Demand (kWh/m²a)">Cooling</option>
+				<option value="Heating Demand (kWh/m²a)">Heating</option>
+			</select>
+
+
+  			<div id="gwp-plot" style="width:100%; height:400px;"></div>
+        </div>
+      
+
+        <!-- Gallery Iterations -->
+        <div class="gallerySection" id="gallery">
+            <h3>Vizualisation</h3>
+
+  			<div id="vizGrid" class="viz-grid"> 
+				<div class="viz-tile empty">Waiting for image...</div>
+				<!-- basic grid placeholder -->
+
+				<!-- JS script for adding new tile when you image avaiable -->
+				<script>
+					function loadVizGallery() {
+					const grid = document.getElementById("vizGrid");
+					grid.innerHTML = "";
+
+					let i = 0;
+
+					const tryNext = () => {
+						const imgPath = `../knowledge/iterations/V${i}.png`;
+						
+						// checking for the version
+						// make sure the folder is right!
+
+						const img = new Image();
+						img.onload = function () {
+							const tile = document.createElement("div");
+							tile.className = "viz-tile";
+
+							const label = document.createElement("div");
+							label.className = "viz-label";
+							label.textContent = `V${i}`;
+
+							tile.appendChild(img);
+							tile.appendChild(label);
+
+							grid.appendChild(tile);
+
+							i++;
+							tryNext();
+						};
+
+						img.onerror = function () {
+						if (i === 0) {
+							const empty = document.createElement("div");
+							empty.className = "viz-tile empty";
+							empty.textContent = "No images yet.";
+							grid.appendChild(empty);
+						}
+						};
+
+						img.src = imgPath;
+					};
+
+					tryNext();
+					}
+
+					window.addEventListener("load", loadVizGallery);
+					</script>
+
+			</div>
+        </div>
+
+
+    </body>
+</html>
