@@ -6,8 +6,6 @@
 A local AI assistant for Rhino 3D.  
 Copilot predicts design's sustainable KPI including GWP.
 
->>>>> TEST
-
 This is the repo for AIA 25 Studio at IAAC for MaCAD.
 
 Team:
