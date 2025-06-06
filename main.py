@@ -215,7 +215,7 @@ def show_copilot_ui():
     # === icon ===
     icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
     if os.path.exists(icon_path):
-        chat_form.Icon = drawing.Icon(icon_path)
+        data_form.Icon = drawing.Icon(icon_path)
     else:
         print("Icon not found at:", icon_path)
 
