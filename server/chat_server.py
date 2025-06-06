@@ -490,34 +490,9 @@ def chat_endpoint(req: ChatRequest):
         print(f"[CHAT] Error: {e}")
         return {"response": f"Error: {str(e)}", "error": True}
     
-
 @app.get("/ping")
 def ping():
     return {"status": "alive"}
-
-@app.get("/initial_greeting")
-def get_initial_greeting():
-    """Get initial greeting from your LLM system"""
-    
-    if not LLM_AVAILABLE:
-        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
-    
-    try:
-        # Get greeting from your system
-        initial_state, greeting, initial_data = llm_calls.manage_conversation_state(
-            "initial", "", {}
-        )
-        
-        return {
-            "response": greeting,
-            "state": initial_state,
-            "design_data": initial_data,
-            "phase": 1
-        }
-        
-    except Exception as e:
-        print(f"[GREETING] Error: {e}")
-        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
 
 @app.get("/conversation_state")
 def get_conversation_state():
@@ -651,35 +626,62 @@ def test_geometry():
             }
     except Exception as e:
         return {"error": str(e)}
+
 #TEMPORARY TEST FUNCTION 2 06.06.25
 @app.get("/initial_greeting")
 def get_initial_greeting():
-    """Get dynamic initial greeting from your LLM system"""
+    """Get dynamic greeting from LLM system"""
     
-    print("🔍 [DEBUG] /initial_greeting endpoint called!")
+    print("📞 [GREETING] Endpoint called")
     
     if not LLM_AVAILABLE:
-        print("🔍 [DEBUG] LLM not available, using fallback")
+        print("⚠️ [GREETING] LLM not available, using fallback")
         return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
     
     try:
-        print("🔍 [DEBUG] Calling generate_dynamic_greeting()...")
-        # Generate dynamic greeting using LLM
-        dynamic_greeting = llm_calls.generate_dynamic_greeting()
-        print(f"🔍 [DEBUG] Got dynamic greeting: {dynamic_greeting}")
+        # Get dynamic greeting
+        print("🤖 [GREETING] Calling generate_dynamic_greeting...")
+        greeting = llm_calls.generate_dynamic_greeting()
+        print(f"✅ [GREETING] Generated: {greeting}")
         
         return {
-            "response": dynamic_greeting,
+            "response": greeting,
             "state": "initial",
             "design_data": {},
-            "phase": 1
+            "phase": 1,
+            "dynamic": True
         }
         
     except Exception as e:
-        print(f"🔍 [DEBUG] Exception in greeting: {e}")
+        print(f"❌ [GREETING] Error: {e}")
+        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
+
+#TEMPORARY TEST FUNCTION 2 06.06.25
+@app.get("/test_greeting")
+def test_greeting():
+    """Debug endpoint to test dynamic greeting"""
+    try:
+        if LLM_AVAILABLE:
+            greeting = llm_calls.generate_dynamic_greeting()
+            return {
+                "success": True,
+                "greeting": greeting,
+                "llm_available": LLM_AVAILABLE
+            }
+        else:
+            return {
+                "success": False,
+                "error": "LLM not available",
+                "llm_available": LLM_AVAILABLE
+            }
+    except Exception as e:
         import traceback
-        traceback.print_exc()
-        return {"response": "BIP.BUP.BAP"}
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "llm_available": LLM_AVAILABLE
+        }
 
 #UPDATED 06.06.25
 if __name__ == "__main__":
