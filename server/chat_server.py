@@ -7,10 +7,9 @@ import os
 import json
 import time
 import threading
-# === START RHINO RECEIVER SERVER (new) 25.05.06 ===
-import subprocess
-# ========================================== ENDS
 from pathlib import Path
+import socket
+import subprocess
 
 # Try to import watchdog for file monitoring
 try:
@@ -418,6 +417,11 @@ def chat_endpoint(req: ChatRequest):
     except Exception as e:
         print(f"[CHAT] Error: {e}")
         return {"response": f"Error: {str(e)}", "error": True}
+    
+
+@app.get("/ping")
+def ping():
+    return {"status": "alive"}
 
 @app.get("/initial_greeting")
 def get_initial_greeting():
@@ -457,10 +461,6 @@ def get_conversation_state():
         "parameters_complete": conversation_state["current_state"] == "complete",
         "conversation_history": conversation_state["conversation_history"][-5:]
     }
-
-@app.get("/ping")
-def ping():
-    return {"status": "alive"}
 
 @app.post("/trigger_phase2")
 def trigger_phase2():
@@ -543,13 +543,6 @@ def debug_phase2_data():
         }
 
 
-@app.post("/rhino_data")
-def receive_rhino_data(data: dict):
-    print("Received data from Rhino:")
-    print(json.dumps(data, indent=2))
-    return {"status": "ok", "message": "Rhino data received."}
-
-
 @app.get("/")
 def health_check():
     return {
@@ -576,5 +569,39 @@ if __name__ == "__main__":
         watcher_thread = threading.Thread(target=start_watcher, daemon=True)
         watcher_thread.start()
         time.sleep(1)  # Give it a moment to start
-    
+
+
+    def find_free_port(start=5000, max_tries=20):
+        for port in range(start, start + max_tries):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                if s.connect_ex(('127.0.0.1', port)) != 0:
+                    return port
+        raise RuntimeError("No free port found.")
+
+    port = 5001
+
+    # Check if port is in use
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex(('127.0.0.1', port)) == 0:
+            print(f"⚠️ Port {port} is in use. Trying to find a free port...")
+            port = find_free_port(5001)
+
+    print(f"🚀 Launching server on port {port}...")
+
+    # Start main server
     uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
+
+    # Save active port for debugging or UI sync
+    with open("knowledge/active_port.txt", "w") as f:
+        f.write(str(port))
+
+    # Compatibility server for clients expecting port 5001
+    import multiprocessing
+
+    def run_legacy_compatibility_server():
+        uvicorn.run(app, host="127.0.0.1", port=5001)
+
+    if port != 5001:
+        print("🔁 Launching compatibility server on port 5001...")
+        legacy_proc = multiprocessing.Process(target=run_legacy_compatibility_server, daemon=True)
+        legacy_proc.start()
