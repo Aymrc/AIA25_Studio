@@ -1,6 +1,6 @@
 {
-    "version": "V9",
-    "timestamp": "2025-06-06T15:44:03.853953",
+    "version": "V10",
+    "timestamp": "2025-06-06T16:12:23.146547",
     "inputs_raw": {
         "Ext.Wall_Partition": 5,
         "Ext.Wall_Insulation": 0,
@@ -11,7 +11,7 @@
         "Roof_Insulation": 0,
         "Window-to-Wall_Ratio": 0.3,
         "Compactness": 0.9,
-        "Gross-Floor-Area": 1000
+        "Gross-Floor-Area": 1001
     },
     "inputs_decoded": {
         "Ext.Wall_Partition": "Timber_mass",
@@ -23,7 +23,7 @@
         "Roof_Insulation": "Cellulose",
         "Window-to-Wall_Ratio": 0.3,
         "Compactness": 0.9,
-        "Gross-Floor-Area": 1000
+        "Gross-Floor-Area": 1001
     },
     "outputs": {
         "Energy Intensity - EUI (kWh/m²a)": 277.24,

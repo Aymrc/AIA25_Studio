@@ -43,7 +43,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+ 
+#IMPORTANT = PHASE DETECTION
 # Global conversation state + Phase 2 detection
 conversation_state = {
     "current_state": "initial",
@@ -57,6 +58,90 @@ phase2_activated = False
 file_observer = None
 
 # File watcher for automatic Phase 2 activation
+#class MLFileWatcher(FileSystemEventHandler):
+    #def __init__(self):
+    #     self.last_modified = {}
+    
+    # def on_modified(self, event):
+    #     if event.is_directory:
+    #         return
+            
+    #     file_name = Path(event.src_path).name
+    #     if file_name != "ml_output.json":
+    #         return
+            
+    #     current_time = time.time()
+    #     if file_name in self.last_modified:
+    #         if current_time - self.last_modified[file_name] < 2:  # 2 second debounce
+    #             return
+                
+    #     self.last_modified[file_name] = current_time
+        
+    #     print(f"🔄 File watcher detected change in {file_name}")
+        
+    #     # AUTOMATICALLY remove the processed flag when ML output changes
+    #     try:
+    #         flag_file = "knowledge/ml_processed.flag"
+    #         if os.path.exists(flag_file):
+    #             os.remove(flag_file)
+    #             print("✅ Automatically removed processed flag - ready for Phase 2")
+    #     except Exception as e:
+    #         print(f"⚠️ Could not remove processed flag: {e}")
+        
+    #     # Check if we should activate Phase 2
+    #     if (not phase2_activated and 
+    #         conversation_state.get("current_state") == "complete" and 
+    #         check_for_ml_output()):
+            
+    #         self.activate_phase2_automatically()
+    
+    # def activate_phase2_automatically(self):
+    #     """Activate Phase 2 when ML file changes"""
+    #     global phase2_activated, conversation_state
+        
+    #     try:
+    #         print("🔄 File change detected - checking Phase 2 activation...")
+            
+    #         # Check if conditions are met
+    #         phase1_complete = conversation_state.get("current_state") == "complete"
+    #         can_activate = check_for_ml_output()
+            
+    #         print(f"[AUTO ACTIVATION] Phase 1 complete: {phase1_complete}")
+    #         print(f"[AUTO ACTIVATION] Can activate: {can_activate}")
+    #         print(f"[AUTO ACTIVATION] Already activated: {phase2_activated}")
+            
+    #         if phase1_complete and can_activate and not phase2_activated:
+    #             phase2_activated = True
+    #             conversation_state["phase"] = 2
+    #             mark_ml_output_processed()
+                
+    #             # Add automatic message to conversation history
+    #             auto_message = {
+    #                 "user": "[SYSTEM]",
+    #                 "assistant": "🎯 Phase 2 activated automatically! ML analysis updated. You can now ask about embodied carbon, improvements, or design changes.",
+    #                 "phase": 2,
+    #                 "trigger": "file_change",
+    #                 "timestamp": time.time()
+    #             }
+    #             conversation_state["conversation_history"].append(auto_message)
+                
+    #             # Terminal message
+    #             print("=" * 60)
+    #             print("🎯 PHASE 2 ACTIVATED AUTOMATICALLY!")
+    #             print("   Triggered by ML file change")
+    #             print("   User can now ask about:")
+    #             print("   • Embodied carbon analysis")
+    #             print("   • Design improvements") 
+    #             print("   • Material changes")
+    #             print("=" * 60)
+    #         else:
+    #             print("❌ Phase 2 activation conditions not met")
+            
+    #     except Exception as e:
+    #         print(f"❌ Error activating Phase 2: {e}")
+
+#UPDATED 06.06.25
+# File watcher for automatic Phase 2 activation
 class MLFileWatcher(FileSystemEventHandler):
     def __init__(self):
         self.last_modified = {}
@@ -66,7 +151,9 @@ class MLFileWatcher(FileSystemEventHandler):
             return
             
         file_name = Path(event.src_path).name
-        if file_name != "ml_output.json":
+        
+        # Monitor both ML output AND input files
+        if file_name not in ["ml_output.json", "compiled_ml_data.json"]:
             return
             
         current_time = time.time()
@@ -78,66 +165,56 @@ class MLFileWatcher(FileSystemEventHandler):
         
         print(f"🔄 File watcher detected change in {file_name}")
         
-        # AUTOMATICALLY remove the processed flag when ML output changes
-        try:
-            flag_file = "knowledge/ml_processed.flag"
-            if os.path.exists(flag_file):
-                os.remove(flag_file)
-                print("✅ Automatically removed processed flag - ready for Phase 2")
-        except Exception as e:
-            print(f"⚠️ Could not remove processed flag: {e}")
+        # Handle compiled_ml_data.json changes (geometry detection)
+        if file_name == "compiled_ml_data.json":
+            self.check_geometry_and_trigger_phase1_completion()
         
-        # Check if we should activate Phase 2
-        if (not phase2_activated and 
-            conversation_state.get("current_state") == "complete" and 
-            check_for_ml_output()):
+        # Handle ml_output.json changes (Phase 2 activation) 
+        elif file_name == "ml_output.json":
+            # AUTOMATICALLY remove the processed flag when ML output changes
+            try:
+                flag_file = "knowledge/ml_processed.flag"
+                if os.path.exists(flag_file):
+                    os.remove(flag_file)
+                    print("✅ Automatically removed processed flag - ready for Phase 2")
+            except Exception as e:
+                print(f"⚠️ Could not remove processed flag: {e}")
             
-            self.activate_phase2_automatically()
+            # Check if we should activate Phase 2
+            if (not phase2_activated and 
+                conversation_state.get("current_state") == "complete" and 
+                check_for_ml_output()):
+                
+                self.activate_phase2_automatically()
     
-    def activate_phase2_automatically(self):
-        """Activate Phase 2 when ML file changes"""
-        global phase2_activated, conversation_state
+    def check_geometry_and_trigger_phase1_completion(self):
+        """Check for geometry and trigger Phase 1 completion if found"""
+        global conversation_state
         
         try:
-            print("🔄 File change detected - checking Phase 2 activation...")
+            print("🔍 [GEOMETRY WATCHER] Checking for geometry data...")
             
-            # Check if conditions are met
-            phase1_complete = conversation_state.get("current_state") == "complete"
-            can_activate = check_for_ml_output()
-            
-            print(f"[AUTO ACTIVATION] Phase 1 complete: {phase1_complete}")
-            print(f"[AUTO ACTIVATION] Can activate: {can_activate}")
-            print(f"[AUTO ACTIVATION] Already activated: {phase2_activated}")
-            
-            if phase1_complete and can_activate and not phase2_activated:
-                phase2_activated = True
-                conversation_state["phase"] = 2
-                mark_ml_output_processed()
+            if LLM_AVAILABLE:
+                geometry_available = llm_calls.check_geometry_available()
+                print(f"🔍 [GEOMETRY WATCHER] Geometry available: {geometry_available}")
                 
-                # Add automatic message to conversation history
-                auto_message = {
-                    "user": "[SYSTEM]",
-                    "assistant": "🎯 Phase 2 activated automatically! ML analysis updated. You can now ask about embodied carbon, improvements, or design changes.",
-                    "phase": 2,
-                    "trigger": "file_change",
-                    "timestamp": time.time()
-                }
-                conversation_state["conversation_history"].append(auto_message)
-                
-                # Terminal message
-                print("=" * 60)
-                print("🎯 PHASE 2 ACTIVATED AUTOMATICALLY!")
-                print("   Triggered by ML file change")
-                print("   User can now ask about:")
-                print("   • Embodied carbon analysis")
-                print("   • Design improvements") 
-                print("   • Material changes")
-                print("=" * 60)
-            else:
-                print("❌ Phase 2 activation conditions not met")
-            
+                if geometry_available and conversation_state.get("current_state") != "complete":
+                    print("🎯 [GEOMETRY WATCHER] Triggering Phase 1 completion!")
+                    
+                    # Update conversation state
+                    conversation_state["current_state"] = "complete"
+                    conversation_state["phase"] = 1
+                    
+                    # Trigger ML predictor
+                    try:
+                        predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+                        subprocess.Popen(["python", predictor_path])
+                        print("🚀 ML_predictor.py launched after geometry detection via file watcher")
+                    except Exception as e:
+                        print(f"❌ Failed to launch ML_predictor.py: {e}")
+                        
         except Exception as e:
-            print(f"❌ Error activating Phase 2: {e}")
+            print(f"❌ [GEOMETRY WATCHER] Error: {e}")
 
 def start_file_watcher():
     """Start file watcher for ML output changes"""
@@ -242,13 +319,8 @@ def chat_endpoint(req: ChatRequest):
             print("   • Material changes")
             print("=" * 60)
             
-            return {
-                "response": "🎯 Phase 2 activated! ML analysis detected. You can now ask about:\n• Embodied carbon analysis\n• Design improvements\n• Material changes",
-                "phase": 2,
-                "state": "analysis",
-                "triggered_by": "ml_output_detected",
-                "error": False
-            }
+                # Log to terminal only
+            print("🎯 Phase 2 activated silently - processing user's question...")
         
         # ===== PHASE 2 PROCESSING =====
         if phase2_activated and conversation_state.get("phase") == 2:
@@ -418,34 +490,9 @@ def chat_endpoint(req: ChatRequest):
         print(f"[CHAT] Error: {e}")
         return {"response": f"Error: {str(e)}", "error": True}
     
-
 @app.get("/ping")
 def ping():
     return {"status": "alive"}
-
-@app.get("/initial_greeting")
-def get_initial_greeting():
-    """Get initial greeting from your LLM system"""
-    
-    if not LLM_AVAILABLE:
-        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
-    
-    try:
-        # Get greeting from your system
-        initial_state, greeting, initial_data = llm_calls.manage_conversation_state(
-            "initial", "", {}
-        )
-        
-        return {
-            "response": greeting,
-            "state": initial_state,
-            "design_data": initial_data,
-            "phase": 1
-        }
-        
-    except Exception as e:
-        print(f"[GREETING] Error: {e}")
-        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
 
 @app.get("/conversation_state")
 def get_conversation_state():
@@ -542,7 +589,6 @@ def debug_phase2_data():
             "error": str(e)
         }
 
-
 @app.get("/")
 def health_check():
     return {
@@ -555,12 +601,100 @@ def health_check():
         "watchdog_available": WATCHDOG_AVAILABLE
     }
 
+#TEMPORARY TEST FUNCTION 06.06.25
+@app.get("/test_geometry")
+def test_geometry():
+    """Debug endpoint to test geometry detection"""
+    try:
+        if LLM_AVAILABLE:
+            geometry_available = llm_calls.check_geometry_available()
+            
+            # Also check raw file content
+            import json
+            import os
+            filepath = os.path.join("knowledge", "compiled_ml_data.json")
+            with open(filepath, 'r') as f:
+                raw_content = f.read()
+                parsed_content = json.loads(raw_content)
+            
+            return {
+                "geometry_available": geometry_available,
+                "gfa_value": parsed_content.get("gfa"),
+                "av_value": parsed_content.get("av"),
+                "raw_content": raw_content,
+                "parsed_content": parsed_content
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
+#TEMPORARY TEST FUNCTION 2 06.06.25
+@app.get("/initial_greeting")
+def get_initial_greeting():
+    """Get dynamic greeting from LLM system"""
+    
+    print("📞 [GREETING] Endpoint called")
+    
+    if not LLM_AVAILABLE:
+        print("⚠️ [GREETING] LLM not available, using fallback")
+        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
+    
+    try:
+        # Get dynamic greeting
+        print("🤖 [GREETING] Calling generate_dynamic_greeting...")
+        greeting = llm_calls.generate_dynamic_greeting()
+        print(f"✅ [GREETING] Generated: {greeting}")
+        
+        return {
+            "response": greeting,
+            "state": "initial",
+            "design_data": {},
+            "phase": 1,
+            "dynamic": True
+        }
+        
+    except Exception as e:
+        print(f"❌ [GREETING] Error: {e}")
+        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
+
+#TEMPORARY TEST FUNCTION 2 06.06.25
+@app.get("/test_greeting")
+def test_greeting():
+    """Debug endpoint to test dynamic greeting"""
+    try:
+        if LLM_AVAILABLE:
+            greeting = llm_calls.generate_dynamic_greeting()
+            return {
+                "success": True,
+                "greeting": greeting,
+                "llm_available": LLM_AVAILABLE
+            }
+        else:
+            return {
+                "success": False,
+                "error": "LLM not available",
+                "llm_available": LLM_AVAILABLE
+            }
+    except Exception as e:
+        import traceback
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "llm_available": LLM_AVAILABLE
+        }
+
+#UPDATED 06.06.25
 if __name__ == "__main__":
     print("🚀 Starting Rhino Copilot Server with Full Phase 2...")
     print(f"🤖 LLM Available: {LLM_AVAILABLE}")
     print(f"📁 ML Output Exists: {os.path.exists('knowledge/ml_output.json')}")
     print(f"🔍 Watchdog Available: {WATCHDOG_AVAILABLE}")
     
+
+    # Initialize placeholder dictionary (NEW) 06.06.25
+    if LLM_AVAILABLE:
+        llm_calls.initialize_placeholder_dictionary()
+
     # Start file watcher in background thread
     if WATCHDOG_AVAILABLE:
         def start_watcher():
