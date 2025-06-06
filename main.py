@@ -9,6 +9,11 @@ import Rhino.UI
 import System
 import webbrowser   
 
+# === Rhino Listener Import === NEW
+sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
+import rhino_listener as listener  # Make sure utils/rhino_listener.py defines `shutdown_listener()`
+#================================END
+
 def get_universal_python_path():
     """Universal Python detection that works for ANY user on ANY system"""
     
@@ -238,6 +243,14 @@ def show_copilot_ui():
         if data_form and data_form.Visible:
             data_form.Close()
 
+    #================= Shutdown Rhino listener=============
+    try:
+        listener.shutdown_listener()
+        print("✅ Rhino listener shut down.")
+    except Exception as ex:
+        print("⚠️ Error shutting down listener:", ex)
+    #===================================================END
+
     chat_form.Closed += close_both
     data_form.Closed += close_both
 
@@ -248,6 +261,10 @@ def show_copilot_ui():
 def start_backend():
     # Start the backend server
     print("Starting Rhino Copilot backend...")
+
+    #============= Force chat server to use port 5001 (needed by frontend)
+    os.environ["COPILOT_PORT"] = "5001"
+    #========================================END
 
     # Double check that PORT is used
     # webbrowser.open("http://localhost:5001")
@@ -298,6 +315,21 @@ def start_backend():
             creationflags=0,
             cwd=project_root
         )
+
+
+        # === Start geometry receiver on port 5060 ============================NEW
+        receiver_path = os.path.join(script_dir, "utils", "rhino_receiver.py")
+        if os.path.exists(receiver_path):
+            print("✅ Launching Rhino geometry receiver...")
+            subprocess.Popen(
+                [python_path, receiver_path],
+                creationflags=0,
+                cwd=script_dir
+            )
+        else:
+            print("⚠️ Rhino receiver script not found at:", receiver_path)
+
+        #======================================================================END
 
 
         print("Backend server started successfully!")
