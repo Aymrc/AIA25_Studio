@@ -120,48 +120,131 @@ def install_requirements_if_needed():
 install_requirements_if_needed()
 
 
-def show_copilot_ui():
-    """Show the Rhino Copilot UI"""
-    dialog = forms.Form()
-    dialog.Title = "Rhino Copilot"
-    dialog.ClientSize = drawing.Size(600, 1000)
-    dialog.Topmost = True
+# def show_copilot_ui():
+#     """Show the Rhino Copilot UI"""
+#     dialog = forms.Form()
+#     dialog.Title = "Rhino Copilot"
+#     dialog.ClientSize = drawing.Size(600, 1000)
+#     dialog.Topmost = True
 
-    # icon
+#     # icon
+#     icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
+#     if os.path.exists(icon_path):
+#         dialog.Icon = drawing.Icon(icon_path)
+#     else:
+#         print("Icon not found at:", icon_path)
+
+#     # start positoin position 
+#     screen = Rhino.UI.RhinoEtoApp.MainWindow.Screen
+#     screen_width = screen.WorkingArea.Width
+#     screen_height = screen.WorkingArea.Height
+#     x = int(screen.WorkingArea.X + screen_width * 0.75 - dialog.ClientSize.Width / 2) # change the 0.75 to change the position in x axis
+#     y = int(screen.WorkingArea.Y + (screen_height - dialog.ClientSize.Height) / 2)
+#     dialog.Location = drawing.Point(x, y)
+
+#     web_view = forms.WebView()
+
+#     # Always use script-relative paths
+#     script_dir = os.path.dirname(os.path.abspath(__file__))
+#     html_path = os.path.join(script_dir, "ui", "index.html")
+    
+#     print("Looking for HTML at: " + str(html_path))
+    
+#     if os.path.exists(html_path):
+#         uri = System.Uri("file:///" + html_path.replace("\\", "/"))
+#         web_view.Url = uri
+#         dialog.Content = web_view
+#         dialog.Show()
+#         print("UI loaded successfully!")
+#         return True
+#     else:
+#         print("HTML file not found: " + str(html_path))
+#         return False
+
+def show_copilot_ui():
+    # === Show the Rhino Copilot UI ===
+
+    # === UI window sizes & margins ===
+    marginX, marginY = 35, 35
+    chatWidth = 550
+    chatHeight = 250
+    dataWidth = 500
+    dataHeight = 400
+
+    screen = Rhino.UI.RhinoEtoApp.MainWindow.Screen
+    work_x = screen.WorkingArea.X
+    work_y = screen.WorkingArea.Y
+    work_w = screen.WorkingArea.Width
+    work_h = screen.WorkingArea.Height
+
+    chat_form = None
+    data_form = None
+
+
+
+    # === Create Chat Window ===
+    chat_form = forms.Form()
+    chat_form.Title = "Copilot Chat"
+    chat_form.ClientSize = drawing.Size(chatWidth, chatHeight)
+    chat_form.Topmost = True
+
+    # === icon ===
     icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
     if os.path.exists(icon_path):
-        dialog.Icon = drawing.Icon(icon_path)
+        chat_form.Icon = drawing.Icon(icon_path)
     else:
         print("Icon not found at:", icon_path)
 
-    # start positoin position 
-    screen = Rhino.UI.RhinoEtoApp.MainWindow.Screen
-    screen_width = screen.WorkingArea.Width
-    screen_height = screen.WorkingArea.Height
-    x = int(screen.WorkingArea.X + screen_width * 0.75 - dialog.ClientSize.Width / 2) # change the 0.75 to change the position in x axis
-    y = int(screen.WorkingArea.Y + (screen_height - dialog.ClientSize.Height) / 2)
-    dialog.Location = drawing.Point(x, y)
+    chat_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "ui", "chat.html")) # <<< CHAT
+    if not os.path.exists(chat_path):
+        print("HTML file not found for chat.html:", chat_path)
+        return
 
-    web_view = forms.WebView()
+    chat_web = forms.WebView()
+    chat_web.Url = System.Uri("file:///" + chat_path.replace("\\", "/"))
+    chat_form.Content = chat_web
 
-    # Always use script-relative paths
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    html_path = os.path.join(script_dir, "ui", "index.html")
+
+
+    # === Create Data Window ===
+    data_form = forms.Form()
+    data_form.Title = "Copilot Data"
+    data_form.ClientSize = drawing.Size(dataWidth, dataHeight)
+    data_form.Topmost = True
+
+    data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "ui", "data.html")) # <<< DATA
+    if not os.path.exists(data_path):
+        print("HTML file not found for data.html", data_path)
+        return
+
+    data_web = forms.WebView()
+    data_web.Url = System.Uri("file:///" + data_path.replace("\\", "/"))
+    data_form.Content = data_web
+
+    # === Positioning ===
+    chat_x = int(work_x + marginX)
+    chat_y = int(work_y + work_h - chatHeight - marginY)
+
+    data_x = int(work_x + work_w - dataWidth - marginX)
+    data_y = int(work_y + work_h - dataHeight - marginY)
+
+    chat_form.Location = drawing.Point(chat_x, chat_y)
+    data_form.Location = drawing.Point(data_x, data_y)
+
+    # === Close both when one is closed ===
+    def close_both(_sender, _event):
+        if chat_form and chat_form.Visible:
+            chat_form.Close()
+        if data_form and data_form.Visible:
+            data_form.Close()
+
+    chat_form.Closed += close_both
+    data_form.Closed += close_both
+
+    # === Show windows ===
+    chat_form.Show()
+    data_form.Show()
     
-    print("Looking for HTML at: " + str(html_path))
-    
-    if os.path.exists(html_path):
-        uri = System.Uri("file:///" + html_path.replace("\\", "/"))
-        web_view.Url = uri
-        dialog.Content = web_view
-        dialog.Show()
-        print("UI loaded successfully!")
-        return True
-    else:
-        print("HTML file not found: " + str(html_path))
-        return False
-
-
 def start_backend():
     # Start the backend server
     print("Starting Rhino Copilot backend...")
