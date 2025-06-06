@@ -15,7 +15,7 @@ script_dir = os.path.dirname(__file__)
 compiled_input_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "compiled_ml_data.json"))
 materials_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "materials.json"))
 json_folder = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "iterations"))
-model_path = r"C:\Users\CDH\Documents\Trabajo\IAAC\AIA\Studio\model\gwp_model_rf_av&gfa.pkl"  # GFA+AV-based
+model_path = r"C:\Users\joaqu\Downloads\gwp_model_rf_av&gfa.pkl"  # GFA+AV-based
 
 
 # ============================
