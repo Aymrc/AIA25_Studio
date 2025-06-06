@@ -43,7 +43,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+ 
 #IMPORTANT = PHASE DETECTION
 # Global conversation state + Phase 2 detection
 conversation_state = {
@@ -319,13 +319,8 @@ def chat_endpoint(req: ChatRequest):
             print("   • Material changes")
             print("=" * 60)
             
-            return {
-                "response": "🎯 Phase 2 activated! ML analysis detected. You can now ask about:\n• Embodied carbon analysis\n• Design improvements\n• Material changes",
-                "phase": 2,
-                "state": "analysis",
-                "triggered_by": "ml_output_detected",
-                "error": False
-            }
+                # Log to terminal only
+            print("🎯 Phase 2 activated silently - processing user's question...")
         
         # ===== PHASE 2 PROCESSING =====
         if phase2_activated and conversation_state.get("phase") == 2:
@@ -656,7 +651,35 @@ def test_geometry():
             }
     except Exception as e:
         return {"error": str(e)}
-
+#TEMPORARY TEST FUNCTION 2 06.06.25
+@app.get("/initial_greeting")
+def get_initial_greeting():
+    """Get dynamic initial greeting from your LLM system"""
+    
+    print("🔍 [DEBUG] /initial_greeting endpoint called!")
+    
+    if not LLM_AVAILABLE:
+        print("🔍 [DEBUG] LLM not available, using fallback")
+        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
+    
+    try:
+        print("🔍 [DEBUG] Calling generate_dynamic_greeting()...")
+        # Generate dynamic greeting using LLM
+        dynamic_greeting = llm_calls.generate_dynamic_greeting()
+        print(f"🔍 [DEBUG] Got dynamic greeting: {dynamic_greeting}")
+        
+        return {
+            "response": dynamic_greeting,
+            "state": "initial",
+            "design_data": {},
+            "phase": 1
+        }
+        
+    except Exception as e:
+        print(f"🔍 [DEBUG] Exception in greeting: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"response": "BIP.BUP.BAP"}
 
 #UPDATED 06.06.25
 if __name__ == "__main__":

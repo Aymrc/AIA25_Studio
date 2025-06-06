@@ -29,10 +29,12 @@
         </div>
 
         <script>
-            // Load greeting on window load
+           
+           // MODIFIED - Load greeting on window load 06.06.25
             window.addEventListener("load", async function () {
             try {
-                const res = await fetch("http://127.0.0.1:5001/initial_greeting");
+                // Add cache-busting parameter to force fresh request
+                const res = await fetch(`http://127.0.0.1:5001/initial_greeting?t=${Date.now()}`);
                 const data = await res.json();
 
                 if (data.response) {
@@ -43,6 +45,8 @@
                 addToChat("bot", "Hello! I'm your AI design assistant. What would you like to build today?");
             }
             });
+            
+            
 
             // Handle message send
             async function sendMessage() {

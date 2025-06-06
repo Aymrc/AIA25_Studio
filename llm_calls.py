@@ -32,6 +32,60 @@ except ImportError:
 # PHASE 1 FUNCTIONS (Your System)
 # ==========================================
 
+#NEW FUNCTION 06.06.25
+def generate_dynamic_greeting():
+    """Generate a dynamic, varied greeting for the design assistant"""
+    
+    system_prompt = """You are a friendly, enthusiastic AI design assistant specializing in sustainable architecture. 
+
+Generate a short, welcoming greeting (1-2 sentences max) that:
+- Shows you're ready to help with sustainable design decisions
+- Offers assistance with suggestions and queries
+- Varies each time (be creative and natural)
+- Maintains a professional but approachable tone
+
+Examples of the style:
+"What are we designing today?"
+"Ready to create something sustainable together?"
+"Today's a perfect day for eco-friendly design!"
+"Let's build something amazing and sustainable!"
+
+Generate a unique greeting now - be concise and engaging."""
+
+    try:
+        response = client.chat.completions.create(
+            model=completion_model,
+            messages=[
+                {"role": "system", "content": system_prompt}
+            ],
+            max_tokens=50,  # Keep it short
+            temperature=0.8  # Add creativity/variation
+        )
+        
+        greeting = response.choices[0].message.content.strip()
+        
+        # Remove quotes if the LLM added them
+        if greeting.startswith('"') and greeting.endswith('"'):
+            greeting = greeting[1:-1]
+        
+        print(f"[DYNAMIC GREETING] Generated: {greeting}")
+        return greeting
+        
+    except Exception as e:
+        print(f"[DYNAMIC GREETING] Error: {e}")
+        # Return a random fallback from a curated list
+        import random
+        fallbacks = [
+            "What sustainable design are we creating today?",
+            "Ready to make your next project more eco-friendly?",
+            "Let's design something amazing and sustainable together!",
+            "What architectural challenge can I help you solve today?",
+            "Time to turn your design ideas into sustainable reality!",
+            "Ready to explore sustainable design solutions?",
+            "What green building concepts are we working on today?"
+        ]
+        return random.choice(fallbacks)
+
 #def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
      #try:
     #     extracted = {}
