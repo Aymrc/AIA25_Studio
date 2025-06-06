@@ -87,7 +87,12 @@
             const chat = document.getElementById("chatbox");
             const msg = document.createElement("div");
             msg.className = role;
-            msg.textContent = (role === "user" ? "You: " : "Copilot: ") + text;
+            if (role === "user") {
+                    msg.innerHTML = `You: ${text}`;
+                } else {
+                    msg.innerHTML = `<img src="assets/copilot_icon_chat.png" alt="Copilot" class="chat-icon"> ${text}`;
+                }
+
             chat.appendChild(msg);
             chat.scrollTop = chat.scrollHeight;
             }

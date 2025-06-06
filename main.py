@@ -217,6 +217,13 @@ def show_copilot_ui():
     data_form.ClientSize = drawing.Size(dataWidth, dataHeight)
     data_form.Topmost = True
 
+    # === icon ===
+    icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
+    if os.path.exists(icon_path):
+        data_form.Icon = drawing.Icon(icon_path)
+    else:
+        print("Icon not found at:", icon_path)
+
     data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "ui", "data.html")) # <<< DATA
     if not os.path.exists(data_path):
         print("HTML file not found for data.html", data_path)
