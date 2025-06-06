@@ -32,150 +32,161 @@ except ImportError:
 # PHASE 1 FUNCTIONS (Your System)
 # ==========================================
 
-def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
-    try:
-        extracted = {}
-        input_lower = user_input.lower().strip()
+# def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
+    # try:
+    #     extracted = {}
+    #     input_lower = user_input.lower().strip()
         
-        if not input_lower:
-            return extracted
+    #     if not input_lower:
+    #         return extracted
             
-        design_data = design_data or {}
+    #     design_data = design_data or {}
         
-        print(f"[EXTRACTION DEBUG] Input: '{user_input}'")
-        print(f"[EXTRACTION DEBUG] Current state: {current_state}")
+    #     print(f"[EXTRACTION DEBUG] Input: '{user_input}'")
+    #     print(f"[EXTRACTION DEBUG] Current state: {current_state}")
         
-        # Only use context-aware single-word extraction for simple inputs
-        if current_state == "wwr" and re.match(r'^\s*\d+\s*(?:percent|%)?\s*$', input_lower):
-            wwr_match = re.search(r'(\d+)', input_lower)
-            if wwr_match:
-                percentage = float(wwr_match.group(1))
-                if percentage > 1:
-                    percentage = percentage / 100
-                extracted["wwr"] = round(min(percentage, 0.9), 2)
-                print(f"[EXTRACTION DEBUG] Context-aware WWR: {extracted['wwr']}")
-                return extracted
+    #     # Only use context-aware single-word extraction for simple inputs
+    #     if current_state == "wwr" and re.match(r'^\s*\d+\s*(?:percent|%)?\s*$', input_lower):
+    #         wwr_match = re.search(r'(\d+)', input_lower)
+    #         if wwr_match:
+    #             percentage = float(wwr_match.group(1))
+    #             if percentage > 1:
+    #                 percentage = percentage / 100
+    #             extracted["wwr"] = round(min(percentage, 0.9), 2)
+    #             print(f"[EXTRACTION DEBUG] Context-aware WWR: {extracted['wwr']}")
+    #             return extracted
         
-        # Level patterns
-        level_patterns = [
-            r'(\d+)\s*(?:storey|story|stories|level|floor)s?(?:\s+(?:building|structure))?',
-            r'(\d+)\s*levels?',
-            r'(\d+)[-\s]*level',
-            r'(\d+)[-\s]*storey',
-            r'(\d+)\s*floors?',
-            r'(?:building\s+with\s+)?(\d+)\s+(?:level|floor|storey)',
-            r'(\d+)[-\s]*story(?:\s+building)?'
-        ]
-        for pattern in level_patterns:
-            match = re.search(pattern, input_lower)
-            if match:
-                levels = min(int(match.group(1)), 10)
-                if "geometry" not in extracted:
-                    extracted["geometry"] = {}
-                extracted["geometry"]["number_of_levels"] = levels
-                print(f"[EXTRACTION DEBUG] Found levels: {levels}")
-                break
+    #     # Level patterns
+    #     level_patterns = [
+    #         r'(\d+)\s*(?:storey|story|stories|level|floor)s?(?:\s+(?:building|structure))?',
+    #         r'(\d+)\s*levels?',
+    #         r'(\d+)[-\s]*level',
+    #         r'(\d+)[-\s]*storey',
+    #         r'(\d+)\s*floors?',
+    #         r'(?:building\s+with\s+)?(\d+)\s+(?:level|floor|storey)',
+    #         r'(\d+)[-\s]*story(?:\s+building)?'
+    #     ]
+    #     for pattern in level_patterns:
+    #         match = re.search(pattern, input_lower)
+    #         if match:
+    #             levels = min(int(match.group(1)), 10)
+    #             if "geometry" not in extracted:
+    #                 extracted["geometry"] = {}
+    #             extracted["geometry"]["number_of_levels"] = levels
+    #             print(f"[EXTRACTION DEBUG] Found levels: {levels}")
+    #             break
         
-        # Building type patterns
-        building_patterns = {
-            "residential": ["residential", "apartment", "housing", "house", "home", "flat", "condo"],
-            "office": ["office", "commercial", "workplace", "business", "office building"],
-            "hotel": ["hotel", "hospitality", "accommodation", "resort", "inn", "motel"],
-            "mixed-use": ["mixed-use", "mixed use", "multi-use", "multiple use"],
-            "museum": ["museum", "gallery", "cultural", "exhibition", "art museum"],
-            "hospital": ["hospital", "medical", "healthcare", "clinic", "medical center"],
-            "school": ["school", "educational", "university", "college", "education"],
-            "retail": ["retail", "shop", "store", "shopping", "commercial retail"]
-        }
+    #     # Building type patterns
+    #     building_patterns = {
+    #         "residential": ["residential", "apartment", "housing", "house", "home", "flat", "condo"],
+    #         "office": ["office", "commercial", "workplace", "business", "office building"],
+    #         "hotel": ["hotel", "hospitality", "accommodation", "resort", "inn", "motel"],
+    #         "mixed-use": ["mixed-use", "mixed use", "multi-use", "multiple use"],
+    #         "museum": ["museum", "gallery", "cultural", "exhibition", "art museum"],
+    #         "hospital": ["hospital", "medical", "healthcare", "clinic", "medical center"],
+    #         "school": ["school", "educational", "university", "college", "education"],
+    #         "retail": ["retail", "shop", "store", "shopping", "commercial retail"]
+    #     }
         
-        for building_type, patterns in building_patterns.items():
-            if any(pattern in input_lower for pattern in patterns):
-                extracted["building_type"] = building_type
-                print(f"[EXTRACTION DEBUG] Found building type: {building_type}")
-                break
+    #     for building_type, patterns in building_patterns.items():
+    #         if any(pattern in input_lower for pattern in patterns):
+    #             extracted["building_type"] = building_type
+    #             print(f"[EXTRACTION DEBUG] Found building type: {building_type}")
+    #             break
         
-        # Material patterns
-        material_patterns = {
-            "brick": ["brick", "masonry", "brick walls", "bricks", "clay brick", "red brick"],
-            "concrete": ["concrete", "cement", "concrete walls", "reinforced concrete"],
-            "earth": ["earth", "adobe", "mud", "earthen", "clay", "rammed earth", "cob"],
-            "straw": ["straw", "straw bale", "hay", "strawbale", "straw walls"],
-            "timber_frame": ["timber frame", "wood frame", "wooden frame", "frame construction"],
-            "timber_mass": ["timber mass", "mass timber", "timber", "wood", "wooden", "solid timber", "heavy timber", "logs"]
-        }
+    #     # Material patterns
+    #     material_patterns = {
+    #         "brick": ["brick", "masonry", "brick walls", "bricks", "clay brick", "red brick"],
+    #         "concrete": ["concrete", "cement", "concrete walls", "reinforced concrete"],
+    #         "earth": ["earth", "adobe", "mud", "earthen", "clay", "rammed earth", "cob"],
+    #         "straw": ["straw", "straw bale", "hay", "strawbale", "straw walls"],
+    #         "timber_frame": ["timber frame", "wood frame", "wooden frame", "frame construction"],
+    #         "timber_mass": ["timber mass", "mass timber", "timber", "wood", "wooden", "solid timber", "heavy timber", "logs"]
+    #     }
         
-        for material, patterns in material_patterns.items():
-            if any(pattern in input_lower for pattern in patterns):
-                extracted["materiality"] = material
-                print(f"[EXTRACTION DEBUG] Found material: {material}")
-                break
+    #     for material, patterns in material_patterns.items():
+    #         if any(pattern in input_lower for pattern in patterns):
+    #             extracted["materiality"] = material
+    #             print(f"[EXTRACTION DEBUG] Found material: {material}")
+    #             break
         
-        # Climate patterns
-        climate_patterns = {
-            "cold": ["cold", "winter", "freezing", "snow", "cold climate"],
-            "hot-humid": ["hot humid", "hot", "tropical", "humid", "summer", "hot climate"],
-            "arid": ["arid", "dry", "desert", "arid climate", "dry climate"],
-            "temperate": ["temperate", "mild", "moderate", "temperate climate"]
-        }
+    #     # Climate patterns
+    #     climate_patterns = {
+    #         "cold": ["cold", "winter", "freezing", "snow", "cold climate"],
+    #         "hot-humid": ["hot humid", "hot", "tropical", "humid", "summer", "hot climate"],
+    #         "arid": ["arid", "dry", "desert", "arid climate", "dry climate"],
+    #         "temperate": ["temperate", "mild", "moderate", "temperate climate"]
+    #     }
         
-        for climate, patterns in climate_patterns.items():
-            if any(pattern in input_lower for pattern in patterns):
-                extracted["climate"] = climate
-                print(f"[EXTRACTION DEBUG] Found climate: {climate}")
-                break
+    #     for climate, patterns in climate_patterns.items():
+    #         if any(pattern in input_lower for pattern in patterns):
+    #             extracted["climate"] = climate
+    #             print(f"[EXTRACTION DEBUG] Found climate: {climate}")
+    #             break
         
-        # WWR patterns
-        wwr_patterns = [
-            r'wwr:\s*(\d+)',
-            r'(\d+)%?\s*(?:window|glazing|glass|windows)',
-            r'(?:window|wwr|glazing).*?(\d+)%?',
-            r'(\d+)%?\s*wwr',
-            r'(\d+)\s*percent\s*(?:window|glass|glazing)',
-            r'^\s*(\d+)\s*$',
-            r'^\s*(\d+)\s*percent\s*$',
-            r'^\s*(\d+)%\s*$',
-            r'^\s*0\.(\d+)\s*$',
-            r'(\d+)\s*percent'
-        ]
+    #     # WWR patterns
+    #     wwr_patterns = [
+    #         r'wwr:\s*(\d+)',
+    #         r'(\d+)%?\s*(?:window|glazing|glass|windows)',
+    #         r'(?:window|wwr|glazing).*?(\d+)%?',
+    #         r'(\d+)%?\s*wwr',
+    #         r'(\d+)\s*percent\s*(?:window|glass|glazing)',
+    #         r'^\s*(\d+)\s*$',
+    #         r'^\s*(\d+)\s*percent\s*$',
+    #         r'^\s*(\d+)%\s*$',
+    #         r'^\s*0\.(\d+)\s*$',
+    #         r'(\d+)\s*percent'
+    #     ]
         
-        for pattern in wwr_patterns:
-            match = re.search(pattern, input_lower)
-            if match:
-                percentage = float(match.group(1))
+    #     for pattern in wwr_patterns:
+    #         match = re.search(pattern, input_lower)
+    #         if match:
+    #             percentage = float(match.group(1))
                 
-                if pattern == r'^\s*0\.(\d+)\s*$':
-                    percentage = float(f"0.{match.group(1)}") * 100
+    #             if pattern == r'^\s*0\.(\d+)\s*$':
+    #                 percentage = float(f"0.{match.group(1)}") * 100
                 
-                if percentage > 1:
-                    percentage = percentage / 100
+    #             if percentage > 1:
+    #                 percentage = percentage / 100
                     
-                extracted["wwr"] = round(min(percentage, 0.9), 2)
-                print(f"[EXTRACTION DEBUG] Found WWR: {extracted['wwr']}")
-                break
+    #             extracted["wwr"] = round(min(percentage, 0.9), 2)
+    #             print(f"[EXTRACTION DEBUG] Found WWR: {extracted['wwr']}")
+    #             break
         
-        print(f"[EXTRACTION DEBUG] Final extracted: {extracted}")
-        return extracted
+    #     print(f"[EXTRACTION DEBUG] Final extracted: {extracted}")
+    #     return extracted
         
-    except Exception as e:
-        print(f"Error in parameter extraction: {str(e)}")
-        traceback.print_exc()
-        return {}
+    # except Exception as e:
+        # print(f"Error in parameter extraction: {str(e)}")
+        # traceback.print_exc()
+        # return {}
 
+
+#PLACEHOLDER DEFINITION 06.06.25
+def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
+    """Placeholder - parameter extraction disabled for new organic flow"""
+    return {}  # Return empty dict since we're using placeholders
+
+#NEW LOGIC   06.06.25
 def create_ml_dictionary(design_data):
     try:
         mapper = MaterialMapper()
         
+        # Complete dictionary with placeholder values from the start
         ml_dict = {
-            "ew_par": 0,
-            "ew_ins": 0,
-            "iw_par": 0,
-            "es_ins": 1,
-            "is_par": 0,
-            "ro_par": 0,
-            "ro_ins": 0,
-            "wwr": 0.3
+            "ew_par": 1,      # Default: concrete
+            "ew_ins": 2,      # Default: EPS insulation
+            "iw_par": 1,      # Default: concrete
+            "es_ins": 1,      # Default: XPS
+            "is_par": 0,      # Default: concrete slab
+            "ro_par": 0,      # Default: concrete roof
+            "ro_ins": 7,      # Default: XPS roof insulation
+            "wwr": 0.3,       # Default: 30% window ratio
+            "av": None,       # Will come from geometry
+            "gfa": None       # Will come from geometry
         }
         
+        # Override with actual design data if available
         if "materiality" in design_data:
             material = design_data["materiality"]
             print(f"[ML DICT] Processing material: {material}")
@@ -188,13 +199,13 @@ def create_ml_dictionary(design_data):
             ml_dict["wwr"] = design_data["wwr"]
             print(f"[ML DICT] WWR: {design_data['wwr']}")
         
-        print(f"[ML DICT] Partial dictionary (geometry data pending): {ml_dict}")
+        print(f"[ML DICT] Complete dictionary with placeholders: {ml_dict}")
         return ml_dict
         
     except Exception as e:
         print(f"[ML DICT] Error creating ML dictionary: {e}")
         return None
-
+    
 def save_ml_dictionary(ml_dict):
     try:
         knowledge_folder = "knowledge"
@@ -227,17 +238,34 @@ def merge_design_data(existing_data, new_data):
     
     return merged
 
+#NEW LOGIC     06.06.25
 def determine_next_missing_parameter(design_data):
-    if "materiality" not in design_data:
-        return "materiality", "What material would you like to use? (brick, concrete, timber, earth, straw)"
-        
-    if "climate" not in design_data:
-        return "climate", "What climate will this building be in? (cold, hot-humid, arid, temperate)"
-        
-    if "wwr" not in design_data:
-        return "wwr", "What percentage of windows would you like? (e.g., 30%, 40%)"
+    # Check if geometry data (GFA) is available
+    if not check_geometry_available():
+        return "waiting_geometry", "I have your design parameters ready! Create a geometry in Rhino to see predictions."
     
-    return "complete", "🎉 Perfect! All basic parameters collected. Generating ML dictionary..."
+    return "complete", "🎉 Perfect! Geometry detected. Generating ML predictions..."
+
+#NEW DEFINITION 06.06.25 
+def check_geometry_available():
+    """Check if geometry data (GFA) exists in compiled_ml_data.json"""
+    try:
+        knowledge_folder = "knowledge"
+        filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
+        
+        if not os.path.exists(filepath):
+            return False
+            
+        with open(filepath, 'r') as f:
+            ml_data = json.load(f)
+        
+        # Check if GFA exists and is not None/0
+        gfa = ml_data.get("gfa")
+        return gfa is not None and gfa > 0
+        
+    except Exception as e:
+        print(f"[GEOMETRY CHECK] Error: {e}")
+        return False
 
 def manage_conversation_state(current_state, user_input, design_data):
     print(f"[CONVERSATION DEBUG] State: {current_state}, Input: '{user_input[:50]}...', Current data keys: {list(design_data.keys())}")
@@ -249,7 +277,7 @@ def manage_conversation_state(current_state, user_input, design_data):
             next_state, next_question = determine_next_missing_parameter(design_data)
             return next_state, next_question, design_data
     
-    extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
+    extracted_params = {}
     
     if extracted_params:
         design_data = merge_design_data(design_data, extracted_params)
@@ -309,6 +337,45 @@ def handle_change_or_question(user_input, design_data):
     except Exception as e:
         print(f"Error in handle_change_or_question: {str(e)}")
         return "active", "I'm having trouble with that. Could you try rephrasing?", design_data
+
+
+#NEW DEFINITION 06.06.25
+def initialize_placeholder_dictionary():
+    """Initialize compiled_ml_data.json with placeholder values"""
+    try:
+        knowledge_folder = "knowledge"
+        os.makedirs(knowledge_folder, exist_ok=True)
+        
+        filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
+        
+        # Don't overwrite if file already exists (whether it has geometry or not)
+        if os.path.exists(filepath):
+            print("[INIT] Dictionary already exists, not overwriting")
+            return True
+        
+        # Create placeholder dictionary
+        placeholder_dict = {
+            "ew_par": 1,      # Concrete walls
+            "ew_ins": 2,      # EPS insulation  
+            "iw_par": 1,      # Concrete interior walls
+            "es_ins": 1,      # XPS slab insulation
+            "is_par": 0,      # Concrete slab
+            "ro_par": 0,      # Concrete roof
+            "ro_ins": 7,      # XPS roof insulation
+            "wwr": 0.3,       # 30% windows
+            "av": None,       # Pending geometry
+            "gfa": None       # Pending geometry
+        }
+        
+        with open(filepath, 'w') as f:
+            json.dump(placeholder_dict, f, indent=2)
+        
+        print(f"[INIT] Placeholder dictionary created at {filepath}")
+        return True
+        
+    except Exception as e:
+        print(f"[INIT] Error creating placeholder dictionary: {e}")
+        return False
 
 # ==========================================
 # PHASE 2 FUNCTIONS (César's System)
