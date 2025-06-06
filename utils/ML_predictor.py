@@ -6,7 +6,6 @@ from datetime import datetime
 import re
 import shutil
 import sys
-import sklearn
 
 # ============================
 # PATH CONFIGURATION
