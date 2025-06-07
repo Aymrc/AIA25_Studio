@@ -445,9 +445,10 @@ def chat_endpoint(req: ChatRequest):
         print(f"[PHASE 1] State: {current_state}")
         
         # Call your conversation management
-        new_state, response, updated_design_data = llm_calls.manage_conversation_state(
-            current_state, user_input, design_data
-        )
+       # Call enhanced conversation management with sustainability insights
+        new_state, response, updated_design_data = llm_calls.enhanced_handle_change_or_question(
+        user_input, design_data
+)
         
         # Update global state
         conversation_state["current_state"] = new_state
