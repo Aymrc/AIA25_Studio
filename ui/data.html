@@ -13,8 +13,64 @@
     <body>
         <div class="glow-line"></div>
         <div class="copTitle">Copilot Data</div>
-		
-		
+
+		<button id="SaveIt">Save Iteration</button>
+		<script>
+			document.getElementById("SaveIt").addEventListener("click", () => {
+				fetch("http://127.0.0.1:5060/screenshot/")
+					.then(response => response.text())
+					.then(result => {
+						if (result === "ok") {
+							alert("✅ Screenshot saved!");
+						} else {
+							alert("❌ Failed to take screenshot.");
+						}
+					})
+					.catch(err => {
+						console.error("Error:", err);
+						alert("⚠️ Could not reach Rhino listener.");
+					});
+			});
+		</script>
+
+
+		<div style="margin: 10px 0;">
+			<button id="clearBtn" style="padding: 8px 14px; border-radius: 6px; background: crimson; color: white; border: none; cursor: pointer;">Clear Iterations</button>
+			<span id="clearStatus" style="margin-left: 10px; font-size: 0.9em;"></span>
+		</div>
+		<script>
+			document.getElementById("clearBtn").addEventListener("click", () => {
+				const status = document.getElementById("clearStatus");
+				status.textContent = "Clearing...";
+				status.style.color = "black";
+
+				fetch("http://127.0.0.1:5001/api/clear_iterations", {
+					method: "POST"
+				})
+				.then(res => res.json())
+				.then(data => {
+					if (data.status === "success") {
+						status.textContent = `Deleted ${data.deleted.length} file(s)`;
+						status.style.color = "green";
+
+						// Refresh visualizations & plots
+						document.getElementById("vizGrid").innerHTML = '<div class="viz-tile empty">Waiting for image...</div>';
+						window.gwpData = [];
+						document.getElementById("gwp-plot").innerText = "No data yet.";
+					} else {
+						status.textContent = `Error: ${data.error}`;
+						status.style.color = "red";
+					}
+				})
+				.catch(err => {
+					status.textContent = "Request failed";
+					status.style.color = "red";
+					console.error("Clear error:", err);
+				});
+			});
+		</script>
+
+
 		<div class="main_container">
 
 			<!-- layer composition material -->
@@ -153,18 +209,11 @@
 
 
 			<!-- js for plotly -->
-			<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+			<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
 			<script>
 				window.addEventListener("load", () => {
 					const select = document.getElementById("metricSelect");
-
-					// Simulated example data (replace or fetch real gwpData)
-					// Make sure this exists OR fetch from a real API
-					if (!window.gwpData || gwpData.length === 0) {
-						console.warn("No gwpData found or empty.");
-						document.getElementById("gwp-plot").innerText = "No data yet.";
-						return;
-					}
+					const plotContainer = document.getElementById("gwp-plot");
 
 					const displayNames = {
 						"GWP total (kg CO2e/m²a GFA)": "GWP total",
@@ -172,20 +221,31 @@
 						"Embodied Carbon A-D (kg CO2e/m²a GFA)": "EC A-D",
 						"Energy Intensity - EUI (kWh/m²a)": "EUI",
 						"Cooling Demand (kWh/m²a)": "Cooling",
-						"Heating Demand (kWh/m²a)": "Heating",
+						"Heating Demand (kWh/m²a)": "Heating"
 					};
 
 					function plotMetric(metricName) {
-						const filtered = gwpData.filter(d => typeof d[metricName] === "number" && !isNaN(d[metricName]));
+						const data = window.gwpData || [];
+
+						const filtered = data.filter(d => 
+							d.outputs && typeof d.outputs[metricName] === "number" && !isNaN(d.outputs[metricName])
+						);
+
+						console.log("Selected metric:", metricName);
+						console.log("Filtered data:", filtered);
 
 						const x = filtered.map(d => d.version);
-						const y = filtered.map(d => d[metricName]);
+						const y = filtered.map(d => d.outputs[metricName]);
+
+						if (x.length === 0 || y.length === 0) {
+							plotContainer.innerText = "No valid data to display.";
+							return;
+						}
 
 						const min = Math.min(...y);
 						const max = Math.max(...y);
 						const minIndex = y.indexOf(min);
 						const maxIndex = y.indexOf(max);
-
 						const shortName = displayNames[metricName] || metricName;
 
 						const trace = {
@@ -206,26 +266,26 @@
 								cmax: max,
 								colorbar: {
 									title: {
-										text: metricName,
+										text: shortName,
 										font: { size: 12 }
 									},
 									thickness: 15
 								}
 							},
-							hovertemplate: `Version: %{x}<br>${metricName}: %{y}<extra></extra>`
+							hovertemplate: `Version: %{x}<br>${shortName}: %{y}<extra></extra>`
 						};
 
-						Plotly.newPlot('gwp-plot', [trace], {
-							title: `${metricName} per Design Iteration`,
+						const layout = {
+							title: `${shortName} per Design Iteration`,
 							xaxis: {
 								title: 'Version',
-								fixedrange: false,
-								tickmode: 'linear'
+								tickmode: 'linear',
+								fixedrange: false
 							},
 							yaxis: {
-								title: `${metricName}`,
-								fixedrange: false,
-								range: [0, max + 20]
+								title: shortName,
+								range: [0, max + 20],
+								fixedrange: false
 							},
 							dragmode: 'pan',
 							margin: { t: 40 },
@@ -246,16 +306,56 @@
 									yshift: -15,
 									font: { color: 'red', size: 12 }
 								}
-							]
-						});
+							],
+							paper_bgcolor: "#f3f3f3", // Background OUTSIDE the plotting area
+							plot_bgcolor: "#ffffff", // Background INSIDE the plotting area
+							margin: { t: 45, b: 0 },
+						};
+
+						Plotly.newPlot(plotContainer, [trace], layout);
 					}
 
-					plotMetric(select.value);
+					function tryFetchGWPData(retries = 5, delay = 1000) {
+						fetch("http://127.0.0.1:5001/api/gwp_data")
+							.then(res => res.json())
+							.then(data => {
+								console.log("Fetched gwpData:", data);
+								if (!Array.isArray(data) || data.length === 0) {
+									plotContainer.innerText = "No data received from server.";
+									return;
+								}
+								window.gwpData = data;
+								plotMetric(select.value);
+							})
+							.catch(err => {
+								console.warn(`Fetch failed (${retries} retries left):`, err);
+								if (retries > 0) {
+									setTimeout(() => tryFetchGWPData(retries - 1, delay), delay);
+								} else {
+									plotContainer.innerText = "Failed to connect to server.";
+								}
+							});
+					}
+
+					// Initial data fetch
+					tryFetchGWPData();
+
+					// Replot when user changes metric
 					select.addEventListener("change", () => {
-						plotMetric(select.value);
+						if (window.gwpData) {
+							plotMetric(select.value);
+						}
 					});
+
+					// Live auto-refresh every 10 seconds
+					setInterval(() => {
+						if (window.gwpData) {
+							plotMetric(select.value);
+						}
+					}, 100);
 				});
 			</script>
+
 
 		</div>
 
