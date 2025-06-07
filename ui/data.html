@@ -13,8 +13,70 @@
     <body>
         <div class="glow-line"></div>
         <div class="copTitle">Copilot Data</div>
+<<<<<<< HEAD
 		
 		
+=======
+
+		<div class="top-button-bar">
+			<!-- button save iteration's data / image viewport / 3D -->
+			<button id="SaveIt">Save Iteration</button>
+			<script>
+				document.getElementById("SaveIt").addEventListener("click", () => {
+					fetch("http://127.0.0.1:5060/screenshot/")
+						.then(response => response.text())
+						.then(result => {
+							if (result === "ok") {
+								alert("Screenshot saved!");
+							} else {
+								alert("Failed to take screenshot.");
+							}
+						})
+						.catch(err => {
+							console.error("Error:", err);
+							alert("Could not reach Rhino listener.");
+						});
+				});
+			</script>
+
+			<!-- button clear iteration -->
+			<button id="clearBtn">Clear Iterations</button>
+			<span id="clearStatus"></span>
+
+			<script>
+				document.getElementById("clearBtn").addEventListener("click", () => {
+					const status = document.getElementById("clearStatus");
+					status.textContent = "Clearing...";
+					status.style.color = "black";
+
+					fetch("http://127.0.0.1:5001/api/clear_iterations", {
+						method: "POST"
+					})
+					.then(res => res.json())
+					.then(data => {
+						if (data.status === "success") {
+							status.textContent = `Deleted ${data.deleted.length} file(s)`;
+							status.style.color = "green";
+
+							// Refresh visualizations & plots
+							document.getElementById("vizGrid").innerHTML = '<div class="viz-tile empty">Waiting for image...</div>';
+							window.gwpData = [];
+							document.getElementById("gwp-plot").innerText = "No data yet.";
+						} else {
+							status.textContent = `Error: ${data.error}`;
+							status.style.color = "red";
+						}
+					})
+					.catch(err => {
+						status.textContent = "Request failed";
+						status.style.color = "red";
+						console.error("Clear error:", err);
+					});
+				});
+			</script>
+		</div>
+
+>>>>>>> Aymeric
 		<div class="main_container">
 
 			<!-- layer composition material -->
@@ -86,13 +148,13 @@
 				</select>
 
 
-				<div id="gwp-plot" style="width:100%; height:400px;"></div>
+				<div id="gwp-plot"></div>
 			</div>
 		
 
 			<!-- Gallery Iterations -->
 			<div class="gallerySection" id="gallery">
-				<h3>Vizualisation</h3>
+				<h3>Visualization</h3>
 
 				<div id="vizGrid" class="viz-grid"> 
 					<div class="viz-tile empty">Waiting for image...</div>
@@ -101,52 +163,71 @@
 					<!-- JS script for adding new tile when you image avaiable -->
 					<script>
 						function loadVizGallery() {
-						const grid = document.getElementById("vizGrid");
-						grid.innerHTML = "";
+							const grid = document.getElementById("vizGrid");
+							grid.innerHTML = "";
 
-						let i = 0;
+							let i = 0;
 
-						const tryNext = () => {
-							const imgPath = `../knowledge/iterations/V${i}.png`;
-							
-							// checking for the version
-							// make sure the folder is right!
+							const tryNext = () => {
+								const imgPath = `../knowledge/iterations/V${i}.png`;
 
-							const img = new Image();
-							img.onload = function () {
-								const tile = document.createElement("div");
-								tile.className = "viz-tile";
+								const img = new Image();
+								img.onload = function () {
+									const tile = document.createElement("div");
+									tile.className = "viz-tile";
 
-								const label = document.createElement("div");
-								label.className = "viz-label";
-								label.textContent = `V${i}`;
+									const label = document.createElement("div");
+									label.className = "viz-label";
+									label.textContent = `V${i}`;
 
-								tile.appendChild(img);
-								tile.appendChild(label);
+									// === Glowing Button ===
+									const buttonWrapper = document.createElement("div");
+									buttonWrapper.className = "viz-btn-wrapper";
 
-								grid.appendChild(tile);
+									const glow = document.createElement("div");
+									glow.className = "viz-btn-glow";
 
-								i++;
-								tryNext();
+									const button = document.createElement("button");
+									button.className = "viz-btn";
+									button.textContent = "🪄";
+									button.title = "Magic action";
+
+									button.addEventListener("click", () => {
+										alert(`Button clicked for V${i}`);
+										// Add your custom action here
+									});
+
+									buttonWrapper.appendChild(glow);
+									buttonWrapper.appendChild(button);
+
+									// === Add everything ===
+									tile.appendChild(img);
+									tile.appendChild(label);
+									tile.appendChild(buttonWrapper);
+									grid.appendChild(tile);
+
+									i++;
+									tryNext();
+								};
+
+								img.onerror = function () {
+									if (i === 0) {
+										const empty = document.createElement("div");
+										empty.className = "viz-tile empty";
+										empty.textContent = "No images yet.";
+										grid.appendChild(empty);
+									}
+								};
+
+								img.src = imgPath;
 							};
 
-							img.onerror = function () {
-							if (i === 0) {
-								const empty = document.createElement("div");
-								empty.className = "viz-tile empty";
-								empty.textContent = "No images yet.";
-								grid.appendChild(empty);
-							}
-							};
-
-							img.src = imgPath;
-						};
-
-						tryNext();
+							tryNext();
 						}
 
 						window.addEventListener("load", loadVizGallery);
-						</script>
+					</script>
+
 
 				</div>
 			</div>
@@ -176,7 +257,18 @@
 					};
 
 					function plotMetric(metricName) {
+<<<<<<< HEAD
 						const filtered = gwpData.filter(d => typeof d[metricName] === "number" && !isNaN(d[metricName]));
+=======
+						const data = window.gwpData || [];
+
+						const filtered = data.filter(d =>
+							d.outputs && typeof d.outputs[metricName] === "number" && !isNaN(d.outputs[metricName])
+						);
+
+						console.log("Selected metric:", metricName);
+						console.log("Filtered data:", filtered);
+>>>>>>> Aymeric
 
 						const x = filtered.map(d => d.version);
 						const y = filtered.map(d => d[metricName]);
@@ -189,8 +281,8 @@
 						const shortName = displayNames[metricName] || metricName;
 
 						const trace = {
-							x: x,
-							y: y,
+							x,
+							y,
 							type: 'scatter',
 							mode: 'markers',
 							marker: {
@@ -228,7 +320,7 @@
 								range: [0, max + 20]
 							},
 							dragmode: 'pan',
-							margin: { t: 40 },
+							margin: { t: 40, b: 40 },
 							annotations: [
 								{
 									x: x[minIndex],
@@ -246,17 +338,67 @@
 									yshift: -15,
 									font: { color: 'red', size: 12 }
 								}
+<<<<<<< HEAD
 							]
 						});
 					}
 
 					plotMetric(select.value);
+=======
+							],
+							paper_bgcolor: "#f3f3f3",
+							plot_bgcolor: "#ffffff"
+						};
+
+						Plotly.newPlot(plotContainer, [trace], layout);
+					}
+
+					function tryFetchGWPData(retries = 5, delay = 1000) {
+						fetch("http://127.0.0.1:5001/api/gwp_data")
+							.then(res => res.json())
+							.then(data => {
+								console.log("Fetched gwpData:", data);
+								if (!Array.isArray(data) || data.length === 0) {
+									plotContainer.innerText = "No data received from server.";
+									return;
+								}
+								window.gwpData = data;
+								plotMetric(select.value);
+							})
+							.catch(err => {
+								console.warn(`Fetch failed (${retries} retries left):`, err);
+								if (retries > 0) {
+									setTimeout(() => tryFetchGWPData(retries - 1, delay), delay);
+								} else {
+									plotContainer.innerText = "Failed to connect to server.";
+								}
+							});
+					}
+
+					// Initial load
+					tryFetchGWPData();
+
+					// Replot when user changes metric
+>>>>>>> Aymeric
 					select.addEventListener("change", () => {
 						plotMetric(select.value);
 					});
+<<<<<<< HEAD
 				});
 			</script>
 
+=======
+
+					// Auto-refresh every 2 seconds with new data
+					setInterval(() => {
+						tryFetchGWPData();
+					}, 2000);
+				});
+			</script>
+
+
+
+>>>>>>> Aymeric
 		</div>
 
     </body>
