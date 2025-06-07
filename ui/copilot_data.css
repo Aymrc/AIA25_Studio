@@ -22,14 +22,22 @@ h3 {
 	font-weight: 500;
 }
 
-#SaveIt {
-	background: #ffffff;
-	color: black;
+.top-button-bar button {
+	padding: 8px 14px;
+	border-radius: 6px;
+	border: none;
+	cursor: pointer;
+	font-weight: 500;
+	background: #f3f3f3;
+	color: #727272;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+	transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.15s ease;
 }
 
-#clearBtn {
-	background: rgb(255, 255, 255);
-	color: black;
+.top-button-bar button:hover {
+	background-color: white;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+	transform: scale(1.02);
 }
 
 #clearStatus {

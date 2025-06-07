@@ -37,7 +37,7 @@
 
 			<!-- button clear iteration -->
 			<button id="clearBtn">Clear Iterations</button>
-			<span id="clearStatus"></span>
+			<span id="clearStatus"></span><!--  show if worked -->
 
 			<script>
 				document.getElementById("clearBtn").addEventListener("click", () => {
@@ -247,9 +247,15 @@
 					function plotMetric(metricName) {
 						const data = window.gwpData || [];
 
-						const filtered = data.filter(d =>
+						const filtered = data
+						.filter(d =>
 							d.outputs && typeof d.outputs[metricName] === "number" && !isNaN(d.outputs[metricName])
-						);
+						)
+						.sort((a, b) => {
+							const numA = parseInt(a.version.replace("V", ""));
+							const numB = parseInt(b.version.replace("V", ""));
+							return numA - numB;
+						});
 
 						console.log("Selected metric:", metricName);
 						console.log("Filtered data:", filtered);
@@ -328,7 +334,10 @@
 								}
 							],
 							paper_bgcolor: "#f3f3f3",
-							plot_bgcolor: "#ffffff"
+							plot_bgcolor: "#ffffff",
+							font: {
+								color: "#727272"
+							}
 						};
 
 						Plotly.newPlot(plotContainer, [trace], layout);
