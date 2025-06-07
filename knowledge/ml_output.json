@@ -1,37 +1,37 @@
 {
-    "version": "V3",
-    "timestamp": "2025-06-07T15:50:55.885306",
+    "version": "V2",
+    "timestamp": "2025-06-07T17:31:16.070838",
     "inputs_raw": {
-        "Ext.Wall_Partition": 5,
-        "Ext.Wall_Insulation": 3,
-        "Int.Wall_Partition": 0,
+        "Ext.Wall_Partition": 1,
+        "Ext.Wall_Insulation": 2,
+        "Int.Wall_Partition": 1,
         "Ext.Slab_Insulation": 1,
-        "Int.Slab_Partition": 2,
+        "Int.Slab_Partition": 0,
         "Roof_Partition": 0,
         "Roof_Insulation": 7,
         "Window-to-Wall_Ratio": 0.3,
-        "Compactness": 1000.0,
-        "Gross-Floor-Area": 1200.0
+        "Compactness": null,
+        "Gross-Floor-Area": null
     },
     "inputs_decoded": {
-        "Ext.Wall_Partition": "Timber_mass",
-        "Ext.Wall_Insulation": "Glass_wool",
-        "Int.Wall_Partition": "Brick",
+        "Ext.Wall_Partition": "Concrete",
+        "Ext.Wall_Insulation": "EPS",
+        "Int.Wall_Partition": "Concrete",
         "Ext.Slab_Insulation": "XPS",
-        "Int.Slab_Partition": "Timber_mass",
+        "Int.Slab_Partition": "Concrete",
         "Roof_Partition": "Concrete",
         "Roof_Insulation": "XPS",
         "Window-to-Wall_Ratio": 0.3,
-        "Compactness": 1000.0,
-        "Gross-Floor-Area": 1200.0
+        "Compactness": null,
+        "Gross-Floor-Area": null
     },
     "outputs": {
-        "Energy Intensity - EUI (kWh/m²a)": 275.97,
-        "Cooling Demand (kWh/m²a)": 206.7,
+        "Energy Intensity - EUI (kWh/m²a)": 248.05,
+        "Cooling Demand (kWh/m²a)": 178.77,
         "Heating Demand (kWh/m²a)": 0.0,
-        "Operational Carbon (kg CO2e/m²a GFA)": 124.19,
-        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": -196.37,
-        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 187.68,
-        "GWP total (kg CO2e/m²a GFA)": 303.44
+        "Operational Carbon (kg CO2e/m²a GFA)": 111.62,
+        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 262.96,
+        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 265.35,
+        "GWP total (kg CO2e/m²a GFA)": 395.84
     }
 }
