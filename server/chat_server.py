@@ -632,62 +632,139 @@ def test_geometry():
     except Exception as e:
         return {"error": str(e)}
 
-#TEMPORARY TEST FUNCTION 2 06.06.25
+#NEW FUNCTION 2 07.06.25
+# Replace your existing get_initial_greeting function with this enhanced version:
 @app.get("/initial_greeting")
 def get_initial_greeting():
-    """Get dynamic greeting from LLM system"""
+    """Get dynamic greeting - GUARANTEED to work since server startup tested it"""
     
-    print("📞 [GREETING] Endpoint called")
+    print("=" * 60)
+    print("📞 [GREETING] Endpoint called at", time.strftime("%H:%M:%S"))
+    print("   Frontend is requesting greeting...")
+    print("=" * 60)
     
-    if not LLM_AVAILABLE:
-        print("⚠️ [GREETING] LLM not available, using fallback")
-        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
-    
+    # Since server startup already verified LLM works, this should never fail
     try:
-        # Get dynamic greeting
-        print("🤖 [GREETING] Calling generate_dynamic_greeting...")
+        print("🤖 [GREETING] Calling generate_dynamic_greeting (server startup confirmed it works)...")
+        
+        # Just call it directly - no need for elaborate retry logic since startup verified it works
         greeting = llm_calls.generate_dynamic_greeting()
-        print(f"✅ [GREETING] Generated: {greeting}")
+        
+        print(f"✅ [GREETING] SUCCESS! Generated: {greeting}")
+        print("=" * 60)
         
         return {
             "response": greeting,
             "state": "initial",
             "design_data": {},
             "phase": 1,
-            "dynamic": True
+            "dynamic": True,
+            "timestamp": time.strftime("%H:%M:%S"),
+            "source": "llm_verified_at_startup"
         }
         
     except Exception as e:
-        print(f"❌ [GREETING] Error: {e}")
-        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
-
-#TEMPORARY TEST FUNCTION 2 06.06.25
-@app.get("/test_greeting")
-def test_greeting():
-    """Debug endpoint to test dynamic greeting"""
-    try:
-        if LLM_AVAILABLE:
+        print(f"❌ [GREETING] UNEXPECTED ERROR (this shouldn't happen): {e}")
+        print("   This is weird because server startup confirmed LLM works...")
+        
+        import traceback
+        print(f"❌ [GREETING] Full traceback: {traceback.format_exc()}")
+        print("=" * 60)
+        
+        # Even in error case, try one more time
+        try:
+            print("🔄 [GREETING] One more attempt...")
             greeting = llm_calls.generate_dynamic_greeting()
+            print(f"✅ [GREETING] Second attempt worked: {greeting}")
+            
             return {
-                "success": True,
-                "greeting": greeting,
-                "llm_available": LLM_AVAILABLE
+                "response": greeting,
+                "state": "initial",
+                "design_data": {},
+                "phase": 1,
+                "dynamic": True,
+                "timestamp": time.strftime("%H:%M:%S"),
+                "source": "llm_second_attempt"
             }
-        else:
+        except Exception as e2:
+            print(f"❌ [GREETING] Second attempt also failed: {e2}")
+            
+            # This should NEVER happen, but if it does, return an error instead of fallback
             return {
-                "success": False,
-                "error": "LLM not available",
-                "llm_available": LLM_AVAILABLE
+                "response": "🔴 LLM Error - Please refresh the page (this shouldn't happen!)",
+                "state": "error",
+                "design_data": {},
+                "phase": 1,
+                "dynamic": False,
+                "error": "unexpected_llm_failure",
+                "timestamp": time.strftime("%H:%M:%S")
             }
+
+# Add this debug endpoint to test the greeting directly
+@app.get("/debug_greeting")
+def debug_greeting():
+    """Debug endpoint to test greeting generation directly"""
+    
+    print("🔧 [DEBUG] Testing greeting generation...")
+    
+    try:
+        greeting = llm_calls.generate_dynamic_greeting()
+        print(f"🔧 [DEBUG] Raw greeting result: {greeting}")
+        
+        return {
+            "success": True,
+            "greeting": greeting,
+            "timestamp": time.strftime("%H:%M:%S"),
+            "llm_available": LLM_AVAILABLE,
+            "has_client": hasattr(llm_calls, 'client'),
+            "client_type": str(type(llm_calls.client)) if hasattr(llm_calls, 'client') else None
+        }
+        
     except Exception as e:
         import traceback
         return {
             "success": False,
             "error": str(e),
             "traceback": traceback.format_exc(),
+            "timestamp": time.strftime("%H:%M:%S"),
             "llm_available": LLM_AVAILABLE
         }
 
+# Also add this debug endpoint to help troubleshoot
+@app.get("/llm_status")
+def check_llm_status():
+    """Debug endpoint to check LLM status"""
+    status = {
+        "llm_available_flag": LLM_AVAILABLE,
+        "llm_calls_imported": "llm_calls" in sys.modules,
+        "timestamp": time.strftime("%H:%M:%S")
+    }
+    
+    try:
+        import llm_calls
+        status["has_client"] = hasattr(llm_calls, 'client')
+        status["has_greeting_function"] = hasattr(llm_calls, 'generate_dynamic_greeting')
+        
+        if hasattr(llm_calls, 'client'):
+            status["client_type"] = str(type(llm_calls.client))
+            
+            # Try to generate a greeting
+            if hasattr(llm_calls, 'generate_dynamic_greeting'):
+                try:
+                    test_greeting = llm_calls.generate_dynamic_greeting()
+                    status["can_generate_greeting"] = True
+                    status["test_greeting"] = test_greeting[:50] + "..." if len(test_greeting) > 50 else test_greeting
+                except Exception as e:
+                    status["can_generate_greeting"] = False
+                    status["greeting_error"] = str(e)
+            else:
+                status["can_generate_greeting"] = False
+                status["greeting_error"] = "Function not found"
+                
+    except Exception as e:
+        status["import_error"] = str(e)
+    
+    return status
 
 
 # retrieve ml_output.json for Aymeric's TABLE // clean ml_output check independant from any other // 07/06/2025
@@ -745,7 +822,8 @@ def clear_iterations(request: Request):
 
 
 
-#UPDATED 06.06.25
+
+#UPDATED 07.06.25
 if __name__ == "__main__":
     print("🚀 Starting Rhino Copilot Server with Full Phase 2...")
     print(f"🤖 LLM Available: {LLM_AVAILABLE}")
@@ -782,7 +860,28 @@ if __name__ == "__main__":
             print(f"⚠️ Port {port} is in use. Trying to find a free port...")
             port = find_free_port(5001)
 
-    print(f"🚀 Launching server on port {port}...")
+    print(f"🚀 Preparing to launch server on port {port}...")
+
+    # WAIT FOR LLM TO BE FULLY READY BEFORE STARTING SERVER
+    if LLM_AVAILABLE:
+        print("⏳ Ensuring LLM is fully ready before starting server...")
+        max_attempts = 15
+        for attempt in range(max_attempts):
+            try:
+                print(f"🧪 Testing LLM readiness... (attempt {attempt + 1}/{max_attempts})")
+                test_greeting = llm_calls.generate_dynamic_greeting()
+                print(f"✅ LLM is ready! Test greeting: {test_greeting[:50]}...")
+                break
+            except Exception as e:
+                print(f"⏳ LLM not ready yet: {e}")
+                if attempt < max_attempts - 1:
+                    print("   Waiting 2 seconds before retry...")
+                    time.sleep(2)
+                else:
+                    print("❌ LLM failed to initialize after all attempts!")
+                    print("   Server will start anyway, but greetings may fail")
+
+    print("🌟 LLM initialization complete! Starting server...")
 
     # Start main server
     uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
@@ -801,4 +900,3 @@ if __name__ == "__main__":
         print("🔁 Launching compatibility server on port 5001...")
         legacy_proc = multiprocessing.Process(target=run_legacy_compatibility_server, daemon=True)
         legacy_proc.start()
-

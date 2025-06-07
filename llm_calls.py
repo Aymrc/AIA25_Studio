@@ -4,7 +4,8 @@ import os
 import re
 import traceback
 from server.config import client, completion_model
-
+import sys
+import subprocess
 # Try to import César's SQL dataset utility
 try:
     from utils.sql_dataset import get_top_low_carbon_high_gfa
@@ -687,7 +688,9 @@ def suggest_change(user_prompt, design_data):
 # DYNAMIC GREETING
 # ==========================================
 
-#NEW FUNCTION 06.06.25
+#NEW FUNCTION 07.06.25
+# Add this function to your llm_calls.py file if it doesn't exist:
+
 def generate_dynamic_greeting():
     """Generate a varied, engaging greeting for the design assistant"""
     try:
@@ -700,7 +703,7 @@ def generate_dynamic_greeting():
                     "role": "system",
                     "content": """
                     You are a friendly architectural design assistant. Generate a brief, welcoming greeting that:
-                    - Is warm and funny
+                    - Is warm and engaging
                     - Mentions sustainable design or architecture
                     - Varies each time (don't be repetitive)
                     - Is 1-2 sentences maximum
@@ -708,7 +711,8 @@ def generate_dynamic_greeting():
                     Generate a unique, engaging greeting now.
                     """
                 }
-            ]
+            ],
+            timeout=50.0  # 30 second timeout
         )
         
         greeting = response.choices[0].message.content.strip()
@@ -716,7 +720,7 @@ def generate_dynamic_greeting():
         return greeting
         
     except Exception as e:
-        print(f"[GREETING] Error generating dynamic greeting: {e}")
+        print(f"[GREETING] Error: {e}")
         import traceback
         traceback.print_exc()
-        return "Hello! I'm your design assistant. What would you like to build today?"
+        raise e  # Don't return fallback, raise error instead
