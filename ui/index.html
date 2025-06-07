@@ -34,20 +34,23 @@
 
 				<!-- script for chatbot calling server -->
 				<script>
-				// Load initial greeting when page loads
+				// NEW LOGIC 06.06.25 Load initial greeting when page loads
 				window.addEventListener("load", async function() {
-					try {
-						const res = await fetch("http://127.0.0.1:5001/initial_greeting");
+    				try {
+        				console.log("🔍 Making request to initial_greeting...");
+						const res = await fetch(`http://127.0.0.1:5001/initial_greeting?t=${Date.now()}`);
+						console.log("🔍 Response status:", res.status);
 						const data = await res.json();
-						
-						if (data.response) {
-							addToChat("bot", data.response);
-						}
+						console.log("🔍 Response data:", data);
+        
+        				if (data.response) {
+            				addToChat("bot", data.response);
+        				}
 					} catch (err) {
 						console.error("Could not load initial greeting:", err);
-						addToChat("bot", "Hello! I'm your design assistant. What would you like to build today?");
+						addToChat("bot", "Hello! I'm your design assistant. What would you like to build today!");
 					}
-				});
+});
 
 				async function sendMessage() {
 					const input = document.getElementById("message");
