@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi import Request
+
 from pydantic import BaseModel
 import uvicorn
 import sys
@@ -687,10 +689,11 @@ def test_greeting():
         }
 
 
-# retrieve ml_output.json for Aymeric's table // clean ml_output check independant from any other // 07/06/2025
+
+# retrieve ml_output.json for Aymeric's TABLE // clean ml_output check independant from any other // 07/06/2025
 @app.get("/api/ml_output")
 def get_ml_output():
-    """Serve the decoded material composition from ml_output.json"""
+    # === Serve the decoded material composition from ml_output.json ===
     try:
         file_path = os.path.join("knowledge", "ml_output.json")
         with open(file_path, "r") as f:
@@ -698,6 +701,47 @@ def get_ml_output():
         return JSONResponse(content=data)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
+# retrieve iterations v{i}.json for Aymeric's PLOT // 07/06/2025
+@app.get("/api/gwp_data")
+def get_gwp_data():
+    # === Aggregate data from all V*.json files in knowledge/iterations/ ====
+    folder = os.path.join("knowledge", "iterations")
+    all_data = []
+
+    try:
+        for filename in sorted(os.listdir(folder)):
+            if filename.startswith("V") and filename.endswith(".json"):
+                path = os.path.join(folder, filename)
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    data["version"] = filename.replace(".json", "")  # Add version for x-axis
+                    all_data.append(data)
+
+        return JSONResponse(content=all_data)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
+# REMOVE iterations v{i}.json and v{i}.png for UI // 07/06/2025
+@app.post("/api/clear_iterations")
+def clear_iterations(request: Request):
+    folder = os.path.join("knowledge", "iterations")
+    deleted_files = []
+
+    try:
+        for filename in os.listdir(folder):
+            if filename.startswith("V") and (filename.endswith(".json") or filename.endswith(".png")):
+                path = os.path.join(folder, filename)
+                os.remove(path)
+                deleted_files.append(filename)
+
+        return JSONResponse(content={"status": "success", "deleted": deleted_files})
+    except Exception as e:
+        return JSONResponse(content={"status": "error", "error": str(e)}, status_code=500)
 
 
 
