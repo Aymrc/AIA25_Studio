@@ -13,10 +13,6 @@
     <body>
         <div class="glow-line"></div>
         <div class="copTitle">Copilot Data</div>
-<<<<<<< HEAD
-		
-		
-=======
 
 		<div class="top-button-bar">
 			<!-- button save iteration's data / image viewport / 3D -->
@@ -76,7 +72,6 @@
 			</script>
 		</div>
 
->>>>>>> Aymeric
 		<div class="main_container">
 
 			<!-- layer composition material -->
@@ -257,9 +252,6 @@
 					};
 
 					function plotMetric(metricName) {
-<<<<<<< HEAD
-						const filtered = gwpData.filter(d => typeof d[metricName] === "number" && !isNaN(d[metricName]));
-=======
 						const data = window.gwpData || [];
 
 						const filtered = data.filter(d =>
@@ -268,7 +260,6 @@
 
 						console.log("Selected metric:", metricName);
 						console.log("Filtered data:", filtered);
->>>>>>> Aymeric
 
 						const x = filtered.map(d => d.version);
 						const y = filtered.map(d => d[metricName]);
@@ -338,17 +329,10 @@
 									yshift: -15,
 									font: { color: 'red', size: 12 }
 								}
-<<<<<<< HEAD
-							]
-						});
-					}
-
-					plotMetric(select.value);
-=======
 							],
 							paper_bgcolor: "#f3f3f3",
 							plot_bgcolor: "#ffffff"
-						};
+						});
 
 						Plotly.newPlot(plotContainer, [trace], layout);
 					}
@@ -379,15 +363,9 @@
 					tryFetchGWPData();
 
 					// Replot when user changes metric
->>>>>>> Aymeric
 					select.addEventListener("change", () => {
 						plotMetric(select.value);
 					});
-<<<<<<< HEAD
-				});
-			</script>
-
-=======
 
 					// Auto-refresh every 2 seconds with new data
 					setInterval(() => {
@@ -398,7 +376,6 @@
 
 
 
->>>>>>> Aymeric
 		</div>
 
     </body>
