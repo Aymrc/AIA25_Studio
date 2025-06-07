@@ -14,62 +14,63 @@
         <div class="glow-line"></div>
         <div class="copTitle">Copilot Data</div>
 
-		<button id="SaveIt">Save Iteration</button>
-		<script>
-			document.getElementById("SaveIt").addEventListener("click", () => {
-				fetch("http://127.0.0.1:5060/screenshot/")
-					.then(response => response.text())
-					.then(result => {
-						if (result === "ok") {
-							alert("✅ Screenshot saved!");
+		<div class="top-button-bar">
+			<!-- button save iteration's data / image viewport / 3D -->
+			<button id="SaveIt">Save Iteration</button>
+			<script>
+				document.getElementById("SaveIt").addEventListener("click", () => {
+					fetch("http://127.0.0.1:5060/screenshot/")
+						.then(response => response.text())
+						.then(result => {
+							if (result === "ok") {
+								alert("Screenshot saved!");
+							} else {
+								alert("Failed to take screenshot.");
+							}
+						})
+						.catch(err => {
+							console.error("Error:", err);
+							alert("Could not reach Rhino listener.");
+						});
+				});
+			</script>
+
+			<!-- button clear iteration -->
+			<button id="clearBtn">Clear Iterations</button>
+			<span id="clearStatus"></span>
+
+			<script>
+				document.getElementById("clearBtn").addEventListener("click", () => {
+					const status = document.getElementById("clearStatus");
+					status.textContent = "Clearing...";
+					status.style.color = "black";
+
+					fetch("http://127.0.0.1:5001/api/clear_iterations", {
+						method: "POST"
+					})
+					.then(res => res.json())
+					.then(data => {
+						if (data.status === "success") {
+							status.textContent = `Deleted ${data.deleted.length} file(s)`;
+							status.style.color = "green";
+
+							// Refresh visualizations & plots
+							document.getElementById("vizGrid").innerHTML = '<div class="viz-tile empty">Waiting for image...</div>';
+							window.gwpData = [];
+							document.getElementById("gwp-plot").innerText = "No data yet.";
 						} else {
-							alert("❌ Failed to take screenshot.");
+							status.textContent = `Error: ${data.error}`;
+							status.style.color = "red";
 						}
 					})
 					.catch(err => {
-						console.error("Error:", err);
-						alert("⚠️ Could not reach Rhino listener.");
-					});
-			});
-		</script>
-
-
-		<div style="margin: 10px 0;">
-			<button id="clearBtn" style="padding: 8px 14px; border-radius: 6px; background: crimson; color: white; border: none; cursor: pointer;">Clear Iterations</button>
-			<span id="clearStatus" style="margin-left: 10px; font-size: 0.9em;"></span>
-		</div>
-		<script>
-			document.getElementById("clearBtn").addEventListener("click", () => {
-				const status = document.getElementById("clearStatus");
-				status.textContent = "Clearing...";
-				status.style.color = "black";
-
-				fetch("http://127.0.0.1:5001/api/clear_iterations", {
-					method: "POST"
-				})
-				.then(res => res.json())
-				.then(data => {
-					if (data.status === "success") {
-						status.textContent = `Deleted ${data.deleted.length} file(s)`;
-						status.style.color = "green";
-
-						// Refresh visualizations & plots
-						document.getElementById("vizGrid").innerHTML = '<div class="viz-tile empty">Waiting for image...</div>';
-						window.gwpData = [];
-						document.getElementById("gwp-plot").innerText = "No data yet.";
-					} else {
-						status.textContent = `Error: ${data.error}`;
+						status.textContent = "Request failed";
 						status.style.color = "red";
-					}
-				})
-				.catch(err => {
-					status.textContent = "Request failed";
-					status.style.color = "red";
-					console.error("Clear error:", err);
+						console.error("Clear error:", err);
+					});
 				});
-			});
-		</script>
-
+			</script>
+		</div>
 
 		<div class="main_container">
 
@@ -142,13 +143,13 @@
 				</select>
 
 
-				<div id="gwp-plot" style="width:100%; height:400px;"></div>
+				<div id="gwp-plot"></div>
 			</div>
 		
 
 			<!-- Gallery Iterations -->
 			<div class="gallerySection" id="gallery">
-				<h3>Vizualisation</h3>
+				<h3>Visualization</h3>
 
 				<div id="vizGrid" class="viz-grid"> 
 					<div class="viz-tile empty">Waiting for image...</div>
@@ -157,52 +158,71 @@
 					<!-- JS script for adding new tile when you image avaiable -->
 					<script>
 						function loadVizGallery() {
-						const grid = document.getElementById("vizGrid");
-						grid.innerHTML = "";
+							const grid = document.getElementById("vizGrid");
+							grid.innerHTML = "";
 
-						let i = 0;
+							let i = 0;
 
-						const tryNext = () => {
-							const imgPath = `../knowledge/iterations/V${i}.png`;
-							
-							// checking for the version
-							// make sure the folder is right!
+							const tryNext = () => {
+								const imgPath = `../knowledge/iterations/V${i}.png`;
 
-							const img = new Image();
-							img.onload = function () {
-								const tile = document.createElement("div");
-								tile.className = "viz-tile";
+								const img = new Image();
+								img.onload = function () {
+									const tile = document.createElement("div");
+									tile.className = "viz-tile";
 
-								const label = document.createElement("div");
-								label.className = "viz-label";
-								label.textContent = `V${i}`;
+									const label = document.createElement("div");
+									label.className = "viz-label";
+									label.textContent = `V${i}`;
 
-								tile.appendChild(img);
-								tile.appendChild(label);
+									// === Glowing Button ===
+									const buttonWrapper = document.createElement("div");
+									buttonWrapper.className = "viz-btn-wrapper";
 
-								grid.appendChild(tile);
+									const glow = document.createElement("div");
+									glow.className = "viz-btn-glow";
 
-								i++;
-								tryNext();
+									const button = document.createElement("button");
+									button.className = "viz-btn";
+									button.textContent = "🪄";
+									button.title = "Magic action";
+
+									button.addEventListener("click", () => {
+										alert(`Button clicked for V${i}`);
+										// Add your custom action here
+									});
+
+									buttonWrapper.appendChild(glow);
+									buttonWrapper.appendChild(button);
+
+									// === Add everything ===
+									tile.appendChild(img);
+									tile.appendChild(label);
+									tile.appendChild(buttonWrapper);
+									grid.appendChild(tile);
+
+									i++;
+									tryNext();
+								};
+
+								img.onerror = function () {
+									if (i === 0) {
+										const empty = document.createElement("div");
+										empty.className = "viz-tile empty";
+										empty.textContent = "No images yet.";
+										grid.appendChild(empty);
+									}
+								};
+
+								img.src = imgPath;
 							};
 
-							img.onerror = function () {
-							if (i === 0) {
-								const empty = document.createElement("div");
-								empty.className = "viz-tile empty";
-								empty.textContent = "No images yet.";
-								grid.appendChild(empty);
-							}
-							};
-
-							img.src = imgPath;
-						};
-
-						tryNext();
+							tryNext();
 						}
 
 						window.addEventListener("load", loadVizGallery);
-						</script>
+					</script>
+
 
 				</div>
 			</div>
@@ -227,7 +247,7 @@
 					function plotMetric(metricName) {
 						const data = window.gwpData || [];
 
-						const filtered = data.filter(d => 
+						const filtered = data.filter(d =>
 							d.outputs && typeof d.outputs[metricName] === "number" && !isNaN(d.outputs[metricName])
 						);
 
@@ -249,8 +269,8 @@
 						const shortName = displayNames[metricName] || metricName;
 
 						const trace = {
-							x: x,
-							y: y,
+							x,
+							y,
 							type: 'scatter',
 							mode: 'markers',
 							marker: {
@@ -288,7 +308,7 @@
 								fixedrange: false
 							},
 							dragmode: 'pan',
-							margin: { t: 40 },
+							margin: { t: 40, b: 40 },
 							annotations: [
 								{
 									x: x[minIndex],
@@ -307,9 +327,8 @@
 									font: { color: 'red', size: 12 }
 								}
 							],
-							paper_bgcolor: "#f3f3f3", // Background OUTSIDE the plotting area
-							plot_bgcolor: "#ffffff", // Background INSIDE the plotting area
-							margin: { t: 45, b: 0 },
+							paper_bgcolor: "#f3f3f3",
+							plot_bgcolor: "#ffffff"
 						};
 
 						Plotly.newPlot(plotContainer, [trace], layout);
@@ -337,7 +356,7 @@
 							});
 					}
 
-					// Initial data fetch
+					// Initial load
 					tryFetchGWPData();
 
 					// Replot when user changes metric
@@ -347,14 +366,13 @@
 						}
 					});
 
-					// Live auto-refresh every 10 seconds
+					// Auto-refresh every 2 seconds with new data
 					setInterval(() => {
-						if (window.gwpData) {
-							plotMetric(select.value);
-						}
-					}, 100);
+						tryFetchGWPData();
+					}, 2000);
 				});
 			</script>
+
 
 
 		</div>
