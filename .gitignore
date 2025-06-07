@@ -1,0 +1,10 @@
+# Ignore all V*.json files inside knowledge/iterations
+knowledge/iterations/V*.json
+
+# Ignore everything inside knowledge/iterations (png, json, ...)
+knowledge/iterations/*
+
+
+# Ignore Python cache
+__pycache__/
+*.pyc
