@@ -12,138 +12,145 @@
 
     <body>
         <div class="glow-line"></div>
-
         <div class="copTitle">Copilot Data</div>
+		
+		
+		<div class="main_container">
+			
+			<!-- layer composition material -->
+			<div class="tableComp">
+				<h3>Building Composition</h3>
+					<table id="compositionTable">
 
-        <!-- layer composition material -->
-        <div class="tableComp">
-            <h3>Building Composition</h3>
-				<table id="compositionTable">
+						<thead>
+						<tr>
+							<th>Component</th>
+							<th>Material</th>
+						</tr>
+						</thead>
 
-					<thead>
-					<tr>
-						<th>Component</th>
-						<th>Material</th>
-					</tr>
-					</thead>
-
-					<tbody>
-						<!-- JavaScript inputs -->
-					</tbody>
-				</table>
-        </div>
-		<script>
-			fetch("http://127.0.0.1:5001/data/ml_output.json")
-			.then(res => res.json())
-			.then(data => {
-				const decoded = data.inputs_decoded;
-				const tableBody = document.querySelector("#compositionTable tbody");
-
-				for (const [component, material] of Object.entries(decoded)) {
-				if (typeof material === "string") {  // filter only actual materials
-					const row = document.createElement("tr");
-					const compCell = document.createElement("td");
-					const matCell = document.createElement("td");
-
-					compCell.textContent = component.replaceAll("_", " ").replaceAll(".", " "); // cleaning string
-					matCell.textContent = material.replaceAll("_", " ");
-
-					row.appendChild(compCell);
-					row.appendChild(matCell);
-					tableBody.appendChild(row);
-				}
-				}
-			})
-			.catch(err => {
-				console.error("Error loading composition:", err);
-				const tableBody = document.querySelector("#compositionTable tbody");
-				const row = document.createElement("tr");
-				row.innerHTML = `<td colspan="2">Failed to load data.</td>`;
-				tableBody.appendChild(row);
-			});
-		</script>
-
-
-        <!-- plot GWP & other metrics -->
-        <div class="plotGWP">
-            <h3>GWP Trend</h3>
-
-			<label for="metricSelect">Select Metric:</label>
-			<select id="metricSelect">
-				<option value="GWP total (kg CO2e/m²a GFA)">GWP total</option>
-				<option value="Operational Carbon (kg CO2e/m²a GFA)">Op. Carbon</option>
-				<option value="Embodied Carbon A-D (kg CO2e/m²a GFA)">EC A-D</option>
-				<option value="Energy Intensity - EUI (kWh/m²a)">EUI</option>
-				<option value="Cooling Demand (kWh/m²a)">Cooling</option>
-				<option value="Heating Demand (kWh/m²a)">Heating</option>
-			</select>
-
-
-  			<div id="gwp-plot" style="width:100%; height:400px;"></div>
-        </div>
-      
-
-        <!-- Gallery Iterations -->
-        <div class="gallerySection" id="gallery">
-            <h3>Vizualisation</h3>
-
-  			<div id="vizGrid" class="viz-grid"> 
-				<div class="viz-tile empty">Waiting for image...</div>
-				<!-- basic grid placeholder -->
-
-				<!-- JS script for adding new tile when you image avaiable -->
-				<script>
-					function loadVizGallery() {
-					const grid = document.getElementById("vizGrid");
-					grid.innerHTML = "";
-
-					let i = 0;
-
-					const tryNext = () => {
-						const imgPath = `../knowledge/iterations/V${i}.png`;
-						
-						// checking for the version
-						// make sure the folder is right!
-
-						const img = new Image();
-						img.onload = function () {
-							const tile = document.createElement("div");
-							tile.className = "viz-tile";
-
-							const label = document.createElement("div");
-							label.className = "viz-label";
-							label.textContent = `V${i}`;
-
-							tile.appendChild(img);
-							tile.appendChild(label);
-
-							grid.appendChild(tile);
-
-							i++;
-							tryNext();
-						};
-
-						img.onerror = function () {
-						if (i === 0) {
-							const empty = document.createElement("div");
-							empty.className = "viz-tile empty";
-							empty.textContent = "No images yet.";
-							grid.appendChild(empty);
-						}
-						};
-
-						img.src = imgPath;
-					};
-
-					tryNext();
-					}
-
-					window.addEventListener("load", loadVizGallery);
-					</script>
-
+						<tbody>
+							<!-- JavaScript inputs -->
+						</tbody>
+					</table>
 			</div>
-        </div>
+			<script>
+				function loadTableData() {
+					fetch("http://127.0.0.1:5001/api/ml_output")
+					.then(res => res.json())
+					.then(data => {
+						const decoded = data.inputs_decoded;
+						const tableBody = document.querySelector("#compositionTable tbody");
+						tableBody.innerHTML = ""; // Clear previous rows
 
+						for (const [component, material] of Object.entries(decoded)) {
+							if (typeof material === "string") {
+								const row = document.createElement("tr");
+								const compCell = document.createElement("td");
+								const matCell = document.createElement("td");
+
+								compCell.textContent = component.replaceAll("_", " ").replaceAll(".", " "); // Clean names
+								matCell.textContent = material.replaceAll("_", " ");
+
+								row.appendChild(compCell);
+								row.appendChild(matCell);
+								tableBody.appendChild(row);
+							}
+						}
+					})
+					.catch(err => {
+						console.error("Error loading composition:", err);
+						const tableBody = document.querySelector("#compositionTable tbody");
+						tableBody.innerHTML = `<tr><td colspan="2">Failed to load data.</td></tr>`;
+					});
+				}
+				loadTableData();
+
+				setInterval(loadTableData, 3000); // 3 sec check
+			</script>
+
+
+			<!-- plot GWP & other metrics -->
+			<div class="plotGWP">
+				<h3>GWP Trend</h3>
+
+				<label for="metricSelect">Select Metric:</label>
+				<select id="metricSelect">
+					<option value="GWP total (kg CO2e/m²a GFA)">GWP total</option>
+					<option value="Operational Carbon (kg CO2e/m²a GFA)">Op. Carbon</option>
+					<option value="Embodied Carbon A-D (kg CO2e/m²a GFA)">EC A-D</option>
+					<option value="Energy Intensity - EUI (kWh/m²a)">EUI</option>
+					<option value="Cooling Demand (kWh/m²a)">Cooling</option>
+					<option value="Heating Demand (kWh/m²a)">Heating</option>
+				</select>
+
+
+				<div id="gwp-plot" style="width:100%; height:400px;"></div>
+			</div>
+		
+
+			<!-- Gallery Iterations -->
+			<div class="gallerySection" id="gallery">
+				<h3>Vizualisation</h3>
+
+				<div id="vizGrid" class="viz-grid"> 
+					<div class="viz-tile empty">Waiting for image...</div>
+					<!-- basic grid placeholder -->
+
+					<!-- JS script for adding new tile when you image avaiable -->
+					<script>
+						function loadVizGallery() {
+						const grid = document.getElementById("vizGrid");
+						grid.innerHTML = "";
+
+						let i = 0;
+
+						const tryNext = () => {
+							const imgPath = `../knowledge/iterations/V${i}.png`;
+							
+							// checking for the version
+							// make sure the folder is right!
+
+							const img = new Image();
+							img.onload = function () {
+								const tile = document.createElement("div");
+								tile.className = "viz-tile";
+
+								const label = document.createElement("div");
+								label.className = "viz-label";
+								label.textContent = `V${i}`;
+
+								tile.appendChild(img);
+								tile.appendChild(label);
+
+								grid.appendChild(tile);
+
+								i++;
+								tryNext();
+							};
+
+							img.onerror = function () {
+							if (i === 0) {
+								const empty = document.createElement("div");
+								empty.className = "viz-tile empty";
+								empty.textContent = "No images yet.";
+								grid.appendChild(empty);
+							}
+							};
+
+							img.src = imgPath;
+						};
+
+						tryNext();
+						}
+
+						window.addEventListener("load", loadVizGallery);
+						</script>
+
+				</div>
+			</div>
+
+		</div>
 
     </body>
 </html>

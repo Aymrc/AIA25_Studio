@@ -1,7 +1,23 @@
+.main_container {
+  padding: 5px;
+}
+
+h3 {
+  margin-left: 0;
+}
+
+.tableComp,
+.plotGWP,
+.gallerySection {
+  position: relative;
+  margin: 10px 0;
+}
+
 /* === table material composition ===  */
 .tableComp {
-  margin: 10px 0;
   overflow-x: auto;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 #compositionTable {

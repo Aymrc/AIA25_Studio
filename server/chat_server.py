@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
 import sys
@@ -56,6 +57,8 @@ conversation_state = {
 # Phase 2 detection
 phase2_activated = False
 file_observer = None
+
+
 
 # File watcher for automatic Phase 2 activation
 #class MLFileWatcher(FileSystemEventHandler):
@@ -683,6 +686,21 @@ def test_greeting():
             "llm_available": LLM_AVAILABLE
         }
 
+
+# retrieve ml_output.json for Aymeric's table // clean ml_output check independant from any other // 07/06/2025
+@app.get("/api/ml_output")
+def get_ml_output():
+    """Serve the decoded material composition from ml_output.json"""
+    try:
+        file_path = os.path.join("knowledge", "ml_output.json")
+        with open(file_path, "r") as f:
+            data = json.load(f)
+        return JSONResponse(content=data)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
 #UPDATED 06.06.25
 if __name__ == "__main__":
     print("🚀 Starting Rhino Copilot Server with Full Phase 2...")
@@ -739,3 +757,4 @@ if __name__ == "__main__":
         print("🔁 Launching compatibility server on port 5001...")
         legacy_proc = multiprocessing.Process(target=run_legacy_compatibility_server, daemon=True)
         legacy_proc.start()
+
