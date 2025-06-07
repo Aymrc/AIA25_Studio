@@ -7,6 +7,7 @@ knowledge/iterations/*
 # Ignore specific files (based on iterations)
 knowledge/ml_output.json
 knowledge/compiled_ml_data.json
+knowledge/geometry_metrics.json
 knowledge/ml_processed.flag
 
 # Ignore Python cache

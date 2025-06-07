@@ -1,3 +1,45 @@
+.main_container {
+  padding: 5px;
+}
+
+h3 {
+  margin-left: 0;
+}
+
+.tableComp,
+.plotGWP,
+.gallerySection {
+  position: relative;
+  margin: 10px 0;
+}
+
+/* === table material composition ===  */
+.tableComp {
+  overflow-x: auto;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+#compositionTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+#compositionTable th,
+#compositionTable td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid #ccc;
+}
+
+#compositionTable th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+
+/* === visualisation gallery ===  */
 .gallerySection {
   padding: 10px;
   overflow-x: auto;
