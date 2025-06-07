@@ -1,0 +1,95 @@
+.main_container {
+  padding: 5px;
+}
+
+h3 {
+  margin-left: 0;
+}
+
+.tableComp,
+.plotGWP,
+.gallerySection {
+  position: relative;
+  margin: 10px 0;
+}
+
+/* === table material composition ===  */
+.tableComp {
+  overflow-x: auto;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+#compositionTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+#compositionTable th,
+#compositionTable td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid #ccc;
+}
+
+#compositionTable th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+
+/* === visualisation gallery ===  */
+.gallerySection {
+  padding: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+}
+
+.viz-grid {
+  display: flex;
+  flex-wrap: nowrap; /* disables wrapping */
+  gap: 10px;
+}
+
+.viz-tile, .viz-tile.empty {
+  width: 150px;
+  height: 150px;
+  flex: 0 0 auto;
+  background-color: #f0f0f0;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  color: #888;
+  text-align: center;
+  padding: 5px;
+  position: relative;
+}
+
+.viz-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.viz-label {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+}
+
+.viz-tile.latest {
+  border: 3px solid #00cc66; /*WIP*/
+  box-shadow: 0 0 10px rgba(0, 204, 102, 0.5);
+}
