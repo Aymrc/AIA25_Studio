@@ -14,3 +14,5 @@ knowledge/ml_processed.flag
 # Ignore Python cache
 __pycache__/
 *.pyc
+/knowledge
+/knowledge
