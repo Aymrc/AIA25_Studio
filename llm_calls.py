@@ -5,6 +5,21 @@ import re
 import traceback
 from server.config import client, completion_model
 
+import sys
+import subprocess
+
+# NEW IMPORTS FOR VERSIONING CONSIDERATIONS 07.06.25 
+from utils.version_analysis_utils import (
+    list_all_version_files,
+    load_specific_version,
+    summarize_version_outputs,
+    get_best_version,
+    extract_versions_from_input,
+    summarize_versions_data,
+    load_version_details
+)
+
+
 # Try to import César's SQL dataset utility
 try:
     from utils.sql_dataset import get_top_low_carbon_high_gfa
@@ -477,6 +492,18 @@ def query_intro():
 
 def answer_user_query(user_query, design_data):
     """Return a precise, factual answer using available project data."""
+    
+   # NEW DEFINITION FOR VERSIONING CONSIDERATIONS 07.06.25 
+    mentioned_versions = extract_versions_from_input(user_query)
+
+    if mentioned_versions:
+        version_data = summarize_versions_data(mentioned_versions)
+        summary_text = json.dumps(version_data, indent=2)
+    else:
+        version_data = summarize_version_outputs()
+        summary_text = json.dumps(version_data, indent=2)
+
+
     design_data_json = json.dumps(design_data)
     response = client.chat.completions.create(
         model=completion_model,
@@ -484,12 +511,15 @@ def answer_user_query(user_query, design_data):
             {
                 "role": "system",
                 "content": f"""
-                You are a technical assistant. Answer the user's question using only this data:
+                You are a technical assistant. Use the current project data and recent design history to answer user questions.
 
+                Current Design Data:
                 {design_data_json}
 
-                Respond in 1–2 concise sentences. If the answer isn't in the data, say so directly.
-                Avoid unnecessary explanations.
+                Recent Versions:
+                {summary_text}
+
+                Respond in 1–2 concise sentences. Be direct. If unsure, say so plainly.
                 """
             },
             {
@@ -498,11 +528,25 @@ def answer_user_query(user_query, design_data):
             }
         ]
     )
+
     return response.choices[0].message.content
 
 def suggest_improvements(user_prompt, design_data):
     """Give 1–2 brief, practical suggestions based on the design data and SQL dataset insights."""
     design_data_json = json.dumps(design_data)
+
+    version_summary = summarize_version_outputs()
+    version_summary_text = json.dumps(version_summary, indent=2)
+
+    best_version = get_best_version()
+    best_version_text = json.dumps(best_version, indent=2)
+
+
+    ranking_block = "\nVersion ranking by GWP (best to worst):\n"
+    sorted_versions = sorted(version_summary, key=lambda x: x.get("GWP", float('inf')))
+    for v in sorted_versions:
+        ranking_block += f"- {v['version']}: {v.get('GWP', 'N/A')} kg CO2e/m²\n"
+
 
     # Step 1: Get dataset-based reference examples (if available)
     if SQL_DATASET_AVAILABLE:
@@ -524,24 +568,35 @@ def suggest_improvements(user_prompt, design_data):
             ]
         )
         dataset_block = f"""
-Reference examples from other projects with high GFA and low carbon footprint:
-{formatted_examples}
-"""
+        Reference examples from other projects with high GFA and low carbon footprint:
+        {formatted_examples}
+        """
     else:
         dataset_block = "\n(No dataset matches found — skipping example injection.)\n"
 
     # Step 2: Build the system prompt
-    system_prompt = f"""
-You are a design advisor. Suggest practical improvements using this data:
+        system_prompt = f"""
+        You are a design advisor. Suggest practical improvements using this data:
 
-Current design:
-{design_data_json}
-{dataset_block}
+        Current design:
+        {design_data_json}
 
-Answer the user's prompt in 1–2 short, specific suggestions.
-Be direct. No intros, no conclusions. Do not repeat the user prompt.
-Only suggest changes relevant to this design.
-"""
+        Recent version summaries:
+        {version_summary_text}
+
+        Best performing version:
+        {best_version_text}
+
+        {ranking_block}
+
+        {dataset_block}
+
+        Answer the user's prompt in 1–2 short, specific suggestions.
+        Be direct. No intros, no conclusions. Do not repeat the user prompt.
+        If helpful, compare with previous versions or point out changes.
+        """
+
+
 
     # Step 3: Call the LLM
     response = client.chat.completions.create(
@@ -554,12 +609,30 @@ Only suggest changes relevant to this design.
 
     return response.choices[0].message.content
 
+def generate_user_summary(ml_dict):
+    """Turn model inputs into a readable summary"""
+    material_map = {
+        0: "brick", 1: "concrete", 2: "earth", 3: "straw", 4: "timber frame", 5: "mass timber"
+    }
+    insulation_map = {
+        0: "cellulose", 1: "cork", 2: "EPS", 3: "glass wool", 4: "mineral wool",
+        5: "wood fiber", 6: "XPS", 7: "XPS"  # reused for roof
+    }
+
+    try:
+        summary = f"✅ Updated design with:\n"
+        summary += f"• Exterior walls: {material_map.get(ml_dict['ew_par'], 'unknown')} + {insulation_map.get(ml_dict['ew_ins'], 'unknown')} insulation\n"
+        summary += f"• Interior walls: {material_map.get(ml_dict['iw_par'], 'unknown')}\n"
+        summary += f"• Roof: {['concrete', 'timber frame', 'mass timber'][ml_dict['ro_par']]} + {insulation_map.get(ml_dict['ro_ins'], 'unknown')} insulation\n"
+        summary += f"• Slab: {['concrete', 'timber frame', 'mass timber'][ml_dict['is_par']]}\n"
+        summary += f"• WWR: {int(ml_dict['wwr'] * 100)}%\n"
+        summary += f"• GFA: {ml_dict['gfa']} m²\n"
+        return summary
+    except Exception as e:
+        print(f"[SUMMARY ERROR] {e}")
+        return "✅ Design updated successfully (could not summarize changes)."
+
 def suggest_change(user_prompt, design_data):
-    import json
-    import os
-    import subprocess
-    import sys
-    import re
 
     # --- Prompt construction ---
     design_data_text = json.dumps(design_data)
@@ -612,12 +685,10 @@ def suggest_change(user_prompt, design_data):
 
     raw_response = response.choices[0].message.content
 
-    # --- Helper: extract first valid JSON block from LLM response ---
     def extract_json_block(text):
         match = re.search(r'\{[\s\S]*?\}', text)
         return match.group(0).strip() if match else None
 
-    # --- Helper: validate and patch JSON ---
     REQUIRED_KEYS = {
         "ew_par", "ew_ins", "iw_par", "es_ins", "is_par",
         "ro_par", "ro_ins", "wwr", "av", "gfa"
@@ -634,7 +705,6 @@ def suggest_change(user_prompt, design_data):
                 print(f"[VALIDATION] Missing key: {key} → filling from defaults")
                 parsed[key] = default_inputs[key]
 
-            # Ensure numeric types
             for key in ["wwr", "av", "gfa"]:
                 parsed[key] = float(parsed[key]) if not isinstance(parsed[key], float) else parsed[key]
             for key in REQUIRED_KEYS - {"wwr", "av", "gfa"}:
@@ -645,7 +715,6 @@ def suggest_change(user_prompt, design_data):
         except Exception as e:
             raise ValueError(f"Invalid model response: {e}")
 
-    # --- Validation and saving ---
     cleaned_json = extract_json_block(raw_response)
     default_inputs = {
         "ew_par": 0, "ew_ins": 0, "iw_par": 0,
@@ -662,7 +731,22 @@ def suggest_change(user_prompt, design_data):
             f.write(raw_response)
         return "⚠️ I couldn't generate a valid parameter set. Please try again."
 
-    # --- Trigger ML_predictor.py ---
+    def get_last_version_data():
+        folder = "knowledge/iterations"
+        try:
+            files = [f for f in os.listdir(folder) if re.match(r"V\d+\.json", f)]
+            files.sort(key=lambda x: int(re.search(r"\d+", x).group()), reverse=True)
+            if not files:
+                return None
+            latest_path = os.path.join(folder, files[0])
+            with open(latest_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[COMPARE] Failed to load previous version: {e}")
+            return None
+
+    previous_data = get_last_version_data()
+
     def run_ml_predictor():
         project_root = os.path.dirname(os.path.abspath(__file__))
         predictor_path = os.path.join(project_root, "utils", "ML_predictor.py")
@@ -681,7 +765,42 @@ def suggest_change(user_prompt, design_data):
 
     run_ml_predictor()
 
-    return raw_response
+    try:
+        with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
+            new_data = json.load(f)
+    except Exception as e:
+        print(f"[COMPARE] Failed to load new output: {e}")
+        return "✅ Change saved, but unable to analyze results right now."
+
+    system_prompt = f"""
+    You are a sustainability design advisor. A user has changed their architectural design. Compare the 'before' and 'after' versions below and explain how the carbon impact changed.
+
+    Design BEFORE:
+    {json.dumps(previous_data.get('inputs_decoded', {}), indent=2)}
+    Outputs BEFORE:
+    {json.dumps(previous_data.get('outputs', {}), indent=2)}
+
+    Design AFTER:
+    {json.dumps(new_data.get('inputs_decoded', {}), indent=2)}
+    Outputs AFTER:
+    {json.dumps(new_data.get('outputs', {}), indent=2)}
+
+    Summarize in 2–3 short sentences. Mention improvements or regressions. Be specific.
+    """
+
+    llm_response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "What changed with this update?"}
+        ]
+    )
+
+    interpretation = llm_response.choices[0].message.content.strip()
+
+    summary = generate_user_summary(validated_dict)
+    return f"{interpretation}\n\n{summary}"
+
 
 # ==========================================
 # DYNAMIC GREETING

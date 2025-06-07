@@ -14,3 +14,7 @@ knowledge/ml_processed.flag
 # Ignore Python cache
 __pycache__/
 *.pyc
+knowledge/compiled_ml_data.json
+knowledge/geometry_metrics.json
+knowledge/ml_output.json
+server/__pycache__/chat_server.cpython-310.pyc
