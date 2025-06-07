@@ -16,7 +16,7 @@
 		
 		
 		<div class="main_container">
-			
+
 			<!-- layer composition material -->
 			<div class="tableComp">
 				<h3>Building Composition</h3>
@@ -34,6 +34,7 @@
 						</tbody>
 					</table>
 			</div>
+			<!-- js for the material table -->
 			<script>
 				function loadTableData() {
 					fetch("http://127.0.0.1:5001/api/ml_output")
@@ -72,7 +73,7 @@
 
 			<!-- plot GWP & other metrics -->
 			<div class="plotGWP">
-				<h3>GWP Trend</h3>
+				<h3>Sustainability Trend</h3>
 
 				<label for="metricSelect">Select Metric:</label>
 				<select id="metricSelect">
@@ -149,6 +150,112 @@
 
 				</div>
 			</div>
+
+
+			<!-- js for plotly -->
+			<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+			<script>
+				window.addEventListener("load", () => {
+					const select = document.getElementById("metricSelect");
+
+					// Simulated example data (replace or fetch real gwpData)
+					// Make sure this exists OR fetch from a real API
+					if (!window.gwpData || gwpData.length === 0) {
+						console.warn("No gwpData found or empty.");
+						document.getElementById("gwp-plot").innerText = "No data yet.";
+						return;
+					}
+
+					const displayNames = {
+						"GWP total (kg CO2e/m²a GFA)": "GWP total",
+						"Operational Carbon (kg CO2e/m²a GFA)": "Op. Carbon",
+						"Embodied Carbon A-D (kg CO2e/m²a GFA)": "EC A-D",
+						"Energy Intensity - EUI (kWh/m²a)": "EUI",
+						"Cooling Demand (kWh/m²a)": "Cooling",
+						"Heating Demand (kWh/m²a)": "Heating",
+					};
+
+					function plotMetric(metricName) {
+						const filtered = gwpData.filter(d => typeof d[metricName] === "number" && !isNaN(d[metricName]));
+
+						const x = filtered.map(d => d.version);
+						const y = filtered.map(d => d[metricName]);
+
+						const min = Math.min(...y);
+						const max = Math.max(...y);
+						const minIndex = y.indexOf(min);
+						const maxIndex = y.indexOf(max);
+
+						const shortName = displayNames[metricName] || metricName;
+
+						const trace = {
+							x: x,
+							y: y,
+							type: 'scatter',
+							mode: 'markers',
+							marker: {
+								size: 15,
+								color: y,
+								colorscale: [
+									[0, 'da70d6'],
+									[0.5, 'ffd700'],
+									[1, 'add8e6']
+								],
+								reversescale: true,
+								cmin: min,
+								cmax: max,
+								colorbar: {
+									title: {
+										text: metricName,
+										font: { size: 12 }
+									},
+									thickness: 15
+								}
+							},
+							hovertemplate: `Version: %{x}<br>${metricName}: %{y}<extra></extra>`
+						};
+
+						Plotly.newPlot('gwp-plot', [trace], {
+							title: `${metricName} per Design Iteration`,
+							xaxis: {
+								title: 'Version',
+								fixedrange: false,
+								tickmode: 'linear'
+							},
+							yaxis: {
+								title: `${metricName}`,
+								fixedrange: false,
+								range: [0, max + 20]
+							},
+							dragmode: 'pan',
+							margin: { t: 40 },
+							annotations: [
+								{
+									x: x[minIndex],
+									y: min,
+									text: "Best",
+									showarrow: false,
+									yshift: -15,
+									font: { color: 'add8e6', size: 12 }
+								},
+								{
+									x: x[maxIndex],
+									y: max,
+									text: "",
+									showarrow: false,
+									yshift: -15,
+									font: { color: 'red', size: 12 }
+								}
+							]
+						});
+					}
+
+					plotMetric(select.value);
+					select.addEventListener("change", () => {
+						plotMetric(select.value);
+					});
+				});
+			</script>
 
 		</div>
 
