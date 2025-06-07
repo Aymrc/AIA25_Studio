@@ -5,6 +5,17 @@ import re
 import traceback
 from server.config import client, completion_model
 
+from utils.version_analysis_utils import (
+    list_all_version_files,
+    load_specific_version,
+    summarize_version_outputs,
+    get_best_version,
+    extract_versions_from_input,
+    summarize_versions_data,
+    load_version_details
+)
+
+
 # Try to import César's SQL dataset utility
 try:
     from utils.sql_dataset import get_top_low_carbon_high_gfa
@@ -477,6 +488,18 @@ def query_intro():
 
 def answer_user_query(user_query, design_data):
     """Return a precise, factual answer using available project data."""
+    
+   # NEW DEFINITION FOR VERSIONING CONSIDERATIONS 07.06.25 
+    mentioned_versions = extract_versions_from_input(user_query)
+
+    if mentioned_versions:
+        version_data = summarize_versions_data(mentioned_versions)
+        summary_text = json.dumps(version_data, indent=2)
+    else:
+        version_data = summarize_version_outputs()
+        summary_text = json.dumps(version_data, indent=2)
+
+
     design_data_json = json.dumps(design_data)
     response = client.chat.completions.create(
         model=completion_model,
@@ -484,12 +507,15 @@ def answer_user_query(user_query, design_data):
             {
                 "role": "system",
                 "content": f"""
-                You are a technical assistant. Answer the user's question using only this data:
+                You are a technical assistant. Use the current project data and recent design history to answer user questions.
 
+                Current Design Data:
                 {design_data_json}
 
-                Respond in 1–2 concise sentences. If the answer isn't in the data, say so directly.
-                Avoid unnecessary explanations.
+                Recent Versions:
+                {summary_text}
+
+                Respond in 1–2 concise sentences. Be direct. If unsure, say so plainly.
                 """
             },
             {
@@ -498,6 +524,7 @@ def answer_user_query(user_query, design_data):
             }
         ]
     )
+
     return response.choices[0].message.content
 
 def suggest_improvements(user_prompt, design_data):
