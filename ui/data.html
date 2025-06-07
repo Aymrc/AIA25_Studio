@@ -18,7 +18,51 @@
         <!-- layer composition material -->
         <div class="tableComp">
             <h3>Building Composition</h3>
+				<table id="compositionTable">
+
+					<thead>
+					<tr>
+						<th>Component</th>
+						<th>Material</th>
+					</tr>
+					</thead>
+
+					<tbody>
+						<!-- JavaScript inputs -->
+					</tbody>
+				</table>
         </div>
+		<script>
+			fetch("http://127.0.0.1:5001/data/ml_output.json")
+			.then(res => res.json())
+			.then(data => {
+				const decoded = data.inputs_decoded;
+				const tableBody = document.querySelector("#compositionTable tbody");
+
+				for (const [component, material] of Object.entries(decoded)) {
+				if (typeof material === "string") {  // filter only actual materials
+					const row = document.createElement("tr");
+					const compCell = document.createElement("td");
+					const matCell = document.createElement("td");
+
+					compCell.textContent = component.replaceAll("_", " ").replaceAll(".", " "); // cleaning string
+					matCell.textContent = material.replaceAll("_", " ");
+
+					row.appendChild(compCell);
+					row.appendChild(matCell);
+					tableBody.appendChild(row);
+				}
+				}
+			})
+			.catch(err => {
+				console.error("Error loading composition:", err);
+				const tableBody = document.querySelector("#compositionTable tbody");
+				const row = document.createElement("tr");
+				row.innerHTML = `<td colspan="2">Failed to load data.</td>`;
+				tableBody.appendChild(row);
+			});
+		</script>
+
 
         <!-- plot GWP & other metrics -->
         <div class="plotGWP">

@@ -1,3 +1,29 @@
+/* === table material composition ===  */
+.tableComp {
+  margin: 10px 0;
+  overflow-x: auto;
+}
+
+#compositionTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+#compositionTable th,
+#compositionTable td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid #ccc;
+}
+
+#compositionTable th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+
+/* === visualisation gallery ===  */
 .gallerySection {
   padding: 10px;
   overflow-x: auto;
