@@ -189,7 +189,7 @@ def show_copilot_ui():
 
     # === Create Chat Window ===
     chat_form = forms.Form()
-    chat_form.Title = "Copilot Chat"
+    chat_form.Title = "Copilot"
     chat_form.ClientSize = drawing.Size(chatWidth, chatHeight)
     chat_form.Topmost = True
 
@@ -213,7 +213,7 @@ def show_copilot_ui():
 
     # === Create Data Window ===
     data_form = forms.Form()
-    data_form.Title = "Copilot Data"
+    data_form.Title = "Copilot"
     data_form.ClientSize = drawing.Size(dataWidth, dataHeight)
     data_form.Topmost = True
 
