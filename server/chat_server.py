@@ -191,6 +191,14 @@ class MLFileWatcher(FileSystemEventHandler):
                 check_for_ml_output()):
                 
                 self.activate_phase2_automatically()
+
+            # 🚀 NEW: trigger ML predictor again on external file change
+            try:
+                predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+                subprocess.Popen(["python", predictor_path])
+                print("🚀 Re-ran ML_predictor.py due to external update to ml_output.json")
+            except Exception as e:
+                print(f"❌ Failed to re-run ML predictor: {e}")
     
     def check_geometry_and_trigger_phase1_completion(self):
         """Check for geometry and trigger Phase 1 completion if found"""
