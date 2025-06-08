@@ -1,17 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi import Request
+
 from pydantic import BaseModel
 import uvicorn
-import sys
-import os
-import json
-import time
-import threading
+import sys, os, subprocess, time, json, threading, socket, re
 from pathlib import Path
-import socket
-import subprocess
 
 # Try to import watchdog for file monitoring
 try:
@@ -825,14 +821,20 @@ def get_gwp_data():
     folder = os.path.join("knowledge", "iterations")
     all_data = []
 
+    def extract_number(filename):
+        match = re.search(r"V(\d+)\.json", filename)
+        return int(match.group(1)) if match else -1
+
     try:
-        for filename in sorted(os.listdir(folder)):
-            if filename.startswith("V") and filename.endswith(".json"):
-                path = os.path.join(folder, filename)
-                with open(path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    data["version"] = filename.replace(".json", "")  # Add version for x-axis
-                    all_data.append(data)
+        files = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
+        files.sort(key=extract_number)  # Sort numerically
+
+        for filename in files:
+            path = os.path.join(folder, filename)
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                data["version"] = filename.replace(".json", "")
+                all_data.append(data)
 
         return JSONResponse(content=all_data)
     except Exception as e:
@@ -899,7 +901,8 @@ def get_gwp_change():
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
-
+# Mounting directory for webapp // 08/06/2025 Aymeric 
+app.mount("/static/iterations", StaticFiles(directory="knowledge/iterations"), name="iterations")
 
 
 #UPDATED 07.06.25
