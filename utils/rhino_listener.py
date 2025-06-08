@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import Rhino
 import scriptcontext as sc
+import rhinoscriptsyntax as rs
 import System.Drawing
 import Rhino.Display
 
@@ -17,10 +18,42 @@ from collections import OrderedDict
 
 # === CONFIGURATION ===
 
-POST_URL = "http://127.0.0.1:5060/geometry"
+POST_URL = "http://127.0.0.1:5005/geometry"
 debounce_timer = None
 is_running = False
 listener_active = True  
+
+def capture_viewport(version_name, output_folder):
+    # #"""Captures two PNGs:
+    # 1. The current user viewport
+    # 2. A predefined axonometric SW view with ZoomExtents
+    
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # --- 1. Capture current user viewport ---
+    user_filename = os.path.join(output_folder, "{}_user.png".format(version_name))
+
+    try:
+        rs.Command('-_SaveViewportToFile "{}" _Enter'.format(user_filename), echo=False)
+        print("✅ User viewport saved: {}".format(user_filename))
+
+    except Exception as e:
+        print("❌ Failed to save user viewport: {}".format(e))
+
+    # --- 2. Capture SW axonometric after zoom extents ---
+    axo_filename = os.path.join(output_folder, "{}_axon.png".format(version_name))
+
+    try:
+        rs.CurrentView("Perspective")  # Switch to a reliable viewport
+        rs.ViewDisplayMode("Perspective", "Shaded")
+        rs.Command("_SetView _World _SW", echo=False)
+        rs.Command("_Zoom _Extents", echo=False)
+        rs.Command('-_SaveViewportToFile "{}" _Enter'.format(axo_filename), echo=False)
+        print("✅ Axonometric view saved: {}".format(axo_filename))
+    except Exception as e:
+        print("❌ Failed to save axonometric view: {}".format(e))
+
 
 # === POST METRICS ===
 
@@ -257,12 +290,45 @@ def setup_listeners():
     Rhino.RhinoDoc.ModifyObjectAttributes += on_modify
     Rhino.RhinoApp.WriteLine("🎧 Rhino listener is active and monitoring geometry changes.")
 
+
+def watch_for_capture_signal():
+    def watcher():
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        flag_path = os.path.join(base_dir, "knowledge", "capture_now.txt")
+        iterations_folder = os.path.join(base_dir, "knowledge", "iterations")
+        last_version = None
+
+        while True:
+            if os.path.exists(flag_path):
+                try:
+                    with open(flag_path, "r") as f:
+                        version_name = f.read().strip()
+
+                    if version_name and version_name != last_version:
+                        Rhino.RhinoApp.WriteLine("🔔 Triggered capture for version: {}".format(version_name))
+                        capture_viewport(version_name, iterations_folder)
+                        last_version = version_name
+                except Exception as e:
+                    Rhino.RhinoApp.WriteLine("⚠️ Error reading flag file: {}".format(e))
+
+            time.sleep(2)
+
+    t = threading.Thread(target=watcher)
+    t.setDaemon(True)
+    t.start()
+
+    Rhino.RhinoApp.WriteLine("Screenshot watcher thread started.")
+
+
 # === SCRIPT START ===
 
 Rhino.RhinoApp.WriteLine("🚦 Starting Rhino listener script...")
 setup_listeners()
 compute_total_metrics()
 Rhino.RhinoApp.WriteLine("✅ Rhino listener initialized and ready.")
+# Start the background watcher
+watch_for_capture_signal()
+
 
 # === SHUTDOWN CLEANUP ===
 
@@ -272,43 +338,4 @@ def shutdown_listener():
     remove_listeners()
     Rhino.RhinoApp.WriteLine("🛑 Rhino listener stopped.")
     Rhino.RhinoApp.WriteLine("✅ Rhino listener shut down.")
-
-
-
-# Viewport capture to .png // Aymeric 07/06/2025 
-# def capture_viewport_screenshot():
-#     view = sc.doc.Views.ActiveView
-#     if not view:
-#         Rhino.RhinoApp.WriteLine("🚫 No active view found.")
-#         return False
-
-#     # Determine next available version
-#     folder = os.path.join(os.path.dirname(__file__), "..", "knowledge", "iterations")
-#     if not os.path.exists(folder):
-#         os.makedirs(folder)
-
-#     existing = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".png")]
-#     versions = []
-#     for f in existing:
-#         try:
-#             num = int(f[1:-4])  # Extract number from 'V{num}.png'
-#             versions.append(num)
-#         except:
-#             continue
-#     next_index = max(versions) + 1 if versions else 0
-
-#     filename = "V%d.png" % next_index
-#     save_path = os.path.join(folder, filename)
-
-#     # Take screenshot
-#     size = System.Drawing.Size(800, 600)
-#     bitmap = view.CaptureToBitmap(size, False, True, True)
-
-#     if bitmap:
-#         bitmap.Save(save_path)
-#         Rhino.RhinoApp.WriteLine("📸 Screenshot saved as %s" % filename)
-#         return filename  # Return filename if needed
-#     else:
-#         Rhino.RhinoApp.WriteLine("❌ Failed to capture screenshot.")
-#         return None
 
