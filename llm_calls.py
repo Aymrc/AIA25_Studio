@@ -12,8 +12,8 @@ import subprocess
 
 # NEW IMPORTS FOR VERSIONING CONSIDERATIONS 07.06.25 
 from utils.version_analysis_utils import (
-    list_all_version_files,
-    load_specific_version,
+    # list_all_version_files, # it is already used in version_analysis_utils.py 
+    # load_specific_version, # it is already used in version_analysis_utils.py 
     summarize_version_outputs,
     get_best_version,
     extract_versions_from_input,
