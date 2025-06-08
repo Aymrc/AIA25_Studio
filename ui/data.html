@@ -129,7 +129,33 @@
 
 				setInterval(loadTableData, 3000); // 3 sec check
 			</script>
+			
 
+			<div class="trendModel3D">
+				<h3>3D model GWP trend</h3><div id="gwp-change-label" style="font-size: 0.9em;"></div>
+				<script>
+					fetch("http://127.0.0.1:5001/api/gwp_change")
+						.then(res => res.json())
+						.then(data => {
+							const label = document.getElementById("gwp-change-label");
+
+							if (data.percent_change !== undefined) {
+							const change = data.percent_change;
+							const sign = change > 0 ? "+" : "";
+							const color = change > 0 ? "red" : "green";
+							const arrow = change > 0 ? "▲" : "▼";
+
+							label.innerHTML = `<span style="color: ${color}; font-weight: bold;">${arrow} ${sign}${change}%</span> vs last model`;
+							} else {
+							label.textContent = "No change data available";
+							}
+						})
+						.catch(err => {
+							console.error("Error fetching GWP change:", err);
+						});
+				</script>
+			</div>
+			
 
 			<!-- plot GWP & other metrics -->
 			<div class="plotGWP">
@@ -288,7 +314,7 @@
 							type: 'scatter',
 							mode: 'markers',
 							marker: {
-								size: 15,
+								size: 10,
 								color: y,
 								colorscale: [
 									[0, 'da70d6'],
