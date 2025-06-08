@@ -1047,7 +1047,33 @@ def compare_versions_summary(user_input):
                 f"- Embodied A-D: {ec}"
             )
 
-        return "\n".join(response_lines)
+                # New LLM-crafted summary
+        llm_prompt = f"""
+        You are an expert sustainability assistant. Compare the materials and performance of these two versions:
+
+        Version 1:
+        Inputs: {json.dumps(data[version_names[0]].get("inputs_decoded", {}), indent=2)}
+        Outputs: {json.dumps(data[version_names[0]].get("outputs", {}), indent=2)}
+
+        Version 2:
+        Inputs: {json.dumps(data[version_names[1]].get("inputs_decoded", {}), indent=2)}
+        Outputs: {json.dumps(data[version_names[1]].get("outputs", {}), indent=2)}
+
+        Explain the main material and performance differences. Be brief, plain, and human. Mention key differences in materials or insulation and any major shifts in operational or embodied carbon.
+        """
+
+        llm_response = client.chat.completions.create(
+            model=completion_model,
+            messages=[
+                {"role": "system", "content": llm_prompt},
+                {"role": "user", "content": f"Compare version {version_names[0]} and {version_names[1]}."}
+            ]
+        )
+
+        natural_summary = llm_response.choices[0].message.content.strip()
+
+        return f"{natural_summary}\n\n🧾 Raw data:\n" + "\n".join(response_lines)
+
 
     except Exception as e:
         print(f"[COMPARE VERSIONS ERROR] {e}")
