@@ -14,7 +14,6 @@
         <div class="glow-line"></div>
         <div class="copTitle">Copilot Data</div>
 
-<<<<<<< HEAD
 		<div class="top-button-bar">
 			<!-- button save iteration's data / image viewport / 3D -->
 			<button id="SaveIt">Save Iteration</button>
@@ -61,16 +60,6 @@
 							document.getElementById("vizGrid").innerHTML = '<div class="viz-tile empty">Waiting for image...</div>';
 							window.gwpData = [];
 							document.getElementById("gwp-plot").innerText = "No data yet.";
-=======
-		<button id="SaveIt">Save Iteration</button>
-		<script>
-			document.getElementById("SaveIt").addEventListener("click", () => {
-				fetch("http://127.0.0.1:5060/screenshot/")
-					.then(response => response.text())
-					.then(result => {
-						if (result === "ok") {
-							alert("✅ Screenshot saved!");
->>>>>>> parent of 9727096 (Merge branch 'main' into andres)
 						} else {
 							alert("❌ Failed to take screenshot.");
 						}
@@ -210,7 +199,6 @@
 						const grid = document.getElementById("vizGrid");
 						grid.innerHTML = "";
 
-<<<<<<< HEAD
 							const images = [];
 							let i = 0;
 
@@ -270,32 +258,6 @@
 								};
 
 								img.src = imgPath;
-=======
-						let i = 0;
-
-						const tryNext = () => {
-							const imgPath = `../knowledge/iterations/V${i}.png`;
-							
-							// checking for the version
-							// make sure the folder is right!
-
-							const img = new Image();
-							img.onload = function () {
-								const tile = document.createElement("div");
-								tile.className = "viz-tile";
-
-								const label = document.createElement("div");
-								label.className = "viz-label";
-								label.textContent = `V${i}`;
-
-								tile.appendChild(img);
-								tile.appendChild(label);
-
-								grid.appendChild(tile);
-
-								i++;
-								tryNext();
->>>>>>> parent of 9727096 (Merge branch 'main' into andres)
 							};
 
 							img.onerror = function () {
@@ -339,12 +301,8 @@
 					function plotMetric(metricName) {
 						const data = window.gwpData || [];
 
-<<<<<<< HEAD
 						const filtered = data
 						.filter(d =>
-=======
-						const filtered = data.filter(d => 
->>>>>>> parent of 9727096 (Merge branch 'main' into andres)
 							d.outputs && typeof d.outputs[metricName] === "number" && !isNaN(d.outputs[metricName])
 						)
 						.sort((a, b) => {
@@ -429,17 +387,11 @@
 									font: { color: 'red', size: 12 }
 								}
 							],
-<<<<<<< HEAD
 							paper_bgcolor: "#f3f3f3",
 							plot_bgcolor: "#ffffff",
 							font: {
 								color: "#727272"
 							}
-=======
-							paper_bgcolor: "#f3f3f3", // Background OUTSIDE the plotting area
-							plot_bgcolor: "#ffffff", // Background INSIDE the plotting area
-							margin: { t: 45, b: 0 },
->>>>>>> parent of 9727096 (Merge branch 'main' into andres)
 						};
 
 						Plotly.newPlot(plotContainer, [trace], layout);
@@ -486,10 +438,6 @@
 				});
 			</script>
 
-<<<<<<< HEAD
-=======
-
->>>>>>> parent of 9727096 (Merge branch 'main' into andres)
 		</div>
 
 		<div class="Copyrights">© Andres, Aymeric, César, Joaquin & Marco</div>

@@ -194,45 +194,49 @@ def copy_latest_version():
 def cleanup_old_versions(folder: str, keep: int = 2):
     #"""Keep only the latest 2 versions of V*.json and V*.png files."""
     version_pattern = re.compile(r'^V(\d+)\.(json|png)$', re.IGNORECASE)
+    files = os.listdir(folder)
+    versioned_files = {}
 
-    try:
-        files = os.listdir(folder)
-        version_map = {}
+    # Collect files by version
+    for file in files:
+        match = version_pattern.match(file)
+        if match:
+            version = int(match.group(1))
+            versioned_files.setdefault(version, []).append(file)
 
-        for file in files:
-            match = version_pattern.match(file)
-            if match:
-                version = int(match.group(1))
-                version_map.setdefault(version, []).append(file)
+    if len(versioned_files) < 2:
+        print("⚠️ Less than two versions found — skipping cleanup.")
+        return
 
-        sorted_versions = sorted(version_map.items(), key=lambda x: x[0], reverse=True)
-        keep = sorted_versions[:2]
-        delete = sorted_versions[2:]
+    sorted_versions = sorted(versioned_files.keys(), reverse=True)
+    latest = sorted_versions[0]
+    second_latest = sorted_versions[1]
 
-        # Delete all older versions
-        for version, file_list in delete:
-            for file in file_list:
-                path = os.path.join(folder, file)
+    # Prepare renamed copies
+    mapping = {
+        latest: "Vn",
+        second_latest: "Vn-1"
+    }
+
+    # Copy the two latest as Vn / Vn-1
+    for original_version, alias in mapping.items():
+        for ext in ["json", "png"]:
+            original = f"V{original_version}.{ext}"
+            if original in files:
+                src = os.path.join(folder, original)
+                dst = os.path.join(folder, f"{alias}.{ext}")
+                shutil.copy2(src, dst)
+                print(f"✅ Copied {original} → {alias}.{ext}")
+
+    # Delete all original V*. files
+    for version, files_list in versioned_files.items():
+        for filename in files_list:
+            path = os.path.join(folder, filename)
+            try:
                 os.remove(path)
-                print(f"🗑️ Deleted: {path}")
-
-        # Rename the two most recent to V1 (latest), V0 (second latest)
-        rename_map = {1: keep[0][0], 0: keep[1][0]} if len(keep) == 2 else {1: keep[0][0]}
-
-        for target, original_version in rename_map.items():
-            for ext in ["json", "png"]:
-                old_filename = f"V{original_version}.{ext}"
-                old_path = os.path.join(folder, old_filename)
-                new_filename = f"V{target}.{ext}"
-                new_path = os.path.join(folder, new_filename)
-
-                if os.path.exists(old_path):
-                    os.replace(old_path, new_path)
-                    print(f"🔄 Renamed: {old_filename} → {new_filename}")
-
-    except Exception as e:
-        print(f"⚠️ Cleanup/Renaming error: {e}")
-
+                print(f"🗑️ Deleted: {filename}")
+            except Exception as e:
+                print(f"⚠️ Failed to delete {filename}: {e}")
 
 # Save versioned output
 version_name = save_version_json(inputs, prediction, labels, json_folder)
