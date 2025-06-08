@@ -822,6 +822,48 @@ def clear_iterations(request: Request):
         return JSONResponse(content={"status": "error", "error": str(e)}, status_code=500)
 
 
+# Comparing In.json to In-1.json for UI // 08/06/2025 Aymeric 
+# >>> Let's try this once Andres' json are there
+@app.get("/api/gwp_change")
+def get_gwp_change():
+    """
+    Compare GWP between In.json (current model) and In-1.json (previous model)
+    Returns delta, % change, and values.
+    """
+    base_dir = Path(__file__).resolve().parent.parent
+    iteration_dir = base_dir / "knowledge" / "iterations"
+    file_current = iteration_dir / "In.json"
+    file_previous = iteration_dir / "In-1.json"
+
+    try:
+        with open(file_current, "r", encoding="utf-8") as f:
+            current = json.load(f)
+        with open(file_previous, "r", encoding="utf-8") as f:
+            previous = json.load(f)
+
+        curr_gwp = current["outputs"]["GWP total (kg CO2e/m²a GFA)"]
+        prev_gwp = previous["outputs"]["GWP total (kg CO2e/m²a GFA)"]
+        
+        if prev_gwp == 0:
+            return {"error": "Previous GWP is zero, cannot compute change."}
+
+        delta = curr_gwp - prev_gwp
+        percent_change = round((delta / prev_gwp) * 100, 2)
+
+        return {
+            "current": curr_gwp,
+            "previous": prev_gwp,
+            "delta": round(delta, 2),
+            "percent_change": percent_change
+        }
+
+    except FileNotFoundError:
+        return JSONResponse(content={"error": "One or both GWP files not found."}, status_code=404)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
 
 
 #UPDATED 07.06.25
