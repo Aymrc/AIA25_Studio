@@ -1,8 +1,9 @@
 # Ignore all V*.json files inside knowledge/iterations
 knowledge/iterations/V*.json
+knowledge/iterations/V*.png
 
 # Ignore everything inside knowledge/iterations (png, json, ...)
-knowledge/iterations/*
+# knowledge/iterations/*
 
 # Ignore specific files (based on iterations)
 knowledge/ml_output.json
@@ -13,3 +14,7 @@ knowledge/ml_processed.flag
 # Ignore Python cache
 __pycache__/
 *.pyc
+knowledge/compiled_ml_data.json
+knowledge/geometry_metrics.json
+knowledge/ml_output.json
+server/__pycache__/chat_server.cpython-310.pyc

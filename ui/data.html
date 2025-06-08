@@ -13,10 +13,69 @@
     <body>
         <div class="glow-line"></div>
         <div class="copTitle">Copilot Data</div>
-		
-		
+
+		<div class="top-button-bar">
+			<!-- button save iteration's data / image viewport / 3D -->
+			<button id="SaveIt">Save Iteration</button>
+			<script>
+				document.getElementById("SaveIt").addEventListener("click", () => {
+					fetch("http://127.0.0.1:5060/screenshot/")
+						.then(response => response.text())
+						.then(result => {
+							if (result === "ok") {
+								alert("Screenshot saved!");
+							} else {
+								alert("Failed to take screenshot.");
+							}
+						})
+						.catch(err => {
+							console.error("Error:", err);
+							alert("Could not reach Rhino listener.");
+						});
+				});
+			</script>
+
+			<!-- button clear iteration -->
+			<button id="clearBtn">Clear Iterations</button>
+			<!-- <span id="clearStatus"></span> --><!-- show if worked -->
+
+			<!-- <button id="Report">Export Report</button> -->
+
+			<script>
+				document.getElementById("clearBtn").addEventListener("click", () => {
+					const status = document.getElementById("clearStatus");
+					status.textContent = "Clearing...";
+					status.style.color = "black";
+
+					fetch("http://127.0.0.1:5001/api/clear_iterations", {
+						method: "POST"
+					})
+					.then(res => res.json())
+					.then(data => {
+						if (data.status === "success") {
+							status.textContent = `Deleted ${data.deleted.length} file(s)`;
+							status.style.color = "green";
+
+							// Refresh visualizations & plots
+							document.getElementById("vizGrid").innerHTML = '<div class="viz-tile empty">Waiting for image...</div>';
+							window.gwpData = [];
+							document.getElementById("gwp-plot").innerText = "No data yet.";
+						} else {
+							status.textContent = `Error: ${data.error}`;
+							status.style.color = "red";
+						}
+					})
+					.catch(err => {
+						status.textContent = "Request failed";
+						status.style.color = "red";
+						console.error("Clear error:", err);
+					});
+				});
+			</script>
+		</div>
+
 		<div class="main_container">
-			
+
 			<!-- layer composition material -->
 			<div class="tableComp">
 				<h3>Building Composition</h3>
@@ -34,6 +93,8 @@
 						</tbody>
 					</table>
 			</div>
+
+			<!-- js for the material table -->
 			<script>
 				function loadTableData() {
 					fetch("http://127.0.0.1:5001/api/ml_output")
@@ -72,7 +133,7 @@
 
 			<!-- plot GWP & other metrics -->
 			<div class="plotGWP">
-				<h3>GWP Trend</h3>
+				<h3>Sustainability Trend</h3>
 
 				<label for="metricSelect">Select Metric:</label>
 				<select id="metricSelect">
@@ -85,72 +146,256 @@
 				</select>
 
 
-				<div id="gwp-plot" style="width:100%; height:400px;"></div>
+				<div id="gwp-plot"></div>
 			</div>
 		
 
 			<!-- Gallery Iterations -->
 			<div class="gallerySection" id="gallery">
-				<h3>Vizualisation</h3>
+				<h3>Visualization</h3>
 
-				<div id="vizGrid" class="viz-grid"> 
+				<div id="vizGrid" class="viz-grid">
 					<div class="viz-tile empty">Waiting for image...</div>
 					<!-- basic grid placeholder -->
 
 					<!-- JS script for adding new tile when you image avaiable -->
 					<script>
 						function loadVizGallery() {
-						const grid = document.getElementById("vizGrid");
-						grid.innerHTML = "";
+							const grid = document.getElementById("vizGrid");
+							grid.innerHTML = "";
 
-						let i = 0;
+							const images = [];
+							let i = 0;
 
-						const tryNext = () => {
-							const imgPath = `../knowledge/iterations/V${i}.png`;
-							
-							// checking for the version
-							// make sure the folder is right!
+							const tryNext = () => {
+								const imgPath = `../knowledge/iterations/V${i}.png`;
+								const img = new Image();
 
-							const img = new Image();
-							img.onload = function () {
-								const tile = document.createElement("div");
-								tile.className = "viz-tile";
+								img.onload = function () {
+									images.push({ index: i, src: imgPath });
+									i++;
+									tryNext();
+								};
 
-								const label = document.createElement("div");
-								label.className = "viz-label";
-								label.textContent = `V${i}`;
+								img.onerror = function () {
+									if (images.length === 0) {
+										const empty = document.createElement("div");
+										empty.className = "viz-tile empty";
+										empty.textContent = "No images yet.";
+										grid.appendChild(empty);
+									} else {
+										// Render in reverse order
+										images.reverse().forEach((data) => {
+											const tile = document.createElement("div");
+											tile.className = "viz-tile";
 
-								tile.appendChild(img);
-								tile.appendChild(label);
+											const image = new Image();
+											image.src = data.src;
 
-								grid.appendChild(tile);
+											const label = document.createElement("div");
+											label.className = "viz-label";
+											label.textContent = `V${data.index}`;
 
-								i++;
-								tryNext();
+											const buttonWrapper = document.createElement("div");
+											buttonWrapper.className = "viz-btn-wrapper";
+
+											const glow = document.createElement("div");
+											glow.className = "viz-btn-glow";
+
+											const button = document.createElement("button");
+											button.className = "viz-btn";
+											button.textContent = "🪄";
+											button.title = "Magic action";
+
+											button.addEventListener("click", () => {
+												alert(`Button clicked for V${data.index}`);
+											});
+
+											buttonWrapper.appendChild(glow);
+											buttonWrapper.appendChild(button);
+
+											tile.appendChild(image);
+											tile.appendChild(label);
+											tile.appendChild(buttonWrapper);
+											grid.appendChild(tile);
+										});
+									}
+								};
+
+								img.src = imgPath;
 							};
 
-							img.onerror = function () {
-							if (i === 0) {
-								const empty = document.createElement("div");
-								empty.className = "viz-tile empty";
-								empty.textContent = "No images yet.";
-								grid.appendChild(empty);
-							}
-							};
-
-							img.src = imgPath;
-						};
-
-						tryNext();
+							tryNext();
 						}
 
 						window.addEventListener("load", loadVizGallery);
-						</script>
+					</script>
+
 
 				</div>
 			</div>
 
+
+			<!-- js for plotly -->
+			<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+			<script>
+				window.addEventListener("load", () => {
+					const select = document.getElementById("metricSelect");
+					const plotContainer = document.getElementById("gwp-plot");
+
+					const displayNames = {
+						"GWP total (kg CO2e/m²a GFA)": "GWP total",
+						"Operational Carbon (kg CO2e/m²a GFA)": "Op. Carbon",
+						"Embodied Carbon A-D (kg CO2e/m²a GFA)": "EC A-D",
+						"Energy Intensity - EUI (kWh/m²a)": "EUI",
+						"Cooling Demand (kWh/m²a)": "Cooling",
+						"Heating Demand (kWh/m²a)": "Heating"
+					};
+
+					function plotMetric(metricName) {
+						const data = window.gwpData || [];
+
+						const filtered = data
+						.filter(d =>
+							d.outputs && typeof d.outputs[metricName] === "number" && !isNaN(d.outputs[metricName])
+						)
+						.sort((a, b) => {
+							const numA = parseInt(a.version.replace("V", ""));
+							const numB = parseInt(b.version.replace("V", ""));
+							return numA - numB;
+						});
+
+						console.log("Selected metric:", metricName);
+						console.log("Filtered data:", filtered);
+
+						const x = filtered.map(d => d.version);
+						const y = filtered.map(d => d.outputs[metricName]);
+
+						if (x.length === 0 || y.length === 0) {
+							plotContainer.innerText = "No valid data to display.";
+							return;
+						}
+
+						const min = Math.min(...y);
+						const max = Math.max(...y);
+						const minIndex = y.indexOf(min);
+						const maxIndex = y.indexOf(max);
+						const shortName = displayNames[metricName] || metricName;
+
+						const trace = {
+							x,
+							y,
+							type: 'scatter',
+							mode: 'markers',
+							marker: {
+								size: 15,
+								color: y,
+								colorscale: [
+									[0, 'da70d6'],
+									[0.5, 'ffd700'],
+									[1, 'add8e6']
+								],
+								reversescale: true,
+								cmin: min,
+								cmax: max,
+								colorbar: {
+									title: {
+										text: "", // shortName
+										font: { size: 12 }
+									},
+									thickness: 15,
+									tickvals: [min, max], // remove those 3 next lines to get legend's ticks again
+									ticktext: ["Best", "Worst"], 
+									tickmode: "array"
+								}
+							},
+							hovertemplate: `Version: %{x}<br>${shortName}: %{y}<extra></extra>`
+						};
+
+						const layout = {
+							title: `${shortName} per Design Iteration`,
+							xaxis: {
+								title: 'Version',
+								tickmode: 'linear',
+								fixedrange: false
+							},
+							yaxis: {
+								title: shortName,
+								range: [0, max + 20],
+								fixedrange: false
+							},
+							dragmode: 'pan',
+							margin: { t: 40, b: 40 },
+							annotations: [
+								{
+									x: x[minIndex], // highlithg the best iteration
+									y: min,
+									text: "🌿", //"Best"
+									showarrow: false,
+									yshift: -20, // -15
+									font: { color: 'add8e6', size: 20 } // 12
+								},
+								{
+									x: x[maxIndex], // highlight the worst iteration
+									y: max,
+									text: "",
+									showarrow: false,
+									yshift: -15,
+									font: { color: 'red', size: 12 }
+								}
+							],
+							paper_bgcolor: "#f3f3f3",
+							plot_bgcolor: "#ffffff",
+							font: {
+								color: "#727272"
+							}
+						};
+
+						Plotly.newPlot(plotContainer, [trace], layout);
+					}
+
+					function tryFetchGWPData(retries = 5, delay = 1000) {
+						fetch("http://127.0.0.1:5001/api/gwp_data")
+							.then(res => res.json())
+							.then(data => {
+								console.log("Fetched gwpData:", data);
+								if (!Array.isArray(data) || data.length === 0) {
+									plotContainer.innerText = "No data received from server.";
+									return;
+								}
+								window.gwpData = data;
+								plotMetric(select.value);
+							})
+							.catch(err => {
+								console.warn(`Fetch failed (${retries} retries left):`, err);
+								if (retries > 0) {
+									setTimeout(() => tryFetchGWPData(retries - 1, delay), delay);
+								} else {
+									plotContainer.innerText = "Failed to connect to server.";
+								}
+							});
+					}
+
+					// Initial load
+					tryFetchGWPData();
+
+					// Replot when user changes metric
+					select.addEventListener("change", () => {
+						if (window.gwpData) {
+							plotMetric(select.value);
+						}
+					});
+
+					// Auto-refresh every 2 seconds with new data
+					setInterval(() => {
+						tryFetchGWPData();
+					}, 2000);
+				});
+			</script>
+
 		</div>
+
+		<div class="Copyrights">© Andres, Aymeric, César, Joaquin & Marco</div>
 
     </body>
 </html>

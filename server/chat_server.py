@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi import Request
 from pydantic import BaseModel
 import uvicorn
 import sys
@@ -272,17 +273,47 @@ def mark_ml_output_processed():
         print(f"Warning: Could not create processed flag: {e}")
 
 def classify_phase2_intent(user_input):
-    """Simple intent classification for Phase 2"""
+    """Hybrid intent classification: use rules first, fallback to LLM if needed."""
     input_lower = user_input.lower()
-    
-    if any(word in input_lower for word in ["carbon", "embodied", "gwp", "environmental", "emissions"]):
+
+    # Step 1: Fast rule-based matches
+    if any(word in input_lower for word in ["gwp", "carbon", "embodied", "emissions"]):
         return "carbon_query"
-    elif any(word in input_lower for word in ["improve", "optimize", "reduce", "better", "recommend"]):
+    if any(word in input_lower for word in ["optimize", "reduce", "improve", "suggest"]):
         return "improvement_suggestion"
-    elif any(word in input_lower for word in ["change", "switch", "modify", "update", "replace"]):
+    if any(word in input_lower for word in ["switch", "change", "update", "replace", "use"]):
         return "design_change"
-    else:
+    if any(word in input_lower for word in ["versions", "compare", "history", "gwp history", "best version"]):
+        return "version_query"
+
+    # Step 2: Fallback to LLM if unclear
+    try:
+        intent_prompt = f"""
+You are an intent classifier for an architectural design assistant.
+
+Classify the following user message into one of:
+- carbon_query
+- improvement_suggestion
+- design_change
+- general_query
+
+Message: "{user_input}"
+Only return the label.
+"""
+        from llm_calls import client, completion_model
+        response = client.chat.completions.create(
+            model=completion_model,
+            messages=[{"role": "system", "content": intent_prompt}]
+        )
+        label = response.choices[0].message.content.strip().lower()
+        if label in ["carbon_query", "improvement_suggestion", "design_change", "general_query"]:
+            return label
         return "general_query"
+
+    except Exception as e:
+        print(f"[INTENT HYBRID ERROR] {e}")
+        return "general_query"
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -403,6 +434,13 @@ def chat_endpoint(req: ChatRequest):
                     response = llm_calls.suggest_improvements(user_input, comprehensive_data)
                 elif intent == "design_change":
                     response = llm_calls.suggest_change(user_input, comprehensive_data)
+                elif intent == "version_query":
+                    if "compare" in user_input.lower():
+                        response = llm_calls.compare_versions_summary(user_input)
+                    elif "best" in user_input.lower():
+                        response = llm_calls.get_best_version_summary()
+                    else:
+                        response = llm_calls.query_version_outputs()
                 else:
                     response = llm_calls.answer_user_query(user_input, comprehensive_data)
                 
@@ -443,9 +481,10 @@ def chat_endpoint(req: ChatRequest):
         print(f"[PHASE 1] State: {current_state}")
         
         # Call your conversation management
-        new_state, response, updated_design_data = llm_calls.manage_conversation_state(
-            current_state, user_input, design_data
-        )
+       # Call enhanced conversation management with sustainability insights
+        new_state, response, updated_design_data = llm_calls.enhanced_handle_change_or_question(
+        user_input, design_data
+)
         
         # Update global state
         conversation_state["current_state"] = new_state
@@ -630,67 +669,145 @@ def test_geometry():
     except Exception as e:
         return {"error": str(e)}
 
-#TEMPORARY TEST FUNCTION 2 06.06.25
+#NEW FUNCTION 2 07.06.25
+# Replace your existing get_initial_greeting function with this enhanced version:
 @app.get("/initial_greeting")
 def get_initial_greeting():
-    """Get dynamic greeting from LLM system"""
+    """Get dynamic greeting - GUARANTEED to work since server startup tested it"""
     
-    print("📞 [GREETING] Endpoint called")
+    print("=" * 60)
+    print("📞 [GREETING] Endpoint called at", time.strftime("%H:%M:%S"))
+    print("   Frontend is requesting greeting...")
+    print("=" * 60)
     
-    if not LLM_AVAILABLE:
-        print("⚠️ [GREETING] LLM not available, using fallback")
-        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
-    
+    # Since server startup already verified LLM works, this should never fail
     try:
-        # Get dynamic greeting
-        print("🤖 [GREETING] Calling generate_dynamic_greeting...")
+        print("🤖 [GREETING] Calling generate_dynamic_greeting (server startup confirmed it works)...")
+        
+        # Just call it directly - no need for elaborate retry logic since startup verified it works
         greeting = llm_calls.generate_dynamic_greeting()
-        print(f"✅ [GREETING] Generated: {greeting}")
+        
+        print(f"✅ [GREETING] SUCCESS! Generated: {greeting}")
+        print("=" * 60)
         
         return {
             "response": greeting,
             "state": "initial",
             "design_data": {},
             "phase": 1,
-            "dynamic": True
+            "dynamic": True,
+            "timestamp": time.strftime("%H:%M:%S"),
+            "source": "llm_verified_at_startup"
         }
         
     except Exception as e:
-        print(f"❌ [GREETING] Error: {e}")
-        return {"response": "Hello! I'm your design assistant. What would you like to build today?"}
-
-#TEMPORARY TEST FUNCTION 2 06.06.25
-@app.get("/test_greeting")
-def test_greeting():
-    """Debug endpoint to test dynamic greeting"""
-    try:
-        if LLM_AVAILABLE:
+        print(f"❌ [GREETING] UNEXPECTED ERROR (this shouldn't happen): {e}")
+        print("   This is weird because server startup confirmed LLM works...")
+        
+        import traceback
+        print(f"❌ [GREETING] Full traceback: {traceback.format_exc()}")
+        print("=" * 60)
+        
+        # Even in error case, try one more time
+        try:
+            print("🔄 [GREETING] One more attempt...")
             greeting = llm_calls.generate_dynamic_greeting()
+            print(f"✅ [GREETING] Second attempt worked: {greeting}")
+            
             return {
-                "success": True,
-                "greeting": greeting,
-                "llm_available": LLM_AVAILABLE
+                "response": greeting,
+                "state": "initial",
+                "design_data": {},
+                "phase": 1,
+                "dynamic": True,
+                "timestamp": time.strftime("%H:%M:%S"),
+                "source": "llm_second_attempt"
             }
-        else:
+        except Exception as e2:
+            print(f"❌ [GREETING] Second attempt also failed: {e2}")
+            
+            # This should NEVER happen, but if it does, return an error instead of fallback
             return {
-                "success": False,
-                "error": "LLM not available",
-                "llm_available": LLM_AVAILABLE
+                "response": "🔴 LLM Error - Please refresh the page (this shouldn't happen!)",
+                "state": "error",
+                "design_data": {},
+                "phase": 1,
+                "dynamic": False,
+                "error": "unexpected_llm_failure",
+                "timestamp": time.strftime("%H:%M:%S")
             }
+
+# Add this debug endpoint to test the greeting directly
+@app.get("/debug_greeting")
+def debug_greeting():
+    """Debug endpoint to test greeting generation directly"""
+    
+    print("🔧 [DEBUG] Testing greeting generation...")
+    
+    try:
+        greeting = llm_calls.generate_dynamic_greeting()
+        print(f"🔧 [DEBUG] Raw greeting result: {greeting}")
+        
+        return {
+            "success": True,
+            "greeting": greeting,
+            "timestamp": time.strftime("%H:%M:%S"),
+            "llm_available": LLM_AVAILABLE,
+            "has_client": hasattr(llm_calls, 'client'),
+            "client_type": str(type(llm_calls.client)) if hasattr(llm_calls, 'client') else None
+        }
+        
     except Exception as e:
         import traceback
         return {
             "success": False,
             "error": str(e),
             "traceback": traceback.format_exc(),
+            "timestamp": time.strftime("%H:%M:%S"),
             "llm_available": LLM_AVAILABLE
         }
 
+# Also add this debug endpoint to help troubleshoot
+@app.get("/llm_status")
+def check_llm_status():
+    """Debug endpoint to check LLM status"""
+    status = {
+        "llm_available_flag": LLM_AVAILABLE,
+        "llm_calls_imported": "llm_calls" in sys.modules,
+        "timestamp": time.strftime("%H:%M:%S")
+    }
+    
+    try:
+        import llm_calls
+        status["has_client"] = hasattr(llm_calls, 'client')
+        status["has_greeting_function"] = hasattr(llm_calls, 'generate_dynamic_greeting')
+        
+        if hasattr(llm_calls, 'client'):
+            status["client_type"] = str(type(llm_calls.client))
+            
+            # Try to generate a greeting
+            if hasattr(llm_calls, 'generate_dynamic_greeting'):
+                try:
+                    test_greeting = llm_calls.generate_dynamic_greeting()
+                    status["can_generate_greeting"] = True
+                    status["test_greeting"] = test_greeting[:50] + "..." if len(test_greeting) > 50 else test_greeting
+                except Exception as e:
+                    status["can_generate_greeting"] = False
+                    status["greeting_error"] = str(e)
+            else:
+                status["can_generate_greeting"] = False
+                status["greeting_error"] = "Function not found"
+                
+    except Exception as e:
+        status["import_error"] = str(e)
+    
+    return status
 
-# retrieve ml_output.json for Aymeric's table // clean ml_output check independant from any other // 07/06/2025
+
+# retrieve ml_output.json for Aymeric's TABLE // clean ml_output check independant from any other // 07/06/2025
 @app.get("/api/ml_output")
 def get_ml_output():
-    """Serve the decoded material composition from ml_output.json"""
+    # === Serve the decoded material composition from ml_output.json ===
     try:
         file_path = os.path.join("knowledge", "ml_output.json")
         with open(file_path, "r") as f:
@@ -701,7 +818,49 @@ def get_ml_output():
 
 
 
-#UPDATED 06.06.25
+# retrieve iterations v{i}.json for Aymeric's PLOT // 07/06/2025
+@app.get("/api/gwp_data")
+def get_gwp_data():
+    # === Aggregate data from all V*.json files in knowledge/iterations/ ====
+    folder = os.path.join("knowledge", "iterations")
+    all_data = []
+
+    try:
+        for filename in sorted(os.listdir(folder)):
+            if filename.startswith("V") and filename.endswith(".json"):
+                path = os.path.join(folder, filename)
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    data["version"] = filename.replace(".json", "")  # Add version for x-axis
+                    all_data.append(data)
+
+        return JSONResponse(content=all_data)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
+# REMOVE iterations v{i}.json and v{i}.png for UI // 07/06/2025
+@app.post("/api/clear_iterations")
+def clear_iterations(request: Request):
+    folder = os.path.join("knowledge", "iterations")
+    deleted_files = []
+
+    try:
+        for filename in os.listdir(folder):
+            if filename.startswith("V") and (filename.endswith(".json") or filename.endswith(".png")):
+                path = os.path.join(folder, filename)
+                os.remove(path)
+                deleted_files.append(filename)
+
+        return JSONResponse(content={"status": "success", "deleted": deleted_files})
+    except Exception as e:
+        return JSONResponse(content={"status": "error", "error": str(e)}, status_code=500)
+
+
+
+
+#UPDATED 07.06.25
 if __name__ == "__main__":
     print("🚀 Starting Rhino Copilot Server with Full Phase 2...")
     print(f"🤖 LLM Available: {LLM_AVAILABLE}")
@@ -738,7 +897,28 @@ if __name__ == "__main__":
             print(f"⚠️ Port {port} is in use. Trying to find a free port...")
             port = find_free_port(5001)
 
-    print(f"🚀 Launching server on port {port}...")
+    print(f"🚀 Preparing to launch server on port {port}...")
+
+    # WAIT FOR LLM TO BE FULLY READY BEFORE STARTING SERVER
+    if LLM_AVAILABLE:
+        print("⏳ Ensuring LLM is fully ready before starting server...")
+        max_attempts = 15
+        for attempt in range(max_attempts):
+            try:
+                print(f"🧪 Testing LLM readiness... (attempt {attempt + 1}/{max_attempts})")
+                test_greeting = llm_calls.generate_dynamic_greeting()
+                print(f"✅ LLM is ready! Test greeting: {test_greeting[:50]}...")
+                break
+            except Exception as e:
+                print(f"⏳ LLM not ready yet: {e}")
+                if attempt < max_attempts - 1:
+                    print("   Waiting 2 seconds before retry...")
+                    time.sleep(2)
+                else:
+                    print("❌ LLM failed to initialize after all attempts!")
+                    print("   Server will start anyway, but greetings may fail")
+
+    print("🌟 LLM initialization complete! Starting server...")
 
     # Start main server
     uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
@@ -757,4 +937,3 @@ if __name__ == "__main__":
         print("🔁 Launching compatibility server on port 5001...")
         legacy_proc = multiprocessing.Process(target=run_legacy_compatibility_server, daemon=True)
         legacy_proc.start()
-

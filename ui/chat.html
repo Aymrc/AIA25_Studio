@@ -31,46 +31,79 @@
 
         <script>
            
-           // MODIFIED - Load greeting on window load 06.06.25
-            window.addEventListener("load", async function() {
-                console.log("🚀 Page loaded - fetching dynamic greeting...");
-                
-                // Small delay to ensure server is ready
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                try {
-                    const url = `http://127.0.0.1:5001/initial_greeting?t=${Date.now()}`;
-                    console.log("📡 Fetching from:", url);
+           // MODIFIED - Wait for LLM to Load. Load greeting on window load 07.06.25
+                window.addEventListener("load", async function() {
+                    console.log("🚀 Page loaded - checking if server is ready...");
                     
-                    const response = await fetch(url, {
-                        cache: 'no-cache',
-                        headers: {
-                            'Cache-Control': 'no-cache',
-                            'Pragma': 'no-cache'
+                    // Show loading message
+                    addToChat("bot", "Connecting...");
+                    
+                    // Quick check if server is already ready
+                    async function checkServerReady() {
+                        try {
+                            const response = await fetch(`http://127.0.0.1:5001/initial_greeting?test=true&t=${Date.now()}`, {
+                                cache: 'no-cache',
+                                timeout: 3000 // 3 second timeout
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                // If we get a dynamic greeting, server is ready
+                                return data.dynamic === true;
+                            }
+                            return false;
+                        } catch {
+                            return false;
                         }
-                    });
-                    console.log("📥 Response status:", response.status);
+                    }
                     
-                    const responseData = await response.json();
-                    console.log("📦 Response data:", responseData);
+                    // Check if already ready (for when server was already running)
+                    let serverReady = await checkServerReady();
                     
-                    if (responseData.response && responseData.dynamic) {
-                        console.log("✅ Adding dynamic greeting to chat");
-                        addToChat("bot", responseData.response);
-                    } else if (responseData.response) {
-                        console.log("⚠️ Got response but not marked as dynamic, using anyway");
-                        addToChat("bot", responseData.response);
+                    if (serverReady) {
+                        console.log("✅ Server already ready!");
                     } else {
-                        console.log("⚠️ No response field, using fallback");
+                        console.log("⏳ Server not ready yet, waiting...");
+                        
+                        // Wait in short intervals, checking readiness
+                        const maxWaitTime = 15000; // Max 15 seconds
+                        const checkInterval = 1000; // Check every 1 second
+                        const startTime = Date.now();
+                        
+                        while (!serverReady && (Date.now() - startTime) < maxWaitTime) {
+                            await new Promise(resolve => setTimeout(resolve, checkInterval));
+                            serverReady = await checkServerReady();
+                            
+                            if (serverReady) {
+                                console.log("✅ Server became ready!");
+                                break;
+                            } else {
+                                console.log("⏳ Still waiting for server...");
+                            }
+                        }
+                    }
+                    
+                    // Now get the actual greeting
+                    try {
+                        const response = await fetch(`http://127.0.0.1:5001/initial_greeting?t=${Date.now()}`, {
+                            cache: 'no-cache'
+                        });
+                        const data = await response.json();
+                        
+                        // Remove loading message
+                        const chatbox = document.getElementById("chatbox");
+                        chatbox.innerHTML = "";
+                        
+                        // Add greeting
+                        addToChat("bot", data.response || "Hello! I'm your design assistant. What would you like to build today?");
+                        
+                    } catch (error) {
+                        console.error("❌ Final greeting failed:", error);
+                        const chatbox = document.getElementById("chatbox");
+                        chatbox.innerHTML = "";
                         addToChat("bot", "Hello! I'm your design assistant. What would you like to build today?");
                     }
-                } catch (error) {
-                    console.error("❌ Greeting fetch failed:", error);
-                    addToChat("bot", "Hello! I'm your design assistant. What would you like to build today?");
-                }
-            });
-                        
-            
+                });
 
             // Handle message send
             async function sendMessage() {
