@@ -19,13 +19,13 @@
 			<button id="SaveIt">Save Iteration</button>
 			<script>
 				document.getElementById("SaveIt").addEventListener("click", () => {
-					fetch("http://127.0.0.1:5060/screenshot/")
+					fetch("http://127.0.0.1:5005/screenshot/")
 						.then(response => response.text())
 						.then(result => {
-							if (result === "ok") {
-								alert("Screenshot saved!");
+							if (result.trim().startsWith("I")) {
+								alert("Iteration saved: " + result);
 							} else {
-								alert("Failed to take screenshot.");
+								alert("Failed to save iteration: " + result);
 							}
 						})
 						.catch(err => {

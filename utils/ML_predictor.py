@@ -10,26 +10,58 @@ import sys
 # ============================
 # PATH CONFIGURATION
 # ============================
-script_dir = os.path.dirname(__file__)
-compiled_input_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "compiled_ml_data.json"))
-materials_path = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "materials.json"))
-json_folder = os.path.normpath(os.path.join(script_dir, "..", "knowledge", "iterations"))
-# model_path = r"C:\Users\CDH\Documents\Trabajo\IAAC\AIA\Studio\model\gwp_model_rf_av&gfa.pkl"  # old way
-model_path =  os.path.normpath(os.path.join(script_dir, "..", "..", r"gwp_model_rf_av&gfa.pkl")) # automaticaly retrieve the ML model in the folder before the root folder
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(script_dir, ".."))
+
+compiled_input_path = os.path.join(project_root, "knowledge", "compiled_ml_data.json")
+materials_path = os.path.join(project_root, "knowledge", "materials.json")
+json_folder = os.path.join(project_root, "knowledge", "iterations")
+destination_folder = os.path.join(project_root, "knowledge")
+destination_filename = "ml_output.json"
+
+model_path = os.path.normpath(os.path.join(project_root, "..", "gwp_model_rf_av&gfa.pkl"))
 print("model to GWP PREDICTOR path:", model_path)
+
+
+# ============================
+# DEBUG PATH VERIFICATION
+# ============================
+print("\n🧭 PATH VERIFICATION")
+print(f"📂 Script directory        : {script_dir}")
+print(f"📂 Project root            : {project_root}")
+print(f"📄 Compiled input path     : {compiled_input_path}")
+print(f"📄 Materials path          : {materials_path}")
+print(f"📁 Iterations (json_folder): {json_folder}")
+print(f"📁 Destination folder      : {destination_folder}")
+print(f"📄 Model path              : {model_path}")
+
+
+# ============================
+# INPUT NAME MAP
+# ============================
+input_name_map = {
+    "ew_par": "Ext.Wall_Partition",
+    "ew_ins": "Ext.Wall_Insulation",
+    "iw_par": "Int.Wall_Partition",
+    "es_ins": "Ext.Slab_Insulation",
+    "is_par": "Int.Slab_Partition",
+    "ro_par": "Roof_Partition",
+    "ro_ins": "Roof_Insulation",
+    "wwr": "Window-to-Wall_Ratio",
+    "av": "Compactness",
+    "gfa": "Gross-Floor-Area"
+}
 
 # ============================
 # FUNCTION: Predict Outputs
 # ============================
 
-_loaded_model = None  # global model cache
+_loaded_model = None
 
 def predict_outputs(inputs: dict, model_path: str) -> list:
     global _loaded_model
-
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model file not found at: {model_path}")
-
     if _loaded_model is None:
         _loaded_model = joblib.load(model_path)
 
@@ -49,7 +81,6 @@ def predict_outputs(inputs: dict, model_path: str) -> list:
 def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
     os.makedirs(folder, exist_ok=True)
 
-    # Load materials decoding
     try:
         with open(materials_path, "r", encoding="utf-8") as mat_file:
             materials_map = json.load(mat_file)
@@ -57,19 +88,16 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         print(f"Could not load materials.json: {e}")
         materials_map = {}
 
-    # Determine next version number
     existing_versions = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
     existing_numbers = [int(f[1:-5]) for f in existing_versions if f[1:-5].isdigit()]
     next_version = max(existing_numbers, default=-1) + 1
     version_name = f"V{next_version}"
     json_path = os.path.join(folder, f"{version_name}.json")
 
-    # Translate input keys
     inputs_raw = {}
     inputs_decoded = {}
     for short_key, value in inputs.items():
         full_key = input_name_map.get(short_key, short_key)
-
         if full_key in materials_map:
             inputs_raw[full_key] = value
             decoded_value = materials_map[full_key].get(str(value), f"Unknown ({value})")
@@ -78,7 +106,6 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
             inputs_raw[full_key] = value
             inputs_decoded[full_key] = value
 
-    # Format outputs with readable labels
     formatted_outputs = {
         label.replace("\u00b2", "²"): round(value, 2)
         for label, value in zip(labels, outputs)
@@ -98,25 +125,12 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         print(f"Saved version file: {json_path}")
     except Exception as e:
         print(f"Failed to save JSON version: {e}")
-    
+
     return version_name
 
 # ============================
 # MAIN EXECUTION
 # ============================
-
-input_name_map = {
-    "ew_par": "Ext.Wall_Partition",
-    "ew_ins": "Ext.Wall_Insulation",
-    "iw_par": "Int.Wall_Partition",
-    "es_ins": "Ext.Slab_Insulation",
-    "is_par": "Int.Slab_Partition",
-    "ro_par": "Roof_Partition",
-    "ro_ins": "Roof_Insulation",
-    "wwr": "Window-to-Wall_Ratio",
-    "av": "Compactness",
-    "gfa": "Gross-Floor-Area"
-}
 
 default_inputs = {
     "ew_par": 1,
@@ -131,7 +145,6 @@ default_inputs = {
     "gfa": 1000.0
 }
 
-# Load and merge input
 try:
     with open(compiled_input_path, "r", encoding="utf-8") as f:
         loaded_inputs = json.load(f)
@@ -150,8 +163,6 @@ labels = [
     "GWP total (kg CO2e/m²a GFA)"
 ]
 
-
-# Run prediction and save version
 try:
     prediction = predict_outputs(inputs, model_path)
     print("\nPrediction Output:")
@@ -161,13 +172,12 @@ except Exception as e:
     print(f"Prediction failed: {e}")
     prediction = []
 
+# ============================
+# VERSION MANAGEMENT
+# ============================
 
-# CONFIGURATION
-source_folder = r'knowledge\iterations'
-destination_folder = 'knowledge'
-destination_filename = 'ml_output.json'  # Set your target filename here
-# Regex pattern to extract version like V1, V2, V10, etc.
 version_pattern = re.compile(r'V(\d+)', re.IGNORECASE)
+
 def get_version(filename):
     match = version_pattern.search(filename)
     return int(match.group(1)) if match else -1
@@ -177,12 +187,11 @@ def find_latest_version_file(folder):
     versioned_files = [(f, get_version(f)) for f in files if get_version(f) != -1]
     if not versioned_files:
         return None
-    # Sort by version number
     latest_file = max(versioned_files, key=lambda x: x[1])[0]
     return os.path.join(folder, latest_file)
 
 def copy_latest_version():
-    latest_file_path = find_latest_version_file(source_folder)
+    latest_file_path = find_latest_version_file(json_folder)
     if latest_file_path:
         dest_path = os.path.join(destination_folder, destination_filename)
         shutil.copy2(latest_file_path, dest_path)
@@ -190,64 +199,39 @@ def copy_latest_version():
     else:
         print("No versioned files found.")
 
+def create_manual_iteration(get_id_only=False, use_existing_id=None):
+    dst_folder = json_folder
+    os.makedirs(dst_folder, exist_ok=True)
 
-def cleanup_old_versions(folder: str, keep: int = 2):
-    #"""Keep only the latest 2 versions of V*.json and V*.png files."""
-    version_pattern = re.compile(r'^V(\d+)\.(json|png)$', re.IGNORECASE)
-    files = os.listdir(folder)
-    versioned_files = {}
+    if use_existing_id:
+        next_id = use_existing_id
+    else:
+        print(f"🧭 Writing to iteration folder: {dst_folder}")
+        existing = [f for f in os.listdir(dst_folder) if f.startswith("I") and f.endswith(".json")]
+        existing_numbers = [int(f[1:-5]) for f in existing if f[1:-5].isdigit()]
+        next_number = max(existing_numbers, default=0) + 1
+        next_id = f"I{next_number}"
 
-    # Collect files by version
-    for file in files:
-        match = version_pattern.match(file)
-        if match:
-            version = int(match.group(1))
-            versioned_files.setdefault(version, []).append(file)
+    if get_id_only:
+        return True, next_id
 
-    if len(versioned_files) < 2:
-        print("⚠️ Less than two versions found — skipping cleanup.")
-        return
+    dst_json = os.path.join(dst_folder, f"{next_id}.json")
+    src_json = os.path.join(destination_folder, destination_filename)
 
-    sorted_versions = sorted(versioned_files.keys(), reverse=True)
-    latest = sorted_versions[0]
-    second_latest = sorted_versions[1]
+    if not os.path.exists(src_json):
+        return False, "❌ ml_output.json not found"
 
-    # Prepare renamed copies
-    mapping = {
-        latest: "Vn",
-        second_latest: "Vn-1"
-    }
+    try:
+        shutil.copy2(src_json, dst_json)
+        print(f"✅ Saved manual JSON: {dst_json}")
+        # No need to move images — they are saved directly by Rhino
+        return True, f"{next_id} created"
+    except Exception as e:
+        return False, f"❌ Error saving iteration: {e}"
 
-    # Copy the two latest as Vn / Vn-1
-    for original_version, alias in mapping.items():
-        for ext in ["json", "png"]:
-            original = f"V{original_version}.{ext}"
-            if original in files:
-                src = os.path.join(folder, original)
-                dst = os.path.join(folder, f"{alias}.{ext}")
-                shutil.copy2(src, dst)
-                print(f"✅ Copied {original} → {alias}.{ext}")
 
-    # Delete all original V*. files
-    for version, files_list in versioned_files.items():
-        for filename in files_list:
-            path = os.path.join(folder, filename)
-            try:
-                os.remove(path)
-                print(f"🗑️ Deleted: {filename}")
-            except Exception as e:
-                print(f"⚠️ Failed to delete {filename}: {e}")
 
-# Save versioned output
+# === MAIN FLOW ===
 version_name = save_version_json(inputs, prediction, labels, json_folder)
 copy_latest_version()
-cleanup_old_versions(json_folder, keep=2)
-
-
-# # Capture .png of iteration
-# try:
-#     sys.path.append(script_dir)
-#     from SaveState_image import capture_viewport
-#     capture_viewport(version_name, json_folder)
-# except Exception as e:
-#     print(f"Failed to capture viewport: {e}")
+# cleanup_old_versions(json_folder, keep=2)
