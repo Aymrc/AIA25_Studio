@@ -7,6 +7,9 @@ import re
 import traceback
 from server.config import client, completion_model
 
+import sys
+import subprocess
+
 # NEW IMPORTS FOR VERSIONING CONSIDERATIONS 07.06.25 
 from utils.version_analysis_utils import (
     list_all_version_files,

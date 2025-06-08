@@ -37,7 +37,9 @@
 
 			<!-- button clear iteration -->
 			<button id="clearBtn">Clear Iterations</button>
-			<span id="clearStatus"></span>
+			<!-- <span id="clearStatus"></span> --><!-- show if worked -->
+
+			<button id="Report">Export Report</button>
 
 			<script>
 				document.getElementById("clearBtn").addEventListener("click", () => {
@@ -91,6 +93,7 @@
 						</tbody>
 					</table>
 			</div>
+
 			<!-- js for the material table -->
 			<script>
 				function loadTableData() {
@@ -161,56 +164,61 @@
 							const grid = document.getElementById("vizGrid");
 							grid.innerHTML = "";
 
+							const images = [];
 							let i = 0;
 
 							const tryNext = () => {
 								const imgPath = `../knowledge/iterations/V${i}.png`;
-
 								const img = new Image();
+
 								img.onload = function () {
-									const tile = document.createElement("div");
-									tile.className = "viz-tile";
-
-									const label = document.createElement("div");
-									label.className = "viz-label";
-									label.textContent = `V${i}`;
-
-									// === Glowing Button ===
-									const buttonWrapper = document.createElement("div");
-									buttonWrapper.className = "viz-btn-wrapper";
-
-									const glow = document.createElement("div");
-									glow.className = "viz-btn-glow";
-
-									const button = document.createElement("button");
-									button.className = "viz-btn";
-									button.textContent = "🪄";
-									button.title = "Magic action";
-
-									button.addEventListener("click", () => {
-										alert(`Button clicked for V${i}`);
-										// Add your custom action here
-									});
-
-									buttonWrapper.appendChild(glow);
-									buttonWrapper.appendChild(button);
-
-									// === Add everything ===
-									tile.appendChild(img);
-									tile.appendChild(label);
-									tile.appendChild(buttonWrapper);
-									grid.appendChild(tile);
-
+									images.push({ index: i, src: imgPath });
 									i++;
 									tryNext();
 								};
 
 								img.onerror = function () {
-									if (i === 0) {
+									if (images.length === 0) {
 										const empty = document.createElement("div");
 										empty.className = "viz-tile empty";
 										empty.textContent = "No images yet.";
 										grid.appendChild(empty);
+									} else {
+										// Render in reverse order
+										images.reverse().forEach((data) => {
+											const tile = document.createElement("div");
+											tile.className = "viz-tile";
+
+											const image = new Image();
+											image.src = data.src;
+
+											const label = document.createElement("div");
+											label.className = "viz-label";
+											label.textContent = `V${data.index}`;
+
+											const buttonWrapper = document.createElement("div");
+											buttonWrapper.className = "viz-btn-wrapper";
+
+											const glow = document.createElement("div");
+											glow.className = "viz-btn-glow";
+
+											const button = document.createElement("button");
+											button.className = "viz-btn";
+											button.textContent = "🪄";
+											button.title = "Magic action";
+
+											button.addEventListener("click", () => {
+												alert(`Button clicked for V${data.index}`);
+											});
+
+											buttonWrapper.appendChild(glow);
+											buttonWrapper.appendChild(button);
+
+											tile.appendChild(image);
+											tile.appendChild(label);
+											tile.appendChild(buttonWrapper);
+											grid.appendChild(tile);
+										});
 									}
 								};
 
@@ -229,18 +237,11 @@
 
 
 			<!-- js for plotly -->
-			<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+			<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
 			<script>
 				window.addEventListener("load", () => {
 					const select = document.getElementById("metricSelect");
-
-					// Simulated example data (replace or fetch real gwpData)
-					// Make sure this exists OR fetch from a real API
-					if (!window.gwpData || gwpData.length === 0) {
-						console.warn("No gwpData found or empty.");
-						document.getElementById("gwp-plot").innerText = "No data yet.";
-						return;
-					}
+					const plotContainer = document.getElementById("gwp-plot");
 
 					const displayNames = {
 						"GWP total (kg CO2e/m²a GFA)": "GWP total",
@@ -248,27 +249,37 @@
 						"Embodied Carbon A-D (kg CO2e/m²a GFA)": "EC A-D",
 						"Energy Intensity - EUI (kWh/m²a)": "EUI",
 						"Cooling Demand (kWh/m²a)": "Cooling",
-						"Heating Demand (kWh/m²a)": "Heating",
+						"Heating Demand (kWh/m²a)": "Heating"
 					};
 
 					function plotMetric(metricName) {
 						const data = window.gwpData || [];
 
-						const filtered = data.filter(d =>
+						const filtered = data
+						.filter(d =>
 							d.outputs && typeof d.outputs[metricName] === "number" && !isNaN(d.outputs[metricName])
-						);
+						)
+						.sort((a, b) => {
+							const numA = parseInt(a.version.replace("V", ""));
+							const numB = parseInt(b.version.replace("V", ""));
+							return numA - numB;
+						});
 
 						console.log("Selected metric:", metricName);
 						console.log("Filtered data:", filtered);
 
 						const x = filtered.map(d => d.version);
-						const y = filtered.map(d => d[metricName]);
+						const y = filtered.map(d => d.outputs[metricName]);
+
+						if (x.length === 0 || y.length === 0) {
+							plotContainer.innerText = "No valid data to display.";
+							return;
+						}
 
 						const min = Math.min(...y);
 						const max = Math.max(...y);
 						const minIndex = y.indexOf(min);
 						const maxIndex = y.indexOf(max);
-
 						const shortName = displayNames[metricName] || metricName;
 
 						const trace = {
@@ -289,26 +300,26 @@
 								cmax: max,
 								colorbar: {
 									title: {
-										text: metricName,
+										text: shortName,
 										font: { size: 12 }
 									},
 									thickness: 15
 								}
 							},
-							hovertemplate: `Version: %{x}<br>${metricName}: %{y}<extra></extra>`
+							hovertemplate: `Version: %{x}<br>${shortName}: %{y}<extra></extra>`
 						};
 
-						Plotly.newPlot('gwp-plot', [trace], {
-							title: `${metricName} per Design Iteration`,
+						const layout = {
+							title: `${shortName} per Design Iteration`,
 							xaxis: {
 								title: 'Version',
-								fixedrange: false,
-								tickmode: 'linear'
+								tickmode: 'linear',
+								fixedrange: false
 							},
 							yaxis: {
-								title: `${metricName}`,
-								fixedrange: false,
-								range: [0, max + 20]
+								title: shortName,
+								range: [0, max + 20],
+								fixedrange: false
 							},
 							dragmode: 'pan',
 							margin: { t: 40, b: 40 },
@@ -331,8 +342,11 @@
 								}
 							],
 							paper_bgcolor: "#f3f3f3",
-							plot_bgcolor: "#ffffff"
-						});
+							plot_bgcolor: "#ffffff",
+							font: {
+								color: "#727272"
+							}
+						};
 
 						Plotly.newPlot(plotContainer, [trace], layout);
 					}
@@ -364,7 +378,9 @@
 
 					// Replot when user changes metric
 					select.addEventListener("change", () => {
-						plotMetric(select.value);
+						if (window.gwpData) {
+							plotMetric(select.value);
+						}
 					});
 
 					// Auto-refresh every 2 seconds with new data
@@ -374,9 +390,9 @@
 				});
 			</script>
 
-
-
 		</div>
+
+		<div class="Copyrights">© Andres, Aymeric, César, Joaquin & Marco</div>
 
     </body>
 </html>
