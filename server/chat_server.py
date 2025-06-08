@@ -172,7 +172,14 @@ class MLFileWatcher(FileSystemEventHandler):
         
         # Handle compiled_ml_data.json changes (geometry detection)
         if file_name == "compiled_ml_data.json":
-            self.check_geometry_and_trigger_phase1_completion()
+            print("🔁 Detected new compiled_ml_data.json — launching ML predictor...")
+            try:
+                predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+                subprocess.Popen(["python", predictor_path])
+                print("🚀 ML_predictor.py launched successfully")
+            except Exception as e:
+                print(f"❌ Failed to launch ML_predictor.py: {e}")
+
         
         # Handle ml_output.json changes (Phase 2 activation) 
         elif file_name == "ml_output.json":

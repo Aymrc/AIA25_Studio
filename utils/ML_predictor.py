@@ -161,10 +161,6 @@ except Exception as e:
     print(f"Prediction failed: {e}")
     prediction = []
 
-# Save versioned output
-version_name = save_version_json(inputs, prediction, labels, json_folder)
-
-
 
 # CONFIGURATION
 source_folder = r'knowledge\iterations'
@@ -194,13 +190,60 @@ def copy_latest_version():
     else:
         print("No versioned files found.")
 
+
+def cleanup_old_versions(folder: str, keep: int = 2):
+    #"""Keep only the latest 2 versions of V*.json and V*.png files."""
+    version_pattern = re.compile(r'^V(\d+)\.(json|png)$', re.IGNORECASE)
+
+    try:
+        files = os.listdir(folder)
+        version_map = {}
+
+        for file in files:
+            match = version_pattern.match(file)
+            if match:
+                version = int(match.group(1))
+                version_map.setdefault(version, []).append(file)
+
+        sorted_versions = sorted(version_map.items(), key=lambda x: x[0], reverse=True)
+        keep = sorted_versions[:2]
+        delete = sorted_versions[2:]
+
+        # Delete all older versions
+        for version, file_list in delete:
+            for file in file_list:
+                path = os.path.join(folder, file)
+                os.remove(path)
+                print(f"🗑️ Deleted: {path}")
+
+        # Rename the two most recent to V1 (latest), V0 (second latest)
+        rename_map = {1: keep[0][0], 0: keep[1][0]} if len(keep) == 2 else {1: keep[0][0]}
+
+        for target, original_version in rename_map.items():
+            for ext in ["json", "png"]:
+                old_filename = f"V{original_version}.{ext}"
+                old_path = os.path.join(folder, old_filename)
+                new_filename = f"V{target}.{ext}"
+                new_path = os.path.join(folder, new_filename)
+
+                if os.path.exists(old_path):
+                    os.replace(old_path, new_path)
+                    print(f"🔄 Renamed: {old_filename} → {new_filename}")
+
+    except Exception as e:
+        print(f"⚠️ Cleanup/Renaming error: {e}")
+
+
+# Save versioned output
+version_name = save_version_json(inputs, prediction, labels, json_folder)
 copy_latest_version()
+cleanup_old_versions(json_folder, keep=2)
 
 
-# Capture .png of iteration
-try:
-    sys.path.append(script_dir)
-    from SaveState_image import capture_viewport
-    capture_viewport(version_name, json_folder)
-except Exception as e:
-    print(f"Failed to capture viewport: {e}")
+# # Capture .png of iteration
+# try:
+#     sys.path.append(script_dir)
+#     from SaveState_image import capture_viewport
+#     capture_viewport(version_name, json_folder)
+# except Exception as e:
+#     print(f"Failed to capture viewport: {e}")
