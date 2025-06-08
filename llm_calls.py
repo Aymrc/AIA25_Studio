@@ -803,6 +803,79 @@ def suggest_change(user_prompt, design_data):
     summary = generate_user_summary(validated_dict)
     return f"{interpretation}\n\n{summary}"
 
+#NEW FUNCTIONS 08.06.25
+
+def query_version_outputs():
+    """Return a brief summary of all version outputs"""
+    try:
+        versions = summarize_version_outputs()
+        summary_lines = [
+            f"{v['version']}: {v['outputs'].get('GWP total', 'N/A')} kg CO2e/m²"
+            for v in versions
+        ]
+        return "📊 Project Versions:\n" + "\n".join(summary_lines)
+    except Exception as e:
+        return f"⚠️ Could not summarize version outputs: {e}"
+
+def get_best_version_summary(metric="GWP total"):
+    """Identify the best version based on a given metric (default: GWP total)."""
+    try:
+        best_version, best_value = get_best_version(metric)
+        if best_version:
+            return f"🏆 Best version: **{best_version}** with {metric} = {best_value} kg CO2e/m²"
+        return "⚠️ No suitable version found for comparison."
+
+    except Exception as e:
+        print(f"[BEST VERSION ERROR] {e}")
+        return "⚠️ Could not determine the best version."
+
+def compare_versions_summary(user_input):
+    """Compare selected versions based on inputs and outputs."""
+    try:
+        version_names = extract_versions_from_input(user_input)
+        if not version_names or len(version_names) < 2:
+            return "⚠️ Please specify at least two versions to compare (e.g., 'Compare V2 and V5')."
+
+        data = summarize_versions_data(version_names)
+        if not data:
+            return "⚠️ No matching data found for the specified versions."
+
+        response_lines = ["🔍 Version Comparison:"]
+        for version, details in data.items():
+            inputs = details.get("inputs_decoded", {})
+            outputs = details.get("outputs", {})
+            gwp = outputs.get("GWP total", "N/A")
+            eui = outputs.get("Energy Intensity - EUI (kWh/m²a)", "N/A")
+            oc = outputs.get("Operational Carbon (kg CO2e/m²a GFA)", "N/A")
+            ec = outputs.get("Embodied Carbon A-D (kg CO2e/m²a GFA)", "N/A")
+
+            response_lines.append(
+                f"\n📦 **{version}**\n"
+                f"- GWP: {gwp} kg CO2e/m²\n"
+                f"- EUI: {eui}\n"
+                f"- Operational: {oc}\n"
+                f"- Embodied A-D: {ec}"
+            )
+
+        return "\n".join(response_lines)
+
+    except Exception as e:
+        print(f"[COMPARE VERSIONS ERROR] {e}")
+        return "⚠️ Could not compare versions due to an internal error."
+
+def load_version_details_summary(version_name):
+    """Return decoded design inputs and outputs of a specific version"""
+    try:
+        data = load_version_details(version_name)
+        if not data:
+            return f"⚠️ Version {version_name} not found."
+        
+        decoded = json.dumps(data.get("inputs_decoded", {}), indent=2)
+        outputs = json.dumps(data.get("outputs", {}), indent=2)
+        return f"📦 Design {version_name}\n\nInputs:\n{decoded}\n\nOutputs:\n{outputs}"
+    except Exception as e:
+        return f"⚠️ Failed to load version {version_name}: {e}"
+
 
 # ==========================================
 # DYNAMIC GREETING
