@@ -858,7 +858,49 @@ def get_gwp_data():
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+# retrieve iterations In.json & In-1.json for Aymeric's TREND // 09/06/2025
+@app.get("/api/gwp_change")
+def get_gwp_change():
+    """
+    Compare GWP between In.json (current model) and In-1.json (previous model).
+    """
+    iteration_dir = Path(__file__).resolve().parent.parent / "knowledge" / "iterations"
+    file_current = iteration_dir / "In.json"
+    file_previous = iteration_dir / "In-1.json"
 
+    if not file_current.exists() or not file_previous.exists():
+        return JSONResponse(content={
+            "error": "Required GWP files not found in iterations directory.",
+            "files_found": list(p.name for p in iteration_dir.glob("*.json"))
+        }, status_code=404)
+
+    try:
+        with open(file_current, "r", encoding="utf-8") as f:
+            current = json.load(f)
+        with open(file_previous, "r", encoding="utf-8") as f:
+            previous = json.load(f)
+
+        curr_gwp = current.get("outputs", {}).get("GWP total (kg CO2e/m²a GFA)")
+        prev_gwp = previous.get("outputs", {}).get("GWP total (kg CO2e/m²a GFA)")
+
+        if curr_gwp is None or prev_gwp is None:
+            return {"error": "Missing GWP value in one of the files."}
+
+        if prev_gwp == 0:
+            return {"error": "Previous GWP is zero, cannot compute change."}
+
+        delta = curr_gwp - prev_gwp
+        percent_change = round((delta / prev_gwp) * 100, 2)
+
+        return {
+            "current": curr_gwp,
+            "previous": prev_gwp,
+            "delta": round(delta, 2),
+            "percent_change": percent_change
+        }
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 # REMOVE iterations v{i}.json and v{i}.png for UI // 07/06/2025
 @app.post("/api/clear_iterations")
