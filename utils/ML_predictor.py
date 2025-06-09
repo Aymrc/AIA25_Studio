@@ -7,6 +7,7 @@ import re
 import shutil
 import sys
 
+
 # ============================
 # PATH CONFIGURATION
 # ============================
@@ -199,39 +200,141 @@ def copy_latest_version():
     else:
         print("No versioned files found.")
 
-def create_manual_iteration(get_id_only=False, use_existing_id=None):
-    dst_folder = json_folder
-    os.makedirs(dst_folder, exist_ok=True)
+# WIP (Andres)
+# def create_manual_iteration(get_id_only=False, use_existing_id=None):
+#     dst_folder = json_folder
+#     os.makedirs(dst_folder, exist_ok=True)
 
-    if use_existing_id:
-        next_id = use_existing_id
-    else:
-        print(f"🧭 Writing to iteration folder: {dst_folder}")
-        existing = [f for f in os.listdir(dst_folder) if f.startswith("I") and f.endswith(".json")]
-        existing_numbers = [int(f[1:-5]) for f in existing if f[1:-5].isdigit()]
-        next_number = max(existing_numbers, default=0) + 1
-        next_id = f"I{next_number}"
+#     if use_existing_id:
+#         next_id = use_existing_id
+#     else:
+#         print(f"🧭 Writing to iteration folder: {dst_folder}")
+#         existing = [f for f in os.listdir(dst_folder) if f.startswith("I") and f.endswith(".json")]
+#         existing_numbers = [int(f[1:-5]) for f in existing if f[1:-5].isdigit()]
+#         next_number = max(existing_numbers, default=0) + 1
+#         next_id = f"I{next_number}"
 
-    if get_id_only:
-        return True, next_id
+#     if get_id_only:
+#         return True, next_id
 
-    dst_json = os.path.join(dst_folder, f"{next_id}.json")
-    src_json = os.path.join(destination_folder, destination_filename)
+#     dst_json = os.path.join(dst_folder, f"{next_id}.json")
+#     src_json = os.path.join(destination_folder, destination_filename)
 
-    if not os.path.exists(src_json):
-        return False, "❌ ml_output.json not found"
+#     if not os.path.exists(src_json):
+#         return False, "❌ ml_output.json not found"
+
+#     try:
+#         shutil.copy2(src_json, dst_json)
+#         print(f"✅ Saved manual JSON: {dst_json}")
+#         # No need to move images — they are saved directly by Rhino
+#         return True, f"{next_id} created"
+#     except Exception as e:
+#         return False, f"❌ Error saving iteration: {e}"
+
+
+#WIP (Andres)
+# def cleanup_old_versions(folder: str, keep: int = 2):
+#     """
+#     Keeps only the latest two manual iteration files (e.g., I1.json, I2.png),
+#     and renames the latest as In.* and second-latest as In-1.*
+#     Deletes older ones.
+#     """
+#     version_pattern = re.compile(r'^I(\d+)\.(json|png)$', re.IGNORECASE)
+#     files = os.listdir(folder)
+#     versioned_files = {}
+
+#     # Group files by iteration number
+#     for file in files:
+#         match = version_pattern.match(file)
+#         if match:
+#             version = int(match.group(1))
+#             versioned_files.setdefault(version, []).append(file)
+
+#     if len(versioned_files) < 2:
+#         print("⚠️ Less than two iterations found — skipping cleanup.")
+#         return
+
+#     # Sort and select the two most recent iterations
+#     sorted_versions = sorted(versioned_files.keys(), reverse=True)
+#     latest = sorted_versions[0]
+#     second_latest = sorted_versions[1]
+
+#     # Define alias mapping
+#     mapping = {
+#         latest: "In",
+#         second_latest: "In-1"
+#     }
+
+#     # Copy latest iterations with aliases
+#     for original_version, alias in mapping.items():
+#         for ext in ["json", "png"]:
+#             for view_type in ["", "_user", "_axon"]:
+#                 original = f"I{original_version}{view_type}.{ext}"
+#                 if original in files:
+#                     src = os.path.join(folder, original)
+#                     dst = os.path.join(folder, f"{alias}{view_type}.{ext}")
+#                     try:
+#                         shutil.copy2(src, dst)
+#                         print(f"✅ Copied {original} → {alias}{view_type}.{ext}")
+#                     except Exception as e:
+#                         print(f"⚠️ Failed to copy {original}: {e}")
+
+#     # Delete all other iterations
+#     for version, version_files in versioned_files.items():
+#         if version not in mapping:
+#             for filename in version_files:
+#                 try:
+#                     os.remove(os.path.join(folder, filename))
+#                     print(f"🗑️ Deleted: {filename}")
+#                 except Exception as e:
+#                     print(f"⚠️ Failed to delete {filename}: {e}")
+
+
+def copy_last_two_versions_as_iterations(folder: str):
+    """
+    Copies the last two versioned JSON files (V*.json) to In.json and In-1.json.
+    No files are deleted or renamed.
+    """
+    version_pattern = re.compile(r"^V(\d+)\.json$", re.IGNORECASE)
+    files = os.listdir(folder)
+    print("📄 All files in folder:")
+    
+    # Extract version numbers from V*.json
+    versioned = [(f, int(match.group(1)))
+                 for f in files
+                 if (match := version_pattern.match(f))]
+
+    if len(versioned) < 2:
+        print("⚠️ Not enough V*.json files found to copy.")
+        return
+
+    # Sort by version number descending
+    versioned.sort(key=lambda x: x[1], reverse=True)
+    latest, second_latest = versioned[0][0], versioned[1][0]
+
+    # Prepare source and destination paths
+    latest_src = os.path.join(folder, latest)
+    latest_dst = os.path.join(folder, "In.json")
+
+    second_src = os.path.join(folder, second_latest)
+    second_dst = os.path.join(folder, "In-1.json")
 
     try:
-        shutil.copy2(src_json, dst_json)
-        print(f"✅ Saved manual JSON: {dst_json}")
-        # No need to move images — they are saved directly by Rhino
-        return True, f"{next_id} created"
+        shutil.copy2(latest_src, latest_dst)
+        print(f"✅ Copied {latest} → In.json")
+
+        shutil.copy2(second_src, second_dst)
+        print(f"✅ Copied {second_latest} → In-1.json")
+
     except Exception as e:
-        return False, f"❌ Error saving iteration: {e}"
+        print(f"❌ Error during copy: {e}")
+
+
 
 
 
 # === MAIN FLOW ===
 version_name = save_version_json(inputs, prediction, labels, json_folder)
 copy_latest_version()
-# cleanup_old_versions(json_folder, keep=2)
+#cleanup_old_versions(json_folder, keep=2)
+copy_last_two_versions_as_iterations(json_folder)

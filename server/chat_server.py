@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request
-
 from pydantic import BaseModel
 import uvicorn
 import sys
@@ -282,17 +281,47 @@ def mark_ml_output_processed():
         print(f"Warning: Could not create processed flag: {e}")
 
 def classify_phase2_intent(user_input):
-    """Simple intent classification for Phase 2"""
+    """Hybrid intent classification: use rules first, fallback to LLM if needed."""
     input_lower = user_input.lower()
-    
-    if any(word in input_lower for word in ["carbon", "embodied", "gwp", "environmental", "emissions"]):
+
+    # Step 1: Fast rule-based matches
+    if any(word in input_lower for word in ["gwp", "carbon", "embodied", "emissions"]):
         return "carbon_query"
-    elif any(word in input_lower for word in ["improve", "optimize", "reduce", "better", "recommend"]):
+    if any(word in input_lower for word in ["optimize", "reduce", "improve", "suggest"]):
         return "improvement_suggestion"
-    elif any(word in input_lower for word in ["change", "switch", "modify", "update", "replace"]):
+    if any(word in input_lower for word in ["switch", "change", "update", "replace", "use"]):
         return "design_change"
-    else:
+    if any(word in input_lower for word in ["versions", "compare", "history", "gwp history", "best version"]):
+        return "version_query"
+
+    # Step 2: Fallback to LLM if unclear
+    try:
+        intent_prompt = f"""
+You are an intent classifier for an architectural design assistant.
+
+Classify the following user message into one of:
+- carbon_query
+- improvement_suggestion
+- design_change
+- general_query
+
+Message: "{user_input}"
+Only return the label.
+"""
+        from llm_calls import client, completion_model
+        response = client.chat.completions.create(
+            model=completion_model,
+            messages=[{"role": "system", "content": intent_prompt}]
+        )
+        label = response.choices[0].message.content.strip().lower()
+        if label in ["carbon_query", "improvement_suggestion", "design_change", "general_query"]:
+            return label
         return "general_query"
+
+    except Exception as e:
+        print(f"[INTENT HYBRID ERROR] {e}")
+        return "general_query"
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -413,6 +442,13 @@ def chat_endpoint(req: ChatRequest):
                     response = llm_calls.suggest_improvements(user_input, comprehensive_data)
                 elif intent == "design_change":
                     response = llm_calls.suggest_change(user_input, comprehensive_data)
+                elif intent == "version_query":
+                    if "compare" in user_input.lower():
+                        response = llm_calls.compare_versions_summary(user_input)
+                    elif "best" in user_input.lower():
+                        response = llm_calls.get_best_version_summary()
+                    else:
+                        response = llm_calls.query_version_outputs()
                 else:
                     response = llm_calls.answer_user_query(user_input, comprehensive_data)
                 

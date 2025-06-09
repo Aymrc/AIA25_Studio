@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+import subprocess
 # import time
 import re
 import traceback
@@ -10,8 +12,8 @@ import subprocess
 
 # NEW IMPORTS FOR VERSIONING CONSIDERATIONS 07.06.25 
 from utils.version_analysis_utils import (
-    list_all_version_files,
-    load_specific_version,
+    # list_all_version_files, # it is already used in version_analysis_utils.py 
+    # load_specific_version, # it is already used in version_analysis_utils.py 
     summarize_version_outputs,
     get_best_version,
     extract_versions_from_input,
@@ -619,6 +621,19 @@ def initialize_placeholder_dictionary():
 # PHASE 2 FUNCTIONS (César's System)
 # ==========================================
 
+#AUX FUNCTIONS 08.06.25
+
+def generate_diff_summary(before: dict, after: dict):
+    """Return a human-readable summary of parameter changes."""
+    diff = []
+    for key in before:
+        if key in after and before[key] != after[key]:
+            diff.append(f"{key}: {before[key]} → {after[key]}")
+    return "\n".join(diff) if diff else "No parameter differences detected."
+
+
+#OLD CALLS 08.06.25
+
 def query_intro():
     """Prompt the user to ask about their design."""
     response = client.chat.completions.create(
@@ -649,20 +664,28 @@ def answer_user_query(user_query, design_data):
         summary_text = json.dumps(version_data, indent=2)
 
 
-    design_data_json = json.dumps(design_data)
+    try:
+        with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
+            ml_data = json.load(f)
+            design_inputs = ml_data.get("inputs_decoded", {})
+            design_outputs = ml_data.get("outputs", {})
+    except Exception as e:
+        print(f"[QUERY] Failed to load ml_output.json: {e}")
+        design_inputs, design_outputs = {}, {}
+
     response = client.chat.completions.create(
         model=completion_model,
         messages=[
             {
                 "role": "system",
                 "content": f"""
-                You are a technical assistant. Use the current project data and recent design history to answer user questions.
+                You are a technical assistant. Use the current design data to answer user questions.
 
-                Current Design Data:
-                {design_data_json}
+                Design Inputs:
+                {json.dumps(design_inputs, indent=2)}
 
-                Recent Versions:
-                {summary_text}
+                Design Outputs:
+                {json.dumps(design_outputs, indent=2)}
 
                 Respond in 1–2 concise sentences. Be direct. If unsure, say so plainly.
                 """
@@ -686,12 +709,10 @@ def suggest_improvements(user_prompt, design_data):
     best_version = get_best_version()
     best_version_text = json.dumps(best_version, indent=2)
 
-
     ranking_block = "\nVersion ranking by GWP (best to worst):\n"
-    sorted_versions = sorted(version_summary, key=lambda x: x.get("GWP", float('inf')))
+    sorted_versions = sorted(version_summary, key=lambda x: x.get("GWP total", float('inf')))
     for v in sorted_versions:
-        ranking_block += f"- {v['version']}: {v.get('GWP', 'N/A')} kg CO2e/m²\n"
-
+        ranking_block += f"- {v['version']}: {v.get('GWP total', 'N/A')} kg CO2e/m²\n"
 
     # Step 1: Get dataset-based reference examples (if available)
     if SQL_DATASET_AVAILABLE:
@@ -713,35 +734,33 @@ def suggest_improvements(user_prompt, design_data):
             ]
         )
         dataset_block = f"""
-        Reference examples from other projects with high GFA and low carbon footprint:
-        {formatted_examples}
-        """
+Reference examples from other projects with high GFA and low carbon footprint:
+{formatted_examples}
+"""
     else:
         dataset_block = "\n(No dataset matches found — skipping example injection.)\n"
 
-    # Step 2: Build the system prompt
-        system_prompt = f"""
-        You are a design advisor. Suggest practical improvements using this data:
+    # ✅ Step 2: Build the system prompt (outside of the if block!)
+    system_prompt = f"""
+You are a design advisor. Suggest practical improvements using this data:
 
-        Current design:
-        {design_data_json}
+Current design:
+{design_data_json}
 
-        Recent version summaries:
-        {version_summary_text}
+Recent version summaries:
+{version_summary_text}
 
-        Best performing version:
-        {best_version_text}
+Best performing version:
+{best_version_text}
 
-        {ranking_block}
+{ranking_block}
 
-        {dataset_block}
+{dataset_block}
 
-        Answer the user's prompt in 1–2 short, specific suggestions.
-        Be direct. No intros, no conclusions. Do not repeat the user prompt.
-        If helpful, compare with previous versions or point out changes.
-        """
-
-
+Answer the user's prompt in 1–2 short, specific suggestions.
+Be direct. No intros, no conclusions. Do not repeat the user prompt.
+If helpful, compare with previous versions or point out changes.
+"""
 
     # Step 3: Call the LLM
     response = client.chat.completions.create(
@@ -753,6 +772,7 @@ def suggest_improvements(user_prompt, design_data):
     )
 
     return response.choices[0].message.content
+
 
 def generate_user_summary(ml_dict):
     """Turn model inputs into a readable summary"""
@@ -777,48 +797,46 @@ def generate_user_summary(ml_dict):
         print(f"[SUMMARY ERROR] {e}")
         return "✅ Design updated successfully (could not summarize changes)."
 
+
+#NEW VERSION OF SUGGEST_CHANGE 08.06.25
 def suggest_change(user_prompt, design_data):
 
     # --- Prompt construction ---
     design_data_text = json.dumps(design_data)
+
+    # Load current compiled design dictionary
+    compiled_path = os.path.join("knowledge", "compiled_ml_data.json")
+    with open(compiled_path, "r", encoding="utf-8") as f:
+        current_parameters = json.load(f)
+
+
     system_prompt = f"""
-        You are a design assistant. The user will request a design change. You must respond ONLY with a JSON object that represents a complete parameter configuration.
+    You are a design assistant helping update building parameters.
 
-        ### Output format (mandatory structure):
-        {{
-            "ew_par": 0,
-            "ew_ins": 0,
-            "iw_par": 0,
-            "es_ins": 1,
-            "is_par": 0,
-            "ro_par": 0,
-            "ro_ins": 0,
-            "wwr": 0.3,
-            "av": 1.0,
-            "gfa": 1200.0
-        }}
+    The user will describe a design change (e.g., "Change exterior wall insulation to mineral wool").
+    You must:
 
-        ### Parameter definitions:
-        - ew_par: Exterior Wall Partitions → BRICK=0, CONCRETE=1, EARTH=2, STRAW=3, TIMBER FRAME=4, TIMBER MASS=5  
-        - ew_ins: Exterior Wall Insulation → CELLULOSE=0, CORK=1, EPS=2, GLASS WOOL=3, MINERAL WOOL=4, WOOD FIBER=5  
-        - iw_par: Interior Wall Partitions → same as ew_par  
-        - es_ins: Exterior Slabs Insulation → EXPANDED GLASS=0, XPS=1  
-        - is_par: Interior Slabs → CONCRETE=0, TIMBER FRAME=1, TIMBER MASS=2  
-        - ro_par: Roof Slabs → CONCRETE=0, TIMBER FRAME=1, TIMBER MASS=2  
-        - ro_ins: Roof Insulation → CELLULOSE=0, CORK=1, EPS=2, EXPANDED GLASS=3, GLASS WOOL=4, MINERAL WOOL=5, WOOD FIBER=6, XPS=7  
-        - wwr: Window-to-Wall Ratio → float (0.0–1.0)  
-        - gfa: Gross Floor Area → float (no units)  
-        - av: Air Volume → float
+    1. Read the current parameters below.
+    2. Modify ONLY the parameters explicitly mentioned by the user.
+    3. Leave all other values unchanged.
+    4. Output a full dictionary with exactly these 10 keys:
+       - ew_par, ew_ins, iw_par, es_ins, is_par, ro_par, ro_ins, wwr, av, gfa
 
-        ### Output rules:
-        - Respond ONLY with a full dictionary (all 10 keys).
-        - No text or explanation.
-        - No comments, units, or stringified numbers.
-        - Respond in plain JSON format.
+    Do NOT explain the changes or include any text. Respond ONLY with a plain JSON dictionary.
 
-        Use this project data if helpful:
-        {design_data_text}
+    ### Current Parameters:
+    {json.dumps(current_parameters, indent=2)}
+
+    ### Parameter Options:
+    - ew_par / iw_par: BRICK=0, CONCRETE=1, EARTH=2, STRAW=3, TIMBER FRAME=4, TIMBER MASS=5
+    - ew_ins: CELLULOSE=0, CORK=1, EPS=2, GLASS WOOL=3, MINERAL WOOL=4, WOOD FIBER=5
+    - es_ins: EXPANDED GLASS=0, XPS=1
+    - is_par / ro_par: CONCRETE=0, TIMBER FRAME=1, TIMBER MASS=2
+    - ro_ins: CELLULOSE=0, CORK=1, EPS=2, EXPANDED GLASS=3, GLASS WOOL=4, MINERAL WOOL=5, WOOD FIBER=6, XPS=7
+    - wwr: Window-to-Wall Ratio (0.0–1.0 float)
+    - av, gfa: floats from geometry system
     """
+
 
     response = client.chat.completions.create(
         model=completion_model,
@@ -829,6 +847,8 @@ def suggest_change(user_prompt, design_data):
     )
 
     raw_response = response.choices[0].message.content
+    print(f"[RAW LLM RESPONSE]\n{raw_response}")
+
 
     def extract_json_block(text):
         match = re.search(r'\{[\s\S]*?\}', text)
@@ -869,7 +889,18 @@ def suggest_change(user_prompt, design_data):
 
     try:
         validated_dict = parse_and_validate_model_response(cleaned_json, default_inputs)
-        save_ml_dictionary(validated_dict)
+
+        # Merge changes with current parameters
+        merged_result = current_parameters.copy()
+        merged_result.update(validated_dict)
+
+        # Enforce no unexpected changes
+        for key in merged_result:
+            if key not in validated_dict:
+                merged_result[key] = current_parameters[key]  # Keep it unchanged
+
+
+        save_ml_dictionary(merged_result)
     except ValueError as e:
         print(f"❌ Error validating LLM output: {e}")
         with open("invalid_llm_output.json", "w", encoding="utf-8") as f:
@@ -917,34 +948,114 @@ def suggest_change(user_prompt, design_data):
         print(f"[COMPARE] Failed to load new output: {e}")
         return "✅ Change saved, but unable to analyze results right now."
 
-    system_prompt = f"""
-    You are a sustainability design advisor. A user has changed their architectural design. Compare the 'before' and 'after' versions below and explain how the carbon impact changed.
+    diff_summary = generate_diff_summary(
+        current_parameters,
+        merged_result
+    )
 
-    Design BEFORE:
-    {json.dumps(previous_data.get('inputs_decoded', {}), indent=2)}
-    Outputs BEFORE:
-    {json.dumps(previous_data.get('outputs', {}), indent=2)}
 
-    Design AFTER:
-    {json.dumps(new_data.get('inputs_decoded', {}), indent=2)}
-    Outputs AFTER:
-    {json.dumps(new_data.get('outputs', {}), indent=2)}
+    change_explanation_prompt = f"""
+    You are a helpful sustainability design advisor. The user made updates to their building design.
 
-    Summarize in 2–3 short sentences. Mention improvements or regressions. Be specific.
+    Below are the two versions of the design. Use this to explain what changed in a friendly, human way. Mention only what changed.
+
+    Keep it short and clear: 2–3 sentences. Refer to building components like walls, slabs, insulation, or window ratios.
+
+    ### BEFORE:
+    {json.dumps(previous_data.get("inputs_decoded", {}), indent=2)}
+
+    ### AFTER:
+    {json.dumps(new_data.get("inputs_decoded", {}), indent=2)}
     """
 
     llm_response = client.chat.completions.create(
         model=completion_model,
         messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": "What changed with this update?"}
+            {"role": "system", "content": change_explanation_prompt},
+            {"role": "user", "content": "Explain the design update."}
         ]
     )
 
     interpretation = llm_response.choices[0].message.content.strip()
 
-    summary = generate_user_summary(validated_dict)
-    return f"{interpretation}\n\n{summary}"
+
+    return interpretation
+        
+
+#NEW CALLS 08.06.25
+
+def query_version_outputs():
+    """Return a brief summary of all version outputs"""
+    try:
+        versions = summarize_version_outputs()
+        summary_lines = [
+            f"{v['version']}: {v['outputs'].get('GWP total', 'N/A')} kg CO2e/m²"
+            for v in versions
+        ]
+        return "📊 Project Versions:\n" + "\n".join(summary_lines)
+    except Exception as e:
+        return f"⚠️ Could not summarize version outputs: {e}"
+
+def get_best_version_summary(metric="GWP total"):
+    """Identify the best version based on a given metric (default: GWP total)."""
+    try:
+        best_version, best_value = get_best_version(metric)
+        if best_version:
+            return f"🏆 Best version: **{best_version}** with {metric} = {best_value} kg CO2e/m²"
+        return "⚠️ No suitable version found for comparison."
+
+    except Exception as e:
+        print(f"[BEST VERSION ERROR] {e}")
+        return "⚠️ Could not determine the best version."
+
+def compare_versions_summary(user_input):
+    """Compare selected versions based on inputs and outputs."""
+    try:
+        version_names = extract_versions_from_input(user_input)
+        if not version_names or len(version_names) < 2:
+            return "⚠️ Please specify at least two versions to compare (e.g., 'Compare V2 and V5')."
+
+        data = summarize_versions_data(version_names)
+        if not data:
+            return "⚠️ No matching data found for the specified versions."
+
+        response_lines = ["🔍 Version Comparison:"]
+        for version, details in data.items():
+            inputs = details.get("inputs_decoded", {})
+            outputs = details.get("outputs", {})
+            gwp = outputs.get("GWP total", "N/A")
+            eui = outputs.get("Energy Intensity - EUI (kWh/m²a)", "N/A")
+            oc = outputs.get("Operational Carbon (kg CO2e/m²a GFA)", "N/A")
+            ec = outputs.get("Embodied Carbon A-D (kg CO2e/m²a GFA)", "N/A")
+
+            response_lines.append(
+                f"\n📦 **{version}**\n"
+                f"- GWP: {gwp} kg CO2e/m²\n"
+                f"- EUI: {eui}\n"
+                f"- Operational: {oc}\n"
+                f"- Embodied A-D: {ec}"
+            )
+
+        return "\n".join(response_lines)
+
+    except Exception as e:
+        print(f"[COMPARE VERSIONS ERROR] {e}")
+        return "⚠️ Could not compare versions due to an internal error."
+
+def load_version_details_summary(version_name):
+    """Return decoded design inputs and outputs of a specific version"""
+    try:
+        data = load_version_details(version_name)
+        if not data:
+            return f"⚠️ Version {version_name} not found."
+        
+        decoded = json.dumps(data.get("inputs_decoded", {}), indent=2)
+        outputs = json.dumps(data.get("outputs", {}), indent=2)
+        return f"📦 Design {version_name}\n\nInputs:\n{decoded}\n\nOutputs:\n{outputs}"
+    except Exception as e:
+        return f"⚠️ Failed to load version {version_name}: {e}"
+
+
 
 # ==========================================
 # DYNAMIC GREETING
