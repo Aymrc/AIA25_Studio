@@ -12,6 +12,7 @@ import threading
 from pathlib import Path
 import socket
 import subprocess
+import re
 
 # Try to import watchdog for file monitoring
 try:
@@ -381,6 +382,8 @@ def chat_endpoint(req: ChatRequest):
                     try:
                         with open(ml_file, 'r') as f:
                             ml_data = json.load(f)
+
+
                         print(f"✅ [PHASE 2] Successfully loaded ML data with keys: {list(ml_data.keys())}")
                         
                         if 'carbon' in ml_data:
@@ -435,8 +438,17 @@ def chat_endpoint(req: ChatRequest):
                 elif intent == "design_change":
                     response = llm_calls.suggest_change(user_input, comprehensive_data)
                 elif intent == "version_query":
-                    if "compare" in user_input.lower():
+                    versions = re.findall(r"\bv\d+\b", user_input.lower())
+                    if len(versions) >= 2:
                         response = llm_calls.compare_versions_summary(user_input)
+                    elif len(versions) == 1:
+                        version_name = versions[0].upper()
+                        material_keywords = ["material", "materials", "partition", "insulation", "wall", "roof", "slab"]
+                        
+                        if any(word in user_input.lower() for word in material_keywords):
+                            response = llm_calls.summarize_version_materials(version_name)
+                        else:
+                            response = llm_calls.load_version_details_summary(version_name)
                     elif "best" in user_input.lower():
                         response = llm_calls.get_best_version_summary()
                     else:
