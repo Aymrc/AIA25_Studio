@@ -174,7 +174,7 @@ def show_copilot_ui():
     chatWidth = 550
     chatHeight = 250
     dataWidth = 500
-    dataHeight = 650
+    dataHeight = 600
 
     screen = Rhino.UI.RhinoEtoApp.MainWindow.Screen
     work_x = screen.WorkingArea.X
