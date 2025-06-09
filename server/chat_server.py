@@ -172,7 +172,14 @@ class MLFileWatcher(FileSystemEventHandler):
         
         # Handle compiled_ml_data.json changes (geometry detection)
         if file_name == "compiled_ml_data.json":
-            self.check_geometry_and_trigger_phase1_completion()
+            print("🔁 Detected new compiled_ml_data.json — launching ML predictor...")
+            try:
+                predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+                subprocess.Popen(["python", predictor_path])
+                print("🚀 ML_predictor.py launched successfully")
+            except Exception as e:
+                print(f"❌ Failed to launch ML_predictor.py: {e}")
+
         
         # Handle ml_output.json changes (Phase 2 activation) 
         elif file_name == "ml_output.json":
@@ -191,35 +198,36 @@ class MLFileWatcher(FileSystemEventHandler):
                 check_for_ml_output()):
                 
                 self.activate_phase2_automatically()
+
     
-    def check_geometry_and_trigger_phase1_completion(self):
-        """Check for geometry and trigger Phase 1 completion if found"""
-        global conversation_state
+    # def check_geometry_and_trigger_phase1_completion(self):
+    #     """Check for geometry and trigger Phase 1 completion if found"""
+    #     global conversation_state
         
-        try:
-            print("🔍 [GEOMETRY WATCHER] Checking for geometry data...")
+    #     try:
+    #         print("🔍 [GEOMETRY WATCHER] Checking for geometry data...")
             
-            if LLM_AVAILABLE:
-                geometry_available = llm_calls.check_geometry_available()
-                print(f"🔍 [GEOMETRY WATCHER] Geometry available: {geometry_available}")
+    #         if LLM_AVAILABLE:
+    #             geometry_available = llm_calls.check_geometry_available()
+    #             print(f"🔍 [GEOMETRY WATCHER] Geometry available: {geometry_available}")
                 
-                if geometry_available and conversation_state.get("current_state") != "complete":
-                    print("🎯 [GEOMETRY WATCHER] Triggering Phase 1 completion!")
+    #             if geometry_available and conversation_state.get("current_state") != "complete":
+    #                 print("🎯 [GEOMETRY WATCHER] Triggering Phase 1 completion!")
                     
-                    # Update conversation state
-                    conversation_state["current_state"] = "complete"
-                    conversation_state["phase"] = 1
+    #                 # Update conversation state
+    #                 conversation_state["current_state"] = "complete"
+    #                 conversation_state["phase"] = 1
                     
-                    # Trigger ML predictor
-                    try:
-                        predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
-                        subprocess.Popen(["python", predictor_path])
-                        print("🚀 ML_predictor.py launched after geometry detection via file watcher")
-                    except Exception as e:
-                        print(f"❌ Failed to launch ML_predictor.py: {e}")
+    #                 # Trigger ML predictor
+    #                 try:
+    #                     predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+    #                     subprocess.Popen(["python", predictor_path])
+    #                     print("🚀 ML_predictor.py launched after geometry detection via file watcher")
+    #                 except Exception as e:
+    #                     print(f"❌ Failed to launch ML_predictor.py: {e}")
                         
-        except Exception as e:
-            print(f"❌ [GEOMETRY WATCHER] Error: {e}")
+    #     except Exception as e:
+    #         print(f"❌ [GEOMETRY WATCHER] Error: {e}")
 
 def start_file_watcher():
     """Start file watcher for ML output changes"""

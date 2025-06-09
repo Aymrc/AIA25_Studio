@@ -6,6 +6,7 @@ h3 {
   margin-left: 0;
 }
 
+<<<<<<< HEAD
 
 .top-button-bar {
 	display: flex;
@@ -50,6 +51,8 @@ h3 {
 
 /* === global ===  */
 
+=======
+>>>>>>> parent of 9727096 (Merge branch 'main' into andres)
 .tableComp,
 .plotGWP,
 .gallerySection {
@@ -87,22 +90,9 @@ h3 {
 }
 
 
-
-/* plot GWP */
-.plotGWP {
-  margin-bottom: 0;
-}
-
-#gwp-plot {
-  width:100%;
-  height:350px;
-  margin-bottom: 0px;
-}
-
-
-
 /* === visualisation gallery ===  */
 .gallerySection {
+<<<<<<< HEAD
   padding: 0px 10px 0 10px;
 }
 
@@ -111,11 +101,20 @@ h3 {
   display: flex;
   /* flex-direction: row-reverse; */
   gap: 10px;
+=======
+  padding: 10px;
+>>>>>>> parent of 9727096 (Merge branch 'main' into andres)
   overflow-x: auto;
   overflow-y: hidden;
+  white-space: nowrap;
 }
 
-/* Base style for each tile */
+.viz-grid {
+  display: flex;
+  flex-wrap: nowrap; /* disables wrapping */
+  gap: 10px;
+}
+
 .viz-tile, .viz-tile.empty {
   width: 150px;
   height: 150px;
@@ -133,7 +132,6 @@ h3 {
   position: relative;
 }
 
-/* Image styling */
 .viz-tile img {
   width: 100%;
   height: 100%;
@@ -141,7 +139,6 @@ h3 {
   border-radius: 6px;
 }
 
-/* The version label in the top-left */
 .viz-label {
   position: absolute;
   background-color: none;
@@ -154,6 +151,7 @@ h3 {
   z-index: 1;
 }
 
+<<<<<<< HEAD
 /* Styles for the round button with glow */
 .viz-btn-wrapper {
   position: absolute;
@@ -200,6 +198,11 @@ h3 {
   justify-content: center;
   z-index: 1;
   pointer-events: auto;
+=======
+.viz-tile.latest {
+  border: 3px solid #00cc66; /*WIP*/
+  box-shadow: 0 0 10px rgba(0, 204, 102, 0.5);
+>>>>>>> parent of 9727096 (Merge branch 'main' into andres)
 }
 
 .viz-btn:hover {
