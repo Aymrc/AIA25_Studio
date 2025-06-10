@@ -983,14 +983,14 @@ if __name__ == "__main__":
     print("🌟 LLM initialization complete! Starting server...")
 
     # Start main server
-    # uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
-    uvicorn.run(
-        app, 
-        host="127.0.0.1", 
-        port=5001,
-        log_level="warning",  # Only warnings and errors
-        access_log=False      # Disable HTTP request logs
-    )
+    uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
+    # uvicorn.run(
+    #     app, 
+    #     host="127.0.0.1", 
+    #     port=5001,
+    #     log_level="warning",  # Only warnings and errors
+    #     access_log=False      # Disable HTTP request logs
+    # )
 
 
     # Save active port for debugging or UI sync
@@ -1001,14 +1001,14 @@ if __name__ == "__main__":
     import multiprocessing
 
     def run_legacy_compatibility_server():
-        # uvicorn.run(app, host="127.0.0.1", port=5001)
-        uvicorn.run(
-            app, 
-            host="127.0.0.1", 
-            port=5001,
-            log_level="warning",  # Only warnings and errors
-            access_log=False      # Disable HTTP request logs
-        )
+        uvicorn.run(app, host="127.0.0.1", port=5001)
+        # uvicorn.run(
+        #     app, 
+        #     host="127.0.0.1", 
+        #     port=5001,
+        #     log_level="warning",  # Only warnings and errors
+        #     access_log=False      # Disable HTTP request logs
+        # )
 
 
     if port != 5001:
