@@ -14,6 +14,7 @@ import socket
 import subprocess
 import re
 
+
 # Try to import watchdog for file monitoring
 try:
     from watchdog.observers import Observer
@@ -53,11 +54,11 @@ conversation_state = {
     "current_state": "initial",
     "design_data": {},
     "conversation_history": [],
-    "phase": 1
+    "phase": 2
 }
 
 # Phase 2 detection
-phase2_activated = False
+phase2_activated = True
 file_observer = None
 
 
@@ -343,28 +344,30 @@ def chat_endpoint(req: ChatRequest):
         print(f"[CHAT] Phase2 activated: {phase2_activated}")
         print(f"[CHAT] ML file exists: {os.path.exists('knowledge/ml_output.json')}")
         
-        # Check for Phase 2 activation ONLY if Phase 1 is complete
-        if (not phase2_activated and 
-            conversation_state.get("current_state") == "complete" and 
-            check_for_ml_output()):
-            
-            phase2_activated = True
-            conversation_state["phase"] = 2
-            mark_ml_output_processed()  # Mark as processed
-            
-            # Terminal message
-            print("=" * 60)
-            print("🎯 PHASE 2 ACTIVATED!")
-            print("   ML analysis detected and processed")
-            print("   User can now ask about:")
-            print("   • Embodied carbon analysis")
-            print("   • Design improvements") 
-            print("   • Material changes")
-            print("=" * 60)
-            
-                # Log to terminal only
-            print("🎯 Phase 2 activated silently - processing user's question...")
-        
+        # ✅ Just-in-time Phase 2 activation BEFORE deciding how to handle the input
+        if not phase2_activated and conversation_state.get("current_state") == "complete":
+            phase2_ready = False
+            for attempt in range(5):
+                if check_for_ml_output():
+                    phase2_ready = True
+                    break
+                time.sleep(0.4)
+
+            if phase2_ready:
+                phase2_activated = True
+                conversation_state["phase"] = 2
+                mark_ml_output_processed()
+                print("=" * 60)
+                print("🎯 PHASE 2 ACTIVATED!")
+                print("   ML analysis detected and processed")
+                print("   User can now ask about:")
+                print("   • Embodied carbon analysis")
+                print("   • Design improvements") 
+                print("   • Material changes")
+                print("=" * 60)
+            else:
+                print("⚠️ Phase 2 NOT activated — ML file not ready in time.")
+
         # ===== PHASE 2 PROCESSING =====
         if phase2_activated and conversation_state.get("phase") == 2:
             print("🔍 [PHASE 2] Starting Phase 2 processing...")
@@ -528,14 +531,14 @@ def chat_endpoint(req: ChatRequest):
         
 
 
-            # === START RHINO RECEIVER SERVER (new) 25.05.06 ===
-            try:
-                predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
-                subprocess.Popen(["python", predictor_path])
-                print("🚀 ML_predictor.py launched after Phase 1 completion")
-            except Exception as e:
-                print(f"❌ Failed to launch ML_predictor.py: {e}")
-            # ========================================== ENDS
+            # # === START RHINO RECEIVER SERVER (new) 25.05.06 ===
+            # try:
+            #     predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+            #     subprocess.Popen(["python", predictor_path])
+            #     print("🚀 ML_predictor.py launched after Phase 1 completion")
+            # except Exception as e:
+            #     print(f"❌ Failed to launch ML_predictor.py: {e}")
+            # # ========================================== ENDS
 
 
 
