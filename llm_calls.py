@@ -664,14 +664,25 @@ def answer_user_query(user_query, design_data):
         summary_text = json.dumps(version_data, indent=2)
 
 
-    try:
-        with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
-            ml_data = json.load(f)
-            design_inputs = ml_data.get("inputs_decoded", {})
-            design_outputs = ml_data.get("outputs", {})
-    except Exception as e:
-        print(f"[QUERY] Failed to load ml_output.json: {e}")
-        design_inputs, design_outputs = {}, {}
+    if mentioned_versions:
+        first_version = mentioned_versions[0]
+        version_details = load_version_details(first_version)
+        if version_details:
+            design_inputs = version_details.get("inputs_decoded", {})
+            design_outputs = version_details.get("outputs", {})
+        else:
+            design_inputs = {}
+            design_outputs = {}
+    else:
+        try:
+            with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
+                ml_data = json.load(f)
+                design_inputs = ml_data.get("inputs_decoded", {})
+                design_outputs = ml_data.get("outputs", {})
+        except Exception as e:
+            print(f"[QUERY] Failed to load ml_output.json: {e}")
+            design_inputs, design_outputs = {}, {}
+
 
     response = client.chat.completions.create(
         model=completion_model,
@@ -1036,7 +1047,33 @@ def compare_versions_summary(user_input):
                 f"- Embodied A-D: {ec}"
             )
 
-        return "\n".join(response_lines)
+                # New LLM-crafted summary
+        llm_prompt = f"""
+        You are an expert sustainability assistant. Compare the materials and performance of these two versions:
+
+        Version 1:
+        Inputs: {json.dumps(data[version_names[0]].get("inputs_decoded", {}), indent=2)}
+        Outputs: {json.dumps(data[version_names[0]].get("outputs", {}), indent=2)}
+
+        Version 2:
+        Inputs: {json.dumps(data[version_names[1]].get("inputs_decoded", {}), indent=2)}
+        Outputs: {json.dumps(data[version_names[1]].get("outputs", {}), indent=2)}
+
+        Explain the main material and performance differences. Be brief, plain, and human. Mention key differences in materials or insulation and any major shifts in operational or embodied carbon.
+        """
+
+        llm_response = client.chat.completions.create(
+            model=completion_model,
+            messages=[
+                {"role": "system", "content": llm_prompt},
+                {"role": "user", "content": f"Compare version {version_names[0]} and {version_names[1]}."}
+            ]
+        )
+
+        natural_summary = llm_response.choices[0].message.content.strip()
+
+        return f"{natural_summary}\n\n🧾 Raw data:\n" + "\n".join(response_lines)
+
 
     except Exception as e:
         print(f"[COMPARE VERSIONS ERROR] {e}")
@@ -1055,6 +1092,26 @@ def load_version_details_summary(version_name):
     except Exception as e:
         return f"⚠️ Failed to load version {version_name}: {e}"
 
+def summarize_version_materials(version_name):
+    try:
+        from utils.version_analysis_utils import load_version_details
+        data = load_version_details(version_name)
+        decoded = data.get("inputs_decoded", {})
+
+        response = f"📦 Materials for {version_name}:\n"
+        response += f"• Exterior Wall Partition: {decoded.get('Ext.Wall_Partition', 'N/A')}\n"
+        response += f"• Exterior Wall Insulation: {decoded.get('Ext.Wall_Insulation', 'N/A')}\n"
+        response += f"• Interior Wall Partition: {decoded.get('Int.Wall_Partition', 'N/A')}\n"
+        response += f"• External Slab Insulation: {decoded.get('Ext.Slab_Insulation', 'N/A')}\n"
+        response += f"• Internal Slab Partition: {decoded.get('Int.Slab_Partition', 'N/A')}\n"
+        response += f"• Roof Partition: {decoded.get('Roof_Partition', 'N/A')}\n"
+        response += f"• Roof Insulation: {decoded.get('Roof_Insulation', 'N/A')}\n"
+        response += f"• Window-to-Wall Ratio: {decoded.get('Window-to-Wall_Ratio', 'N/A')}\n"
+        response += f"• Gross Floor Area: {decoded.get('Gross-Floor-Area', 'N/A')} m²"
+        return response
+    except Exception as e:
+        print(f"[VERSION MATERIALS] Error: {e}")
+        return f"⚠️ Could not retrieve materials for {version_name}"
 
 
 # ==========================================

@@ -12,6 +12,7 @@ import threading
 from pathlib import Path
 import socket
 import subprocess
+import re
 
 # Try to import watchdog for file monitoring
 try:
@@ -171,7 +172,14 @@ class MLFileWatcher(FileSystemEventHandler):
         
         # Handle compiled_ml_data.json changes (geometry detection)
         if file_name == "compiled_ml_data.json":
-            self.check_geometry_and_trigger_phase1_completion()
+            print("🔁 Detected new compiled_ml_data.json — launching ML predictor...")
+            try:
+                predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+                subprocess.Popen(["python", predictor_path])
+                print("🚀 ML_predictor.py launched successfully")
+            except Exception as e:
+                print(f"❌ Failed to launch ML_predictor.py: {e}")
+
         
         # Handle ml_output.json changes (Phase 2 activation) 
         elif file_name == "ml_output.json":
@@ -190,35 +198,36 @@ class MLFileWatcher(FileSystemEventHandler):
                 check_for_ml_output()):
                 
                 self.activate_phase2_automatically()
+
     
-    def check_geometry_and_trigger_phase1_completion(self):
-        """Check for geometry and trigger Phase 1 completion if found"""
-        global conversation_state
+    # def check_geometry_and_trigger_phase1_completion(self):
+    #     """Check for geometry and trigger Phase 1 completion if found"""
+    #     global conversation_state
         
-        try:
-            print("🔍 [GEOMETRY WATCHER] Checking for geometry data...")
+    #     try:
+    #         print("🔍 [GEOMETRY WATCHER] Checking for geometry data...")
             
-            if LLM_AVAILABLE:
-                geometry_available = llm_calls.check_geometry_available()
-                print(f"🔍 [GEOMETRY WATCHER] Geometry available: {geometry_available}")
+    #         if LLM_AVAILABLE:
+    #             geometry_available = llm_calls.check_geometry_available()
+    #             print(f"🔍 [GEOMETRY WATCHER] Geometry available: {geometry_available}")
                 
-                if geometry_available and conversation_state.get("current_state") != "complete":
-                    print("🎯 [GEOMETRY WATCHER] Triggering Phase 1 completion!")
+    #             if geometry_available and conversation_state.get("current_state") != "complete":
+    #                 print("🎯 [GEOMETRY WATCHER] Triggering Phase 1 completion!")
                     
-                    # Update conversation state
-                    conversation_state["current_state"] = "complete"
-                    conversation_state["phase"] = 1
+    #                 # Update conversation state
+    #                 conversation_state["current_state"] = "complete"
+    #                 conversation_state["phase"] = 1
                     
-                    # Trigger ML predictor
-                    try:
-                        predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
-                        subprocess.Popen(["python", predictor_path])
-                        print("🚀 ML_predictor.py launched after geometry detection via file watcher")
-                    except Exception as e:
-                        print(f"❌ Failed to launch ML_predictor.py: {e}")
+    #                 # Trigger ML predictor
+    #                 try:
+    #                     predictor_path = os.path.join(os.path.dirname(__file__), "..", "utils", "ML_predictor.py")
+    #                     subprocess.Popen(["python", predictor_path])
+    #                     print("🚀 ML_predictor.py launched after geometry detection via file watcher")
+    #                 except Exception as e:
+    #                     print(f"❌ Failed to launch ML_predictor.py: {e}")
                         
-        except Exception as e:
-            print(f"❌ [GEOMETRY WATCHER] Error: {e}")
+    #     except Exception as e:
+    #         print(f"❌ [GEOMETRY WATCHER] Error: {e}")
 
 def start_file_watcher():
     """Start file watcher for ML output changes"""
@@ -381,6 +390,8 @@ def chat_endpoint(req: ChatRequest):
                     try:
                         with open(ml_file, 'r') as f:
                             ml_data = json.load(f)
+
+
                         print(f"✅ [PHASE 2] Successfully loaded ML data with keys: {list(ml_data.keys())}")
                         
                         if 'carbon' in ml_data:
@@ -435,8 +446,17 @@ def chat_endpoint(req: ChatRequest):
                 elif intent == "design_change":
                     response = llm_calls.suggest_change(user_input, comprehensive_data)
                 elif intent == "version_query":
-                    if "compare" in user_input.lower():
+                    versions = re.findall(r"\bv\d+\b", user_input.lower())
+                    if len(versions) >= 2:
                         response = llm_calls.compare_versions_summary(user_input)
+                    elif len(versions) == 1:
+                        version_name = versions[0].upper()
+                        material_keywords = ["material", "materials", "partition", "insulation", "wall", "roof", "slab"]
+                        
+                        if any(word in user_input.lower() for word in material_keywords):
+                            response = llm_calls.summarize_version_materials(version_name)
+                        else:
+                            response = llm_calls.load_version_details_summary(version_name)
                     elif "best" in user_input.lower():
                         response = llm_calls.get_best_version_summary()
                     else:
@@ -838,7 +858,49 @@ def get_gwp_data():
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
+# retrieve iterations In.json & In-1.json for Aymeric's TREND // 09/06/2025
+@app.get("/api/gwp_change")
+def get_gwp_change():
+    """
+    Compare GWP between In.json (current model) and In-1.json (previous model).
+    """
+    iteration_dir = Path(__file__).resolve().parent.parent / "knowledge" / "iterations"
+    file_current = iteration_dir / "In.json"
+    file_previous = iteration_dir / "In-1.json"
 
+    if not file_current.exists() or not file_previous.exists():
+        return JSONResponse(content={
+            "error": "Required GWP files not found in iterations directory.",
+            "files_found": list(p.name for p in iteration_dir.glob("*.json"))
+        }, status_code=404)
+
+    try:
+        with open(file_current, "r", encoding="utf-8") as f:
+            current = json.load(f)
+        with open(file_previous, "r", encoding="utf-8") as f:
+            previous = json.load(f)
+
+        curr_gwp = current.get("outputs", {}).get("GWP total (kg CO2e/m²a GFA)")
+        prev_gwp = previous.get("outputs", {}).get("GWP total (kg CO2e/m²a GFA)")
+
+        if curr_gwp is None or prev_gwp is None:
+            return {"error": "Missing GWP value in one of the files."}
+
+        if prev_gwp == 0:
+            return {"error": "Previous GWP is zero, cannot compute change."}
+
+        delta = curr_gwp - prev_gwp
+        percent_change = round((delta / prev_gwp) * 100, 2)
+
+        return {
+            "current": curr_gwp,
+            "previous": prev_gwp,
+            "delta": round(delta, 2),
+            "percent_change": percent_change
+        }
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 # REMOVE iterations v{i}.json and v{i}.png for UI // 07/06/2025
 @app.post("/api/clear_iterations")
