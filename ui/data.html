@@ -19,13 +19,13 @@
 			<button id="SaveIt">Save Iteration</button>
 			<script>
 				document.getElementById("SaveIt").addEventListener("click", () => {
-					fetch("http://127.0.0.1:5005/screenshot/")  // ← Fixed port
+					fetch("http://127.0.0.1:5060/screenshot/")
 						.then(response => response.text())
 						.then(result => {
-							if (result.startsWith("error")) {
-								alert("Failed to save iteration:\n" + result);
+							if (result === "ok") {
+								alert("Screenshot saved!");
 							} else {
-								alert("Iteration saved: " + result);
+								alert("Failed to take screenshot.");
 							}
 						})
 						.catch(err => {
@@ -127,41 +127,9 @@
 				}
 				loadTableData();
 
-				setInterval(loadTableData, 2000); // 2 sec check
+				setInterval(loadTableData, 3000); // 3 sec check
 			</script>
-			
 
-			<div class="trendModel3D">
-				<h3>3D model GWP trend</h3><div id="gwp-change-label" style="font-size: 0.9em;"></div>
-				<script>
-					function fetchGWPChange() {
-						fetch("http://127.0.0.1:5001/api/gwp_change")
-							.then(res => res.json())
-							.then(data => {
-								const label = document.getElementById("gwp-change-label");
-
-								if (data.percent_change !== undefined) {
-								const change = data.percent_change;
-								const sign = change > 0 ? "+" : "";
-								const color = change > 0 ? "red" : "green";
-								const arrow = change > 0 ? "▲" : "▼";
-
-								label.innerHTML = `<span style="color: ${color}; font-weight: bold;">${arrow} ${sign}${change}%</span> vs previous 3D`;
-								} else {
-								label.textContent = "No change data available";
-								}
-							})
-							.catch(err => {
-								console.error("Error fetching GWP change:", err);
-							});
-					}
-
-					fetchGWPChange();
-
-					setInterval(fetchGWPChange, 1500); // every 1.5 seconds
-				</script>
-			</div>
-			
 
 			<!-- plot GWP & other metrics -->
 			<div class="plotGWP">
@@ -320,7 +288,7 @@
 							type: 'scatter',
 							mode: 'markers',
 							marker: {
-								size: 10,
+								size: 15,
 								color: y,
 								colorscale: [
 									[0, 'da70d6'],

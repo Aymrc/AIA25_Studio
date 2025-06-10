@@ -57,27 +57,20 @@ def get_best_version(metric="GWP total", folder="knowledge/iterations"):
     return best, best_val
 
 def load_version_details(version_name, folder="knowledge/iterations"):
-    """
-    Load a specific version file based on exact version name (e.g., 'V7').
-    """
-    filename = f"{version_name}.json"
-    path = os.path.join(folder, filename)
-
-    if not os.path.exists(path):
-        print(f"[LOAD VERSION] File not found: {path}")
-        return None
-
+    """Load full data for a specific version like 'V3'"""
     try:
+        path = os.path.join(folder, f"{version_name}.json")
+        if not os.path.exists(path):
+            return None
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
-        print(f"[LOAD VERSION] Failed to load {path}: {e}")
+        print(f"[LOAD VERSION] Error loading {version_name}: {e}")
         return None
 
-
 def extract_versions_from_input(user_input):
-    """Return all version mentions like V1, V7, V12 (case-insensitive)."""
-    return re.findall(r'\bV\d+\b', user_input.upper())
+    """Return list of version names (e.g., ["V2", "V10"]) found in user input"""
+    return re.findall(r"V\d+", user_input)
 
 def summarize_versions_data(version_names, folder="knowledge/iterations"):
     """Return dict of version_name -> {inputs_decoded, outputs} for selected versions"""
