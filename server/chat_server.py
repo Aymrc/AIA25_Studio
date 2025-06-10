@@ -63,87 +63,87 @@ file_observer = None
 
 
 # File watcher for automatic Phase 2 activation
-#class MLFileWatcher(FileSystemEventHandler):
-    #def __init__(self):
-    #     self.last_modified = {}
+# class MLFileWatcher(FileSystemEventHandler):
+#     def __init__(self):
+#         self.last_modified = {}
     
-    # def on_modified(self, event):
-    #     if event.is_directory:
-    #         return
+#     def on_modified(self, event):
+#         if event.is_directory:
+#             return
             
-    #     file_name = Path(event.src_path).name
-    #     if file_name != "ml_output.json":
-    #         return
+#         file_name = Path(event.src_path).name
+#         if file_name != "ml_output.json":
+#             return
             
-    #     current_time = time.time()
-    #     if file_name in self.last_modified:
-    #         if current_time - self.last_modified[file_name] < 2:  # 2 second debounce
-    #             return
+#         current_time = time.time()
+#         if file_name in self.last_modified:
+#             if current_time - self.last_modified[file_name] < 2:  # 2 second debounce
+#                 return
                 
-    #     self.last_modified[file_name] = current_time
+#         self.last_modified[file_name] = current_time
         
-    #     print(f"🔄 File watcher detected change in {file_name}")
+#         print(f"🔄 File watcher detected change in {file_name}")
         
-    #     # AUTOMATICALLY remove the processed flag when ML output changes
-    #     try:
-    #         flag_file = "knowledge/ml_processed.flag"
-    #         if os.path.exists(flag_file):
-    #             os.remove(flag_file)
-    #             print("✅ Automatically removed processed flag - ready for Phase 2")
-    #     except Exception as e:
-    #         print(f"⚠️ Could not remove processed flag: {e}")
+#         # AUTOMATICALLY remove the processed flag when ML output changes
+#         try:
+#             flag_file = "knowledge/ml_processed.flag"
+#             if os.path.exists(flag_file):
+#                 os.remove(flag_file)
+#                 print("✅ Automatically removed processed flag - ready for Phase 2")
+#         except Exception as e:
+#             print(f"⚠️ Could not remove processed flag: {e}")
         
-    #     # Check if we should activate Phase 2
-    #     if (not phase2_activated and 
-    #         conversation_state.get("current_state") == "complete" and 
-    #         check_for_ml_output()):
+#         # Check if we should activate Phase 2
+#         if (not phase2_activated and 
+#             conversation_state.get("current_state") == "complete" and 
+#             check_for_ml_output()):
             
-    #         self.activate_phase2_automatically()
+#             self.activate_phase2_automatically()
     
-    # def activate_phase2_automatically(self):
-    #     """Activate Phase 2 when ML file changes"""
-    #     global phase2_activated, conversation_state
+#     def activate_phase2_automatically(self):
+#         """Activate Phase 2 when ML file changes"""
+#         global phase2_activated, conversation_state
         
-    #     try:
-    #         print("🔄 File change detected - checking Phase 2 activation...")
+#         try:
+#             print("🔄 File change detected - checking Phase 2 activation...")
             
-    #         # Check if conditions are met
-    #         phase1_complete = conversation_state.get("current_state") == "complete"
-    #         can_activate = check_for_ml_output()
+#             # Check if conditions are met
+#             phase1_complete = conversation_state.get("current_state") == "complete"
+#             can_activate = check_for_ml_output()
             
-    #         print(f"[AUTO ACTIVATION] Phase 1 complete: {phase1_complete}")
-    #         print(f"[AUTO ACTIVATION] Can activate: {can_activate}")
-    #         print(f"[AUTO ACTIVATION] Already activated: {phase2_activated}")
+#             print(f"[AUTO ACTIVATION] Phase 1 complete: {phase1_complete}")
+#             print(f"[AUTO ACTIVATION] Can activate: {can_activate}")
+#             print(f"[AUTO ACTIVATION] Already activated: {phase2_activated}")
             
-    #         if phase1_complete and can_activate and not phase2_activated:
-    #             phase2_activated = True
-    #             conversation_state["phase"] = 2
-    #             mark_ml_output_processed()
+#             if phase1_complete and can_activate and not phase2_activated:
+#                 phase2_activated = True
+#                 conversation_state["phase"] = 2
+#                 mark_ml_output_processed()
                 
-    #             # Add automatic message to conversation history
-    #             auto_message = {
-    #                 "user": "[SYSTEM]",
-    #                 "assistant": "🎯 Phase 2 activated automatically! ML analysis updated. You can now ask about embodied carbon, improvements, or design changes.",
-    #                 "phase": 2,
-    #                 "trigger": "file_change",
-    #                 "timestamp": time.time()
-    #             }
-    #             conversation_state["conversation_history"].append(auto_message)
+#                 # Add automatic message to conversation history
+#                 auto_message = {
+#                     "user": "[SYSTEM]",
+#                     "assistant": "🎯 Phase 2 activated automatically! ML analysis updated. You can now ask about embodied carbon, improvements, or design changes.",
+#                     "phase": 2,
+#                     "trigger": "file_change",
+#                     "timestamp": time.time()
+#                 }
+#                 conversation_state["conversation_history"].append(auto_message)
                 
-    #             # Terminal message
-    #             print("=" * 60)
-    #             print("🎯 PHASE 2 ACTIVATED AUTOMATICALLY!")
-    #             print("   Triggered by ML file change")
-    #             print("   User can now ask about:")
-    #             print("   • Embodied carbon analysis")
-    #             print("   • Design improvements") 
-    #             print("   • Material changes")
-    #             print("=" * 60)
-    #         else:
-    #             print("❌ Phase 2 activation conditions not met")
+#                 # Terminal message
+#                 print("=" * 60)
+#                 print("🎯 PHASE 2 ACTIVATED AUTOMATICALLY!")
+#                 print("   Triggered by ML file change")
+#                 print("   User can now ask about:")
+#                 print("   • Embodied carbon analysis")
+#                 print("   • Design improvements") 
+#                 print("   • Material changes")
+#                 print("=" * 60)
+#             else:
+#                 print("❌ Phase 2 activation conditions not met")
             
-    #     except Exception as e:
-    #         print(f"❌ Error activating Phase 2: {e}")
+#         except Exception as e:
+#             print(f"❌ Error activating Phase 2: {e}")
 
 #UPDATED 06.06.25
 # File watcher for automatic Phase 2 activation
@@ -192,12 +192,12 @@ class MLFileWatcher(FileSystemEventHandler):
             except Exception as e:
                 print(f"⚠️ Could not remove processed flag: {e}")
             
-            # Check if we should activate Phase 2
-            if (not phase2_activated and 
-                conversation_state.get("current_state") == "complete" and 
-                check_for_ml_output()):
+            # # Check if we should activate Phase 2
+            # if (not phase2_activated and 
+            #     conversation_state.get("current_state") == "complete" and 
+            #     check_for_ml_output()):
                 
-                self.activate_phase2_automatically()
+            #     self.activate_phase2_automatically()
 
     
     # def check_geometry_and_trigger_phase1_completion(self):
@@ -983,14 +983,14 @@ if __name__ == "__main__":
     print("🌟 LLM initialization complete! Starting server...")
 
     # Start main server
-    uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
-    # uvicorn.run(
-    #     app, 
-    #     host="127.0.0.1", 
-    #     port=5001,
-    #     log_level="warning",  # Only warnings and errors
-    #     access_log=False      # Disable HTTP request logs
-    # )
+    # uvicorn.run(app, host="127.0.0.1", port=5001) # later replace port=free_port
+    uvicorn.run(
+        app, 
+        host="127.0.0.1", 
+        port=5001,
+        log_level="warning",  # Only warnings and errors
+        access_log=False      # Disable HTTP request logs
+    )
 
 
     # Save active port for debugging or UI sync
@@ -1001,14 +1001,14 @@ if __name__ == "__main__":
     import multiprocessing
 
     def run_legacy_compatibility_server():
-        uvicorn.run(app, host="127.0.0.1", port=5001)
-        # uvicorn.run(
-        #     app, 
-        #     host="127.0.0.1", 
-        #     port=5001,
-        #     log_level="warning",  # Only warnings and errors
-        #     access_log=False      # Disable HTTP request logs
-        # )
+        # uvicorn.run(app, host="127.0.0.1", port=5001)
+        uvicorn.run(
+            app, 
+            host="127.0.0.1", 
+            port=5001,
+            log_level="warning",  # Only warnings and errors
+            access_log=False      # Disable HTTP request logs
+        )
 
 
     if port != 5001:
