@@ -253,34 +253,34 @@ def start_file_watcher():
         print(f"⚠️ Could not start file watcher: {e}")
         return None
 
-def check_for_ml_output():
-    """Check if ML output file exists and has been processed"""
-    ml_file = "knowledge/ml_output.json"
-    processed_flag = "knowledge/ml_processed.flag"
+# def check_for_ml_output():
+#     """Check if ML output file exists and has been processed"""
+#     ml_file = "knowledge/ml_output.json"
+#     processed_flag = "knowledge/ml_processed.flag"
     
-    # Debug logging
-    ml_exists = os.path.exists(ml_file)
-    flag_exists = os.path.exists(processed_flag)
+#     # Debug logging
+#     ml_exists = os.path.exists(ml_file)
+#     flag_exists = os.path.exists(processed_flag)
     
-    print(f"[ML CHECK] ML file exists: {ml_exists}")
-    print(f"[ML CHECK] Processed flag exists: {flag_exists}")
+#     print(f"[ML CHECK] ML file exists: {ml_exists}")
+#     print(f"[ML CHECK] Processed flag exists: {flag_exists}")
     
-    # Only trigger Phase 2 if:
-    # 1. ML output exists AND
-    # 2. We haven't processed it yet (no flag file)
-    result = ml_exists and not flag_exists
-    print(f"[ML CHECK] Should trigger Phase 2: {result}")
+#     # Only trigger Phase 2 if:
+#     # 1. ML output exists AND
+#     # 2. We haven't processed it yet (no flag file)
+#     result = ml_exists and not flag_exists
+#     print(f"[ML CHECK] Should trigger Phase 2: {result}")
     
-    return result
+#     return result
 
-def mark_ml_output_processed():
-    """Mark ML output as processed to avoid re-triggering Phase 2"""
-    try:
-        os.makedirs("knowledge", exist_ok=True)
-        with open("knowledge/ml_processed.flag", "w") as f:
-            f.write(str(time.time()))
-    except Exception as e:
-        print(f"Warning: Could not create processed flag: {e}")
+# def mark_ml_output_processed():
+#     """Mark ML output as processed to avoid re-triggering Phase 2"""
+#     try:
+#         os.makedirs("knowledge", exist_ok=True)
+#         with open("knowledge/ml_processed.flag", "w") as f:
+#             f.write(str(time.time()))
+#     except Exception as e:
+#         print(f"Warning: Could not create processed flag: {e}")
 
 def classify_phase2_intent(user_input):
     """Hybrid intent classification: use rules first, fallback to LLM if needed."""
@@ -498,36 +498,36 @@ def chat_endpoint(req: ChatRequest):
                 }
         
         # ===== PHASE 1 PROCESSING =====
-        current_state = conversation_state["current_state"]
-        design_data = conversation_state["design_data"]
+        # current_state = conversation_state["current_state"]
+        # design_data = conversation_state["design_data"]
         
-        print(f"[PHASE 1] State: {current_state}")
+        # print(f"[PHASE 1] State: {current_state}")
         
         # Call your conversation management
        # Call enhanced conversation management with sustainability insights
-        new_state, response, updated_design_data = llm_calls.enhanced_handle_change_or_question(
-        user_input, design_data
-)
+        # new_state, response, updated_design_data = llm_calls.enhanced_handle_change_or_question(
+        # user_input, design_data
+        # )
         
         # Update global state
-        conversation_state["current_state"] = new_state
-        conversation_state["design_data"] = updated_design_data
-        conversation_state["phase"] = 1
+        # conversation_state["current_state"] = new_state
+        # conversation_state["design_data"] = updated_design_data
+        # conversation_state["phase"] = 1
         
         # Add to history
-        conversation_state["conversation_history"].append({
-            "user": user_input,
-            "assistant": response,
-            "state": new_state,
-            "phase": 1,
-            "timestamp": time.time()
-        })
+        # conversation_state["conversation_history"].append({
+        #     "user": user_input,
+        #     "assistant": response,
+        #     "state": new_state,
+        #     "phase": 1,
+        #     "timestamp": time.time()
+        # })
         
-        print(f"[PHASE 1] Response: {response[:100]}...")
+        # print(f"[PHASE 1] Response: {response[:100]}...")
         
-        # Check if Phase 1 is complete
-        if new_state == "complete":
-            response += "\n\n✅ Phase 1 complete! When ML analysis runs, Phase 2 will activate automatically."
+        # # Check if Phase 1 is complete
+        # if new_state == "complete":
+        #     response += "\n\n✅ Phase 1 complete! When ML analysis runs, Phase 2 will activate automatically."
         
 
 
@@ -542,14 +542,14 @@ def chat_endpoint(req: ChatRequest):
 
 
 
-        return {
-            "response": response,
-            "state": new_state,
-            "phase": 1,
-            "design_data": updated_design_data,
-            "parameters_complete": new_state == "complete",
-            "error": False
-        }
+        # return {
+        #     "response": response,
+        #     "state": new_state,
+        #     "phase": 1,
+        #     "design_data": updated_design_data,
+        #     "parameters_complete": new_state == "complete",
+        #     "error": False
+        # }
         
     except Exception as e:
         print(f"[CHAT] Error: {e}")
@@ -566,52 +566,52 @@ def get_conversation_state():
         "state": conversation_state["current_state"],
         "design_data": conversation_state["design_data"],
         "phase": conversation_state.get("phase", 1),
-        "phase2_activated": phase2_activated,
+        # "phase2_activated": phase2_activated,
         "ml_output_exists": os.path.exists("knowledge/ml_output.json"),
-        "ml_can_trigger": check_for_ml_output(),
+        # "ml_can_trigger": check_for_ml_output(),
         "file_watcher_active": file_observer is not None and file_observer.is_alive() if WATCHDOG_AVAILABLE else False,
-        "parameters_complete": conversation_state["current_state"] == "complete",
+        # "parameters_complete": conversation_state["current_state"] == "complete",
         "conversation_history": conversation_state["conversation_history"][-5:]
     }
 
-@app.post("/trigger_phase2")
-def trigger_phase2():
-    """Manually trigger Phase 2 for testing"""
-    global phase2_activated, conversation_state
+# @app.post("/trigger_phase2")
+# def trigger_phase2():
+#     """Manually trigger Phase 2 for testing"""
+#     global phase2_activated, conversation_state
     
-    try:
-        phase2_activated = True
-        conversation_state["phase"] = 2
-        conversation_state["current_state"] = "analysis"
+#     try:
+#         phase2_activated = True
+#         conversation_state["phase"] = 2
+#         conversation_state["current_state"] = "analysis"
         
-        return {
-            "message": "Phase 2 activated manually",
-            "phase": 2,
-            "success": True
-        }
-    except Exception as e:
-        return {
-            "error": str(e),
-            "success": False
-        }
+#         return {
+#             "message": "Phase 2 activated manually",
+#             "phase": 2,
+#             "success": True
+#         }
+#     except Exception as e:
+#         return {
+#             "error": str(e),
+#             "success": False
+#         }
 
-@app.post("/reset_ml_flag")
-def reset_ml_flag():
-    """Reset ML processed flag to test Phase 2 activation"""
-    try:
-        flag_file = "knowledge/ml_processed.flag"
-        if os.path.exists(flag_file):
-            os.remove(flag_file)
+# @app.post("/reset_ml_flag")
+# def reset_ml_flag():
+#     """Reset ML processed flag to test Phase 2 activation"""
+#     try:
+#         flag_file = "knowledge/ml_processed.flag"
+#         if os.path.exists(flag_file):
+#             os.remove(flag_file)
         
-        return {
-            "message": "ML processed flag reset - Phase 2 will activate on next completed conversation",
-            "success": True
-        }
-    except Exception as e:
-        return {
-            "error": str(e),
-            "success": False
-        }
+#         return {
+#             "message": "ML processed flag reset - Phase 2 will activate on next completed conversation",
+#             "success": True
+#         }
+#     except Exception as e:
+#         return {
+#             "error": str(e),
+#             "success": False
+#         }
 
 @app.post("/debug_phase2_data")
 def debug_phase2_data():
@@ -661,7 +661,7 @@ def health_check():
         "message": "Rhino Copilot Server with Full Phase 2", 
         "llm_available": LLM_AVAILABLE,
         "phase": conversation_state.get("phase", 1),
-        "phase2_activated": phase2_activated,
+        # "phase2_activated": phase2_activated,
         "ml_output_exists": os.path.exists("knowledge/ml_output.json"),
         "watchdog_available": WATCHDOG_AVAILABLE
     }
