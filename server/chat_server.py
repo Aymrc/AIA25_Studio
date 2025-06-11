@@ -47,7 +47,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
  
-#IMPORTANT = PHASE DETECTION
 # Global conversation state
 conversation_state = {
     "design_data": {},
@@ -57,8 +56,7 @@ conversation_state = {
 # File system observer for ML file changes
 file_observer = None
 
-#UPDATED 06.06.25
-# Watches for ML-relevant file changes (e.g. geometry updates)
+# Watches ML-related files and runs ML_predictor.py if compiled_ml_data.json changes.
 class MLFileWatcher(FileSystemEventHandler):
     def __init__(self):
         self.last_modified = {}
@@ -91,7 +89,8 @@ class MLFileWatcher(FileSystemEventHandler):
                 print("🚀 ML_predictor.py launched successfully")
             except Exception as e:
                 print(f"❌ Failed to launch ML_predictor.py: {e}")
-       
+
+#start_file_watcher(): Initializes and starts the file-watching service if possible.       
 def start_file_watcher():
     """Start file watcher for ML output changes"""
     global file_observer
@@ -115,6 +114,7 @@ def start_file_watcher():
         print(f"⚠️ Could not start file watcher: {e}")
         return None
 
+#classify_intent(): Determines user intent using rules or falls back to the LLM.
 def classify_intent(user_input):
     """Hybrid intent classification: use rules first, fallback to LLM if needed."""
     input_lower = user_input.lower()
@@ -157,9 +157,11 @@ Only return the label.
         print(f"[INTENT HYBRID ERROR] {e}")
         return "general_query"
 
+#ChatRequest: Data model for receiving chat messages via POST.
 class ChatRequest(BaseModel):
     message: str
 
+#chat_endpoint(): Main chat handler that routes user input to the appropriate LLM function using ML data.
 @app.post("/chat")
 def chat_endpoint(req: ChatRequest):
     """Handle user input using ML-enhanced analysis"""
@@ -284,10 +286,12 @@ def chat_endpoint(req: ChatRequest):
             "error": True
         }
 
+#ping(): Health check endpoint that returns "alive".
 @app.get("/ping")
 def ping():
     return {"status": "alive"}
 
+#get_conversation_state(): Returns the most recent 5 chat interactions and whether ML file/watcher is active.
 @app.get("/conversation_state")
 def get_conversation_state():
     """Get current conversation state"""
@@ -298,7 +302,7 @@ def get_conversation_state():
     "conversation_history": conversation_state["conversation_history"][-5:]
 }
 
-
+#debug_analysis_data(): Returns a deep view of the design + ML data sent to LLMs.
 @app.post("/debug_analysis_data")
 def debug_analysis_data():
     """Debug endpoint to inspect the ML-enhanced analysis data package"""
@@ -338,6 +342,7 @@ def debug_analysis_data():
             "error": str(e)
         }
 
+#health_check(): Returns general server health and LLM readiness.
 @app.get("/")
 def health_check():
     return {
@@ -349,7 +354,7 @@ def health_check():
         "watchdog_available": WATCHDOG_AVAILABLE
     }
 
-#TEMPORARY TEST FUNCTION 06.06.25
+#test_geometry(): Verifies if compiled_ml_data.json contains valid geometry info.
 @app.get("/test_geometry")
 def test_geometry():
     """Debug endpoint to test geometry detection"""
@@ -375,8 +380,7 @@ def test_geometry():
     except Exception as e:
         return {"error": str(e)}
 
-#NEW FUNCTION 2 07.06.25
-# Replace your existing get_initial_greeting function with this enhanced version:
+#get_initial_greeting(): Generates and returns a startup greeting via the LLM.
 @app.get("/initial_greeting")
 def get_initial_greeting():
     """Return a dynamic greeting verified at startup (LLM-based)"""
@@ -434,7 +438,7 @@ def get_initial_greeting():
                 "timestamp": time.strftime("%H:%M:%S")
             }
 
-# Add this debug endpoint to test the greeting directly
+#debug_greeting(): Debug tool to test if LLM greeting generation works.
 @app.get("/debug_greeting")
 def debug_greeting():
     """Debug endpoint to test greeting generation directly"""
@@ -464,7 +468,7 @@ def debug_greeting():
             "llm_available": LLM_AVAILABLE
         }
 
-# Also add this debug endpoint to help troubleshoot
+#heck_llm_status(): Full diagnostic of the LLM system's availability and behavior.
 @app.get("/llm_status")
 def check_llm_status():
     """Debug endpoint to check LLM status"""
@@ -512,7 +516,7 @@ def get_ml_output():
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-# retrieve iterations v{i}.json for Aymeric's PLOT // 07/06/2025
+#get_gwp_data(): Collects all versioned GWP data files (V*.json) for Aymeric’s plot.
 @app.get("/api/gwp_data")
 def get_gwp_data():
     # === Aggregate data from all V*.json files in knowledge/iterations/ ====
@@ -532,7 +536,7 @@ def get_gwp_data():
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-# retrieve iterations In.json & In-1.json for Aymeric's TREND // 09/06/2025
+#get_gwp_change(): Compares current (In.json) and previous (In-1.json) model GWP values.
 @app.get("/api/gwp_change")
 def get_gwp_change():
     """
@@ -576,7 +580,7 @@ def get_gwp_change():
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-# REMOVE iterations v{i}.json and v{i}.png for UI // 07/06/2025
+#clear_iterations(): Deletes all V*.json and .png iteration files for cleanup.
 @app.post("/api/clear_iterations")
 def clear_iterations(request: Request):
     folder = os.path.join("knowledge", "iterations")
@@ -593,7 +597,7 @@ def clear_iterations(request: Request):
     except Exception as e:
         return JSONResponse(content={"status": "error", "error": str(e)}, status_code=500)
 
-#UPDATED 07.06.25
+#__main__ block: Boots the LLM, starts file watching, waits for readiness, and runs the server on a free port.
 if __name__ == "__main__":
     print("🚀 Starting Rhino Copilot Server with Full Phase 2...")
     print(f"🤖 LLM Available: {LLM_AVAILABLE}")
