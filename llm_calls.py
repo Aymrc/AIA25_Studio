@@ -246,12 +246,13 @@ def merge_design_data(existing_data, new_data):
 #         return False
 
 # -- Determine next missing parameter based on current data --
-def determine_next_missing_parameter(design_data):
+# ======= [COMMENTED OUT]
+# def determine_next_missing_parameter(design_data):
     # Check if geometry data (GFA) is available
     # if not check_geometry_available():
     #     return "waiting_geometry", "I have your design parameters ready! Create a geometry in Rhino to see predictions."
     
-    return "complete", "Perfect! Geometry detected. Generating ML predictions..."
+    # return "complete", "Perfect! Geometry detected. Generating ML predictions..."
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║                     3. Material & Parameter Intelligence                   ║
@@ -501,7 +502,7 @@ def manage_conversation_state(current_state, user_input, design_data):
         if not design_data:
             return "initial", "Hello! I'm your design assistant. What would you like to build today?", design_data
         else:
-            next_state, next_question = determine_next_missing_parameter(design_data)
+            next_state, next_question = "complete", "✅ Parameters received. Ready to continue!"
             return next_state, next_question, design_data
     
     extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
@@ -509,7 +510,7 @@ def manage_conversation_state(current_state, user_input, design_data):
     if extracted_params:
         design_data = merge_design_data(design_data, extracted_params)
     
-    next_state, next_question = determine_next_missing_parameter(design_data)
+    next_state, next_question = "complete", "✅ Parameters received. Ready to continue!"
     
     response_parts = []
     
