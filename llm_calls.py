@@ -184,43 +184,44 @@ def merge_design_data(existing_data, new_data):
     return merged
 
 # -- Build ML dictionary from design data (with material mapping) --
-def create_ml_dictionary(design_data):
-    try:
-        mapper = MaterialMapper()
+# ======= [COMMENTED OUT] Build full ML dictionary from design_data (bring it back if we introduce weathers)=======
+# def create_ml_dictionary(design_data):
+#     try:
+#         mapper = MaterialMapper()
         
-        # Complete dictionary with placeholder values from the start
-        ml_dict = {
-            "ew_par": 1,      # Default: concrete
-            "ew_ins": 2,      # Default: EPS insulation
-            "iw_par": 1,      # Default: concrete
-            "es_ins": 1,      # Default: XPS
-            "is_par": 0,      # Default: concrete slab
-            "ro_par": 0,      # Default: concrete roof
-            "ro_ins": 7,      # Default: XPS roof insulation
-            "wwr": 0.3,       # Default: 30% window ratio
-            "av": None,       # Will come from geometry
-            "gfa": None       # Will come from geometry
-        }
+#         # Complete dictionary with placeholder values from the start
+#         ml_dict = {
+#             "ew_par": 1,      # Default: concrete
+#             "ew_ins": 2,      # Default: EPS insulation
+#             "iw_par": 1,      # Default: concrete
+#             "es_ins": 1,      # Default: XPS
+#             "is_par": 0,      # Default: concrete slab
+#             "ro_par": 0,      # Default: concrete roof
+#             "ro_ins": 7,      # Default: XPS roof insulation
+#             "wwr": 0.3,       # Default: 30% window ratio
+#             "av": None,       # Will come from geometry
+#             "gfa": None       # Will come from geometry
+#         }
         
-        # Override with actual design data if available
-        if "materiality" in design_data:
-            material = design_data["materiality"]
-            print(f"[ML DICT] Processing material: {material}")
+#         # Override with actual design data if available
+#         if "materiality" in design_data:
+#             material = design_data["materiality"]
+#             print(f"[ML DICT] Processing material: {material}")
             
-            material_params = mapper.map_simple_material_to_parameters(material)
-            ml_dict.update(material_params)
-            print(f"[ML DICT] Material parameters: {material_params}")
+#             material_params = mapper.map_simple_material_to_parameters(material)
+#             ml_dict.update(material_params)
+#             print(f"[ML DICT] Material parameters: {material_params}")
         
-        if "wwr" in design_data:
-            ml_dict["wwr"] = design_data["wwr"]
-            print(f"[ML DICT] WWR: {design_data['wwr']}")
+#         if "wwr" in design_data:
+#             ml_dict["wwr"] = design_data["wwr"]
+#             print(f"[ML DICT] WWR: {design_data['wwr']}")
         
-        print(f"[ML DICT] Complete dictionary with placeholders: {ml_dict}")
-        return ml_dict
+#         print(f"[ML DICT] Complete dictionary with placeholders: {ml_dict}")
+#         return ml_dict
         
-    except Exception as e:
-        print(f"[ML DICT] Error creating ML dictionary: {e}")
-        return None
+#     except Exception as e:
+#         print(f"[ML DICT] Error creating ML dictionary: {e}")
+#         return None
 
 # -- Check if GFA geometry value is available --
 def check_geometry_available():
@@ -536,16 +537,16 @@ def manage_conversation_state(current_state, user_input, design_data):
     
     if next_state == "complete":
         response_parts.append("🎉 Perfect! All basic parameters collected.")
-        
-        ml_dict = create_ml_dictionary(design_data)
-        if ml_dict:
-            save_success = save_ml_dictionary(ml_dict)
-            if save_success:
-                response_parts.append("✅ Material parameters ready! Geometry data will be added when you create/analyze the building geometry in Rhino.")
-            else:
-                response_parts.append("⚠️ Parameters collected but dictionary save failed.")
-        else:
-            response_parts.append("⚠️ Parameters collected but dictionary creation failed.")
+        # ======= [COMMENTED OUT] Build full ML dictionary from design_data (bring it back if we introduce weathers)=======
+        # ml_dict = create_ml_dictionary(design_data)
+        # if ml_dict:
+            # save_success = save_ml_dictionary(ml_dict)
+            # if save_success:
+            #     response_parts.append("✅ Material parameters ready! Geometry data will be added when you create/analyze the building geometry in Rhino.")
+            # else:
+            #     response_parts.append("⚠️ Parameters collected but dictionary save failed.")
+        # else:
+        #     response_parts.append("⚠️ Parameters collected but dictionary creation failed.")
     else:
         response_parts.append(next_question)
     
