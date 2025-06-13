@@ -224,33 +224,34 @@ def merge_design_data(existing_data, new_data):
 #         return None
 
 # -- Check if GFA geometry value is available --
-def check_geometry_available():
-    """Check if geometry data (GFA) exists in compiled_ml_data.json"""
-    try:
-        knowledge_folder = "knowledge"
-        filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
+# ======= [COMMENTED OUT]
+# def check_geometry_available():
+#     """Check if geometry data (GFA) exists in compiled_ml_data.json"""
+#     try:
+#         knowledge_folder = "knowledge"
+#         filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
         
-        if not os.path.exists(filepath):
-            return False
+#         if not os.path.exists(filepath):
+#             return False
             
-        with open(filepath, 'r') as f:
-            ml_data = json.load(f)
+#         with open(filepath, 'r') as f:
+#             ml_data = json.load(f)
         
-        # Check if GFA exists and is not None/0
-        gfa = ml_data.get("gfa")
-        return gfa is not None and gfa > 0
+#         # Check if GFA exists and is not None/0
+#         gfa = ml_data.get("gfa")
+#         return gfa is not None and gfa > 0
         
-    except Exception as e:
-        print(f"[GEOMETRY CHECK] Error: {e}")
-        return False
+#     except Exception as e:
+#         print(f"[GEOMETRY CHECK] Error: {e}")
+#         return False
 
 # -- Determine next missing parameter based on current data --
 def determine_next_missing_parameter(design_data):
     # Check if geometry data (GFA) is available
-    if not check_geometry_available():
-        return "waiting_geometry", "I have your design parameters ready! Create a geometry in Rhino to see predictions."
+    # if not check_geometry_available():
+    #     return "waiting_geometry", "I have your design parameters ready! Create a geometry in Rhino to see predictions."
     
-    return "complete", "🎉 Perfect! Geometry detected. Generating ML predictions..."
+    return "complete", "Perfect! Geometry detected. Generating ML predictions..."
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║                     3. Material & Parameter Intelligence                   ║
