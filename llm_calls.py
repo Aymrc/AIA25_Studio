@@ -68,23 +68,6 @@ def generate_dynamic_greeting():
         traceback.print_exc()
         raise e  # Don't return fallback, raise error instead
 
-# -- Simple user intro --
-def query_intro():
-    """Prompt the user to ask about their design."""
-    response = client.chat.completions.create(
-        model=completion_model,
-        messages=[
-            {
-                "role": "system",
-                "content": """
-                Greet the user briefly and say: 'What would you like to know about your design?'
-                Do not include any reasoning, chain-of-thought, or <think> tags. Just respond plainly.
-                """
-            }
-        ]
-    )
-    return response.choices[0].message.content
-
 # -- Provide 1-sentence sustainability insight --
 def provide_sustainability_insight(parameter_type, new_value):
     """Generate simple sustainability insights for parameter changes"""
