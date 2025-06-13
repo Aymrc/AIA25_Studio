@@ -823,15 +823,25 @@ def suggest_change(user_prompt, design_data):
             if not isinstance(parsed, dict):
                 raise ValueError("Parsed content is not a dictionary.")
 
+            # Fill any missing required keys
             missing = REQUIRED_KEYS - parsed.keys()
             for key in missing:
                 print(f"[VALIDATION] Missing key: {key} → filling from defaults")
                 parsed[key] = default_inputs[key]
 
+            # Prevent edits to protected fields
+            PROTECTED_KEYS = {"av", "gfa", "number_of_levels"}
+            for key in PROTECTED_KEYS:
+                if parsed.get(key) != default_inputs.get(key):
+                    print(f"[PROTECTION] Rejected LLM change to protected key: {key}")
+                    parsed[key] = default_inputs[key]
+
+            # Type casting
             for key in ["wwr", "av", "gfa"]:
                 parsed[key] = float(parsed[key]) if not isinstance(parsed[key], float) else parsed[key]
             for key in REQUIRED_KEYS - {"wwr", "av", "gfa"}:
                 parsed[key] = int(parsed[key]) if not isinstance(parsed[key], int) else parsed[key]
+
 
             return parsed
 
