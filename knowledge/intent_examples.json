@@ -1,0 +1,30 @@
+{
+  "carbon_query": [
+    "What is the embodied carbon?",
+    "What’s the carbon footprint?",
+    "Tell me the CO2 emissions.",
+    "How sustainable is this design?",
+    "What's the global warming potential?"
+  ],
+  "design_change": [
+    "Change everything to timber.",
+    "Switch insulation to cork.",
+    "Use straw for the walls.",
+    "Replace the roof material.",
+    "Update WWR to 0.4"
+  ],
+  "version_query": [
+    "Compare version V2 and V5.",
+    "Which version performs best?",
+    "List all saved designs.",
+    "Show me version history.",
+    "Summarize the outputs of V6."
+  ],
+  "improvement_suggestion": [
+    "How can I lower emissions?",
+    "Suggest improvements to my design.",
+    "Any advice to reduce carbon?",
+    "What should I change?",
+    "Optimize the structure for sustainability."
+  ]
+}
