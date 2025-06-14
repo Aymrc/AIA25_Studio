@@ -13,7 +13,7 @@ from pathlib import Path
 import socket
 import subprocess
 import re
-
+from utils.embeddings import classify_intent_via_embeddings
 
 # Try to import watchdog for file monitoring
 try:
@@ -114,49 +114,6 @@ def start_file_watcher():
         print(f"⚠️ Could not start file watcher: {e}")
         return None
 
-#classify_intent(): Determines user intent using rules or falls back to the LLM.
-def classify_intent(user_input):
-    """Hybrid intent classification: use rules first, fallback to LLM if needed."""
-    input_lower = user_input.lower()
-
-    # Step 1: Fast rule-based matches
-    if any(word in input_lower for word in ["gwp", "carbon", "embodied", "emissions"]):
-        return "carbon_query"
-    if any(word in input_lower for word in ["optimize", "reduce", "improve", "suggest"]):
-        return "improvement_suggestion"
-    if any(word in input_lower for word in ["switch", "change", "update", "replace", "use"]):
-        return "design_change"
-    if any(word in input_lower for word in ["versions", "compare", "history", "gwp history", "best version"]):
-        return "version_query"
-
-    # Step 2: Fallback to LLM if unclear
-    try:
-        intent_prompt = f"""
-You are an intent classifier for an architectural design assistant.
-
-Classify the following user message into one of:
-- carbon_query
-- improvement_suggestion
-- design_change
-- general_query
-
-Message: "{user_input}"
-Only return the label.
-"""
-        from llm_calls import client, completion_model
-        response = client.chat.completions.create(
-            model=completion_model,
-            messages=[{"role": "system", "content": intent_prompt}]
-        )
-        label = response.choices[0].message.content.strip().lower()
-        if label in ["carbon_query", "improvement_suggestion", "design_change", "general_query"]:
-            return label
-        return "general_query"
-
-    except Exception as e:
-        print(f"[INTENT HYBRID ERROR] {e}")
-        return "general_query"
-
 #ChatRequest: Data model for receiving chat messages via POST.
 class ChatRequest(BaseModel):
     message: str
@@ -181,8 +138,10 @@ def chat_endpoint(req: ChatRequest):
         print("🔍 Starting ML analysis pipeline...")
 
         # Classify intent
-        intent = classify_intent(user_input)
-        print(f"🔍 Intent classified as: {intent}")
+        from utils.embeddings import classify_intent_via_embeddings
+
+        intent, score = classify_intent_via_embeddings(user_input)
+        print(f"[🔎 EMBEDDING INTENT] → {intent} (score={score:.4f})")
 
         # Get current design data
         design_data = conversation_state.get("design_data", {})
@@ -240,8 +199,10 @@ def chat_endpoint(req: ChatRequest):
             response = llm_calls.suggest_change(user_input, comprehensive_data)
         elif intent == "version_query":
             versions = re.findall(r"\bv\d+\b", user_input.lower())
+
             if len(versions) >= 2:
                 response = llm_calls.compare_versions_summary(user_input)
+
             elif len(versions) == 1:
                 version_name = versions[0].upper()
                 material_keywords = ["material", "materials", "partition", "insulation", "wall", "roof", "slab"]
@@ -249,10 +210,49 @@ def chat_endpoint(req: ChatRequest):
                     response = llm_calls.summarize_version_materials(version_name)
                 else:
                     response = llm_calls.load_version_details_summary(version_name)
-            elif "best" in user_input.lower():
-                response = llm_calls.get_best_version_summary()
+
             else:
-                response = llm_calls.query_version_outputs()
+                # Subintent detection via embeddings
+                subintent_examples = {
+                    "list_versions": [
+                        "list all versions",
+                        "show saved iterations",
+                        "version history",
+                        "show project versions",
+                        "summarize saved versions",
+                        "which designs do we have"
+                    ],
+                    "best_version": [
+                        "which version is most sustainable",
+                        "what design performs best",
+                        "lowest GWP",
+                        "best performing design",
+                        "most efficient iteration",
+                        "top sustainability version",
+                        "preferred version",
+                        "lowest carbon footprint version",
+                        "which version is the greenest"
+                    ],
+                    "version_summary": [
+                        "what are the saved versions",
+                        "summarize designs",
+                        "overview of versions",
+                        "available iterations",
+                        "give me a version summary"
+                    ]
+                }
+
+                subintent, score = classify_intent_via_embeddings(user_input, subintent_examples)
+                print(f"[🔎 SUBINTENT via EMBEDDINGS] → {subintent} (score={score:.4f})")
+
+                if subintent == "best_version":
+                    response = llm_calls.get_best_version_summary()
+                elif subintent in ["list_versions", "version_summary"]:
+                    response = llm_calls.query_version_outputs()
+                else:
+                    # fallback
+                    response = llm_calls.query_version_outputs()
+       
         else:
             response = llm_calls.answer_user_query(user_input, comprehensive_data)
 
