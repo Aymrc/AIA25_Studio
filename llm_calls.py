@@ -1,34 +1,24 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                            1. LLM Setup & Utilities                        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
 import json
 import os
 import sys
 import subprocess
-# import time
 import re
 import traceback
 from server.config import client, completion_model
-
 import sys
 import subprocess
 
-# NEW IMPORTS FOR VERSIONING CONSIDERATIONS 07.06.25 
-from utils.version_analysis_utils import (
-    # list_all_version_files, # it is already used in version_analysis_utils.py 
-    # load_specific_version, # it is already used in version_analysis_utils.py 
-    summarize_version_outputs,
-    get_best_version,
-    extract_versions_from_input,
-    summarize_versions_data,
-    load_version_details
-)
-
-# Try to import César's SQL dataset utility
+# -- Optional imports for external features --
 try:
     from utils.sql_dataset import get_top_low_carbon_high_gfa
     SQL_DATASET_AVAILABLE = True
 except ImportError:
     SQL_DATASET_AVAILABLE = False
     print("SQL dataset not available - running without database features")
-
 try:
     from utils.material_mapper import MaterialMapper
 except ImportError:
@@ -44,119 +34,41 @@ except ImportError:
             }
             return mappings.get(material, {"ew_par": 0, "iw_par": 0})
 
-# ==========================================
-# PHASE 1 FUNCTIONS (Your System)
-# ==========================================
-
-#PLACEHOLDER DEFINITION 06.06.25
-def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
-    """Placeholder - parameter extraction disabled for new organic flow"""
-    return {}  # Return empty dict since we're using placeholders
-
-#NEW LOGIC   06.06.25
-def create_ml_dictionary(design_data):
+# -- Generate dynamic LLM greeting --
+def generate_dynamic_greeting():
+    """Generate a varied, engaging greeting for the design assistant"""
     try:
-        mapper = MaterialMapper()
+        print("[GREETING] Starting dynamic greeting generation...")
         
-        # Complete dictionary with placeholder values from the start
-        ml_dict = {
-            "ew_par": 1,      # Default: concrete
-            "ew_ins": 2,      # Default: EPS insulation
-            "iw_par": 1,      # Default: concrete
-            "es_ins": 1,      # Default: XPS
-            "is_par": 0,      # Default: concrete slab
-            "ro_par": 0,      # Default: concrete roof
-            "ro_ins": 7,      # Default: XPS roof insulation
-            "wwr": 0.3,       # Default: 30% window ratio
-            "av": None,       # Will come from geometry
-            "gfa": None       # Will come from geometry
-        }
+        response = client.chat.completions.create(
+            model=completion_model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
+                    You are a friendly architectural design assistant. Generate a brief, welcoming greeting that:
+                    - Is warm and engaging
+                    - Mentions sustainable design or architecture
+                    - Varies each time (don't be repetitive)
+                    - Is 1-2 sentences maximum
+                    
+                    Generate a unique, engaging greeting now.
+                    """
+                }
+            ],
+            timeout=50.0  # 30 second timeout
+        )
         
-        # Override with actual design data if available
-        if "materiality" in design_data:
-            material = design_data["materiality"]
-            print(f"[ML DICT] Processing material: {material}")
-            
-            material_params = mapper.map_simple_material_to_parameters(material)
-            ml_dict.update(material_params)
-            print(f"[ML DICT] Material parameters: {material_params}")
-        
-        if "wwr" in design_data:
-            ml_dict["wwr"] = design_data["wwr"]
-            print(f"[ML DICT] WWR: {design_data['wwr']}")
-        
-        print(f"[ML DICT] Complete dictionary with placeholders: {ml_dict}")
-        return ml_dict
+        greeting = response.choices[0].message.content.strip()
+        print(f"[GREETING] Generated: {greeting}")
+        return greeting
         
     except Exception as e:
-        print(f"[ML DICT] Error creating ML dictionary: {e}")
-        return None
-    
-def save_ml_dictionary(ml_dict):
-    try:
-        knowledge_folder = "knowledge"
-        os.makedirs(knowledge_folder, exist_ok=True)
-        
-        filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
-        with open(filepath, 'w') as f:
-            json.dump(ml_dict, f, indent=2)
-        
-        print(f"[ML DICT] Saved to {filepath}")
-        return True
-        
-    except Exception as e:
-        print(f"[ML DICT] Error saving: {e}")
-        return False
+        print(f"[GREETING] Error: {e}")
+        traceback.print_exc()
+        raise e  # Don't return fallback, raise error instead
 
-def merge_design_data(existing_data, new_data):
-    merged = existing_data.copy()
-    
-    for key, value in new_data.items():
-        if key == "geometry":
-            if "geometry" not in merged:
-                merged["geometry"] = {}
-            for geom_key, geom_value in value.items():
-                merged["geometry"][geom_key] = geom_value
-                print(f"[MERGE DEBUG] Updated geometry.{geom_key} = {geom_value}")
-        else:
-            merged[key] = value
-            print(f"[MERGE DEBUG] Updated {key} = {value}")
-    
-    return merged
-
-def save_ml_dictionary(ml_dict):
-    try:
-        knowledge_folder = "knowledge"
-        os.makedirs(knowledge_folder, exist_ok=True)
-        
-        filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
-        with open(filepath, 'w') as f:
-            json.dump(ml_dict, f, indent=2)
-        
-        print(f"[ML DICT] Saved to {filepath}")
-        return True
-        
-    except Exception as e:
-        print(f"[ML DICT] Error saving: {e}")
-        return False
-
-def merge_design_data(existing_data, new_data):
-    merged = existing_data.copy()
-    
-    for key, value in new_data.items():
-        if key == "geometry":
-            if "geometry" not in merged:
-                merged["geometry"] = {}
-            for geom_key, geom_value in value.items():
-                merged["geometry"][geom_key] = geom_value
-                print(f"[MERGE DEBUG] Updated geometry.{geom_key} = {geom_value}")
-        else:
-            merged[key] = value
-            print(f"[MERGE DEBUG] Updated {key} = {value}")
-    
-    return merged
-#--------------------------------------------------
-#NEW DEFINITION 07.06.25 
+# -- Provide 1-sentence sustainability insight --
 def provide_sustainability_insight(parameter_type, new_value):
     """Generate simple sustainability insights for parameter changes"""
     try:
@@ -195,139 +107,158 @@ def provide_sustainability_insight(parameter_type, new_value):
         print(f"[SUSTAINABILITY INSIGHT] Error generating insight: {e}")
         return f"Great choice with {new_value}!"
 
-#NEW DEFINITION 07.06.25 
-def enhanced_handle_change_or_question(user_input, design_data):
-    """Enhanced version that detects material requests and gives sustainability insights"""
-    try:
-        # Check if user is requesting a material change FIRST
-        user_lower = user_input.lower()
-        
-        # Detect material keywords in user input
-        material_keywords = {
-            "steel": "steel",
-            "timber": "timber", 
-            "wood": "timber",
-            "concrete": "concrete",
-            "brick": "brick",
-            "earth": "earth",
-            "adobe": "earth", 
-            "straw": "straw",
-            "mass timber": "timber_mass",
-            "timber frame": "timber_frame"
-        }
-        
-        detected_material = None
-        for keyword, material in material_keywords.items():
-            if keyword in user_lower:
-                detected_material = material
-                break
-        
-        # Expanded detection: change requests OR material questions
-        is_material_request = detected_material and (
-            # Change requests
-            any(word in user_lower for word in ["change", "switch", "use", "make", "set", "material"]) or
-            # Questions about materials (like "timber or steel?")
-            any(word in user_lower for word in ["?", "or", "which", "what", "should", "better", "choose"]) or
-            # Simple material statements ("timber", "use timber", etc.)
-            len(user_input.strip().split()) <= 3
-        )
-        
-        # If material detected and it's a material-related request, return ONLY the insight
-        if is_material_request:
-            # Process the change through normal flow (to update data)
-            state, reply, updated_data = manage_conversation_state("active", user_input, design_data)
-            
-            # Generate and return ONLY the sustainability insight
-            insight = provide_sustainability_insight("material", detected_material)
-            
-            print(f"[ENHANCED RESPONSE] Material request detected - returning ONLY insight for {detected_material}")
-            print(f"[ENHANCED RESPONSE] Original input: '{user_input}'")
-            
-            return state, insight, updated_data
-        
-        # If not a material request, proceed with normal conversation flow
-        return manage_conversation_state("active", user_input, design_data)
-        
-    except Exception as e:
-        print(f"Error in enhanced_handle_change_or_question: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        # Fallback to original function
-        return manage_conversation_state("active", user_input, design_data)
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                          2. Design Data Handling                           ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
 
-#NEW LOGIC     07.06.25
-def determine_next_missing_parameter(design_data):
-    # Check if geometry data (GFA) is available
-    if not check_geometry_available():
-        return "waiting_geometry", "I have your design parameters ready! Create a geometry in Rhino to see predictions."
-    
-    return "complete", "🎉 Perfect! Geometry detected. Generating ML predictions..."
-
-#NEW DEFINITION 06.06.25 
-def check_geometry_available():
-    """Check if geometry data (GFA) exists in compiled_ml_data.json"""
+# -- Initialize compiled ML dictionary with placeholder values --
+def initialize_placeholder_dictionary():
+    """Initialize compiled_ml_data.json with placeholder values"""
     try:
         knowledge_folder = "knowledge"
+        os.makedirs(knowledge_folder, exist_ok=True)
+        
         filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
         
-        if not os.path.exists(filepath):
-            return False
-            
-        with open(filepath, 'r') as f:
-            ml_data = json.load(f)
+        # Don't overwrite if file already exists (whether it has geometry or not)
+        if os.path.exists(filepath):
+            print("[INIT] Dictionary already exists, not overwriting")
+            return True
         
-        # Check if GFA exists and is not None/0
-        gfa = ml_data.get("gfa")
-        return gfa is not None and gfa > 0
+        # Create placeholder dictionary
+        placeholder_dict = {
+            "ew_par": 1,      # Concrete walls
+            "ew_ins": 2,      # EPS insulation  
+            "iw_par": 1,      # Concrete interior walls
+            "es_ins": 1,      # XPS slab insulation
+            "is_par": 0,      # Concrete slab
+            "ro_par": 0,      # Concrete roof
+            "ro_ins": 7,      # XPS roof insulation
+            "wwr": 0.3,       # 30% windows
+            "av": None,       # Pending geometry
+            "gfa": None       # Pending geometry
+        }
         
-    except Exception as e:
-        print(f"[GEOMETRY CHECK] Error: {e}")
-        return False
-
-#NEW DEFINITION 07.06.25     
-def update_compiled_ml_data_with_changes(parameter_updates):
-    """Update compiled_ml_data.json with new parameter values"""
-    try:
-        import os
-        import json
-        from collections import OrderedDict
+        with open(filepath, 'w') as f:
+            json.dump(placeholder_dict, f, indent=2)
         
-        ml_data_path = os.path.join("knowledge", "compiled_ml_data.json")
-        
-        # Read existing data
-        if os.path.exists(ml_data_path):
-            with open(ml_data_path, 'r') as f:
-                current_data = json.load(f)
-        else:
-            # Create default structure if file doesn't exist
-            current_data = {
-                "ew_par": 1, "ew_ins": 2, "iw_par": 1, "es_ins": 1, 
-                "is_par": 0, "ro_par": 0, "ro_ins": 7, "wwr": 0.3,
-                "av": None, "gfa": None
-            }
-        
-        # Update with new parameters
-        for param_key, param_value in parameter_updates.items():
-            current_data[param_key] = param_value
-            print(f"[ML UPDATE] {param_key}: {param_value}")
-        
-        # Maintain proper order
-        ordered_data = OrderedDict()
-        key_order = ["ew_par", "ew_ins", "iw_par", "es_ins", "is_par", "ro_par", "ro_ins", "wwr", "av", "gfa"]
-        for key in key_order:
-            ordered_data[key] = current_data.get(key, 0)
-        
-        # Write back to file
-        with open(ml_data_path, 'w') as f:
-            json.dump(ordered_data, f, indent=2)
-        
-        print(f"[ML UPDATE] Successfully updated compiled_ml_data.json")
+        print(f"[INIT] Placeholder dictionary created at {filepath}")
         return True
         
     except Exception as e:
-        print(f"[ML UPDATE] Error updating compiled data: {e}")
+        print(f"[INIT] Error creating placeholder dictionary: {e}")
         return False
-#--------------------------------------------------
+
+# -- Save compiled ML dictionary to file --
+def save_ml_dictionary(ml_dict):
+    try:
+        knowledge_folder = "knowledge"
+        os.makedirs(knowledge_folder, exist_ok=True)
+        
+        filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
+        with open(filepath, 'w') as f:
+            json.dump(ml_dict, f, indent=2)
+        
+        print(f"[ML DICT] Saved to {filepath}")
+        return True
+        
+    except Exception as e:
+        print(f"[ML DICT] Error saving: {e}")
+        return False
+
+# -- Merge new design data into existing one --
+def merge_design_data(existing_data, new_data):
+    merged = existing_data.copy()
+    
+    for key, value in new_data.items():
+        if key == "geometry":
+            if "geometry" not in merged:
+                merged["geometry"] = {}
+            for geom_key, geom_value in value.items():
+                merged["geometry"][geom_key] = geom_value
+                print(f"[MERGE DEBUG] Updated geometry.{geom_key} = {geom_value}")
+        else:
+            merged[key] = value
+            print(f"[MERGE DEBUG] Updated {key} = {value}")
+    
+    return merged
+
+# -- Build ML dictionary from design data (with material mapping) --
+# ======= [COMMENTED OUT] Build full ML dictionary from design_data (bring it back if we introduce weathers)=======
+# def create_ml_dictionary(design_data):
+#     try:
+#         mapper = MaterialMapper()
+        
+#         # Complete dictionary with placeholder values from the start
+#         ml_dict = {
+#             "ew_par": 1,      # Default: concrete
+#             "ew_ins": 2,      # Default: EPS insulation
+#             "iw_par": 1,      # Default: concrete
+#             "es_ins": 1,      # Default: XPS
+#             "is_par": 0,      # Default: concrete slab
+#             "ro_par": 0,      # Default: concrete roof
+#             "ro_ins": 7,      # Default: XPS roof insulation
+#             "wwr": 0.3,       # Default: 30% window ratio
+#             "av": None,       # Will come from geometry
+#             "gfa": None       # Will come from geometry
+#         }
+        
+#         # Override with actual design data if available
+#         if "materiality" in design_data:
+#             material = design_data["materiality"]
+#             print(f"[ML DICT] Processing material: {material}")
+            
+#             material_params = mapper.map_simple_material_to_parameters(material)
+#             ml_dict.update(material_params)
+#             print(f"[ML DICT] Material parameters: {material_params}")
+        
+#         if "wwr" in design_data:
+#             ml_dict["wwr"] = design_data["wwr"]
+#             print(f"[ML DICT] WWR: {design_data['wwr']}")
+        
+#         print(f"[ML DICT] Complete dictionary with placeholders: {ml_dict}")
+#         return ml_dict
+        
+#     except Exception as e:
+#         print(f"[ML DICT] Error creating ML dictionary: {e}")
+#         return None
+
+# -- Check if GFA geometry value is available --
+# ======= [COMMENTED OUT]
+# def check_geometry_available():
+#     """Check if geometry data (GFA) exists in compiled_ml_data.json"""
+#     try:
+#         knowledge_folder = "knowledge"
+#         filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
+        
+#         if not os.path.exists(filepath):
+#             return False
+            
+#         with open(filepath, 'r') as f:
+#             ml_data = json.load(f)
+        
+#         # Check if GFA exists and is not None/0
+#         gfa = ml_data.get("gfa")
+#         return gfa is not None and gfa > 0
+        
+#     except Exception as e:
+#         print(f"[GEOMETRY CHECK] Error: {e}")
+#         return False
+
+# -- Determine next missing parameter based on current data --
+# ======= [COMMENTED OUT]
+# def determine_next_missing_parameter(design_data):
+    # Check if geometry data (GFA) is available
+    # if not check_geometry_available():
+    #     return "waiting_geometry", "I have your design parameters ready! Create a geometry in Rhino to see predictions."
+    
+    # return "complete", "Perfect! Geometry detected. Generating ML predictions..."
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                     3. Material & Parameter Intelligence                   ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# -- Detect if user is asking for material change, component-specific edit, or comparison --
 def detect_change_request(user_input):
     """Detect what type of change the user is requesting"""
     user_lower = user_input.lower()
@@ -393,6 +324,7 @@ def detect_change_request(user_input):
     
     return None
 
+# -- Apply overall material change across multiple components --
 def apply_overall_material_change(material_name):
     """Apply overall material change using MaterialMapper logic"""
     try:
@@ -413,6 +345,7 @@ def apply_overall_material_change(material_name):
         print(f"[OVERALL MATERIAL] Error: {e}")
         return f"Selected {material_name.replace('_', ' ')} material"
 
+# -- Apply material change to a specific component (e.g., only roof, only insulation) --
 def apply_component_specific_change(component, material):
     """Apply component-specific material change"""
     try:
@@ -459,6 +392,7 @@ def apply_component_specific_change(component, material):
         print(f"[COMPONENT CHANGE] Error: {e}")
         return f"Updated {component} to {material.replace('_', ' ')}"
 
+# -- Main material-change entrypoint (auto classifies and applies or answers) --
 def enhanced_handle_change_or_question(user_input, design_data):
     """Enhanced version handling both overall materials and individual components"""
     try:
@@ -503,11 +437,64 @@ def enhanced_handle_change_or_question(user_input, design_data):
         
     except Exception as e:
         print(f"Error in enhanced_handle_change_or_question: {str(e)}")
-        import traceback
         traceback.print_exc()
         # Fallback to original function
         return manage_conversation_state("active", user_input, design_data)
 
+# -- Update compiled_ml_data.json with new parameter values --
+def update_compiled_ml_data_with_changes(parameter_updates):
+    """Update compiled_ml_data.json with new parameter values"""
+    try:
+        import os
+        import json
+        from collections import OrderedDict
+        
+        ml_data_path = os.path.join("knowledge", "compiled_ml_data.json")
+        
+        # Read existing data
+        if os.path.exists(ml_data_path):
+            with open(ml_data_path, 'r') as f:
+                current_data = json.load(f)
+        else:
+            # Create default structure if file doesn't exist
+            current_data = {
+                "ew_par": 1, "ew_ins": 2, "iw_par": 1, "es_ins": 1, 
+                "is_par": 0, "ro_par": 0, "ro_ins": 7, "wwr": 0.3,
+                "av": None, "gfa": None
+            }
+        
+        # Update with new parameters
+        for param_key, param_value in parameter_updates.items():
+            current_data[param_key] = param_value
+            print(f"[ML UPDATE] {param_key}: {param_value}")
+        
+        # Maintain proper order
+        ordered_data = OrderedDict()
+        key_order = ["ew_par", "ew_ins", "iw_par", "es_ins", "is_par", "ro_par", "ro_ins", "wwr", "av", "gfa"]
+        for key in key_order:
+            ordered_data[key] = current_data.get(key, 0)
+        
+        # Write back to file
+        with open(ml_data_path, 'w') as f:
+            json.dump(ordered_data, f, indent=2)
+        
+        print(f"[ML UPDATE] Successfully updated compiled_ml_data.json")
+        return True
+        
+    except Exception as e:
+        print(f"[ML UPDATE] Error updating compiled data: {e}")
+        return False
+
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                         4. Conversation Flow & State                       ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# -- Placeholder for extracting design intent from user message --
+def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
+    """Placeholder - parameter extraction disabled for new organic flow"""
+    return {}  # This function is reserved for future parsing logic.
+
+# -- Main state manager for building up design data from user input --
 def manage_conversation_state(current_state, user_input, design_data):
     print(f"[CONVERSATION DEBUG] State: {current_state}, Input: '{user_input[:50]}...', Current data keys: {list(design_data.keys())}")
     
@@ -515,7 +502,7 @@ def manage_conversation_state(current_state, user_input, design_data):
         if not design_data:
             return "initial", "Hello! I'm your design assistant. What would you like to build today?", design_data
         else:
-            next_state, next_question = determine_next_missing_parameter(design_data)
+            next_state, next_question = "complete", "✅ Parameters received. Ready to continue!"
             return next_state, next_question, design_data
     
     extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
@@ -523,7 +510,7 @@ def manage_conversation_state(current_state, user_input, design_data):
     if extracted_params:
         design_data = merge_design_data(design_data, extracted_params)
     
-    next_state, next_question = determine_next_missing_parameter(design_data)
+    next_state, next_question = "complete", "✅ Parameters received. Ready to continue!"
     
     response_parts = []
     
@@ -552,16 +539,16 @@ def manage_conversation_state(current_state, user_input, design_data):
     
     if next_state == "complete":
         response_parts.append("🎉 Perfect! All basic parameters collected.")
-        
-        ml_dict = create_ml_dictionary(design_data)
-        if ml_dict:
-            save_success = save_ml_dictionary(ml_dict)
-            if save_success:
-                response_parts.append("✅ Material parameters ready! Geometry data will be added when you create/analyze the building geometry in Rhino.")
-            else:
-                response_parts.append("⚠️ Parameters collected but dictionary save failed.")
-        else:
-            response_parts.append("⚠️ Parameters collected but dictionary creation failed.")
+        # ======= [COMMENTED OUT] Build full ML dictionary from design_data (bring it back if we introduce weathers)=======
+        # ml_dict = create_ml_dictionary(design_data)
+        # if ml_dict:
+            # save_success = save_ml_dictionary(ml_dict)
+            # if save_success:
+            #     response_parts.append("✅ Material parameters ready! Geometry data will be added when you create/analyze the building geometry in Rhino.")
+            # else:
+            #     response_parts.append("⚠️ Parameters collected but dictionary save failed.")
+        # else:
+        #     response_parts.append("⚠️ Parameters collected but dictionary creation failed.")
     else:
         response_parts.append(next_question)
     
@@ -571,6 +558,7 @@ def manage_conversation_state(current_state, user_input, design_data):
     
     return next_state, final_response, design_data
 
+# -- Entry-point fallback for general design questions or changes --
 def handle_change_or_question(user_input, design_data):
     try:
         state, reply, updated_data = manage_conversation_state("active", user_input, design_data)
@@ -579,77 +567,22 @@ def handle_change_or_question(user_input, design_data):
         print(f"Error in handle_change_or_question: {str(e)}")
         return "active", "I'm having trouble with that. Could you try rephrasing?", design_data
 
-#NEW DEFINITION 06.06.25
-def initialize_placeholder_dictionary():
-    """Initialize compiled_ml_data.json with placeholder values"""
-    try:
-        knowledge_folder = "knowledge"
-        os.makedirs(knowledge_folder, exist_ok=True)
-        
-        filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
-        
-        # Don't overwrite if file already exists (whether it has geometry or not)
-        if os.path.exists(filepath):
-            print("[INIT] Dictionary already exists, not overwriting")
-            return True
-        
-        # Create placeholder dictionary
-        placeholder_dict = {
-            "ew_par": 1,      # Concrete walls
-            "ew_ins": 2,      # EPS insulation  
-            "iw_par": 1,      # Concrete interior walls
-            "es_ins": 1,      # XPS slab insulation
-            "is_par": 0,      # Concrete slab
-            "ro_par": 0,      # Concrete roof
-            "ro_ins": 7,      # XPS roof insulation
-            "wwr": 0.3,       # 30% windows
-            "av": None,       # Pending geometry
-            "gfa": None       # Pending geometry
-        }
-        
-        with open(filepath, 'w') as f:
-            json.dump(placeholder_dict, f, indent=2)
-        
-        print(f"[INIT] Placeholder dictionary created at {filepath}")
-        return True
-        
-    except Exception as e:
-        print(f"[INIT] Error creating placeholder dictionary: {e}")
-        return False
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                5. Versioning, Suggestions & Query Handlers                ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
 
-# ==========================================
-# PHASE 2 FUNCTIONS (César's System)
-# ==========================================
+# === Version utilities (used throughout Group 5) ===
+from utils.version_analysis_utils import (
+    # list_all_version_files, # it is already used in version_analysis_utils.py 
+    # load_specific_version, # it is already used in version_analysis_utils.py 
+    summarize_version_outputs,
+    get_best_version,
+    extract_versions_from_input,
+    summarize_versions_data,
+    load_version_details
+)
 
-#AUX FUNCTIONS 08.06.25
-
-def generate_diff_summary(before: dict, after: dict):
-    """Return a human-readable summary of parameter changes."""
-    diff = []
-    for key in before:
-        if key in after and before[key] != after[key]:
-            diff.append(f"{key}: {before[key]} → {after[key]}")
-    return "\n".join(diff) if diff else "No parameter differences detected."
-
-
-#OLD CALLS 08.06.25
-
-def query_intro():
-    """Prompt the user to ask about their design."""
-    response = client.chat.completions.create(
-        model=completion_model,
-        messages=[
-            {
-                "role": "system",
-                "content": """
-                Greet the user briefly and say: 'What would you like to know about your design?'
-                Do not include any reasoning, chain-of-thought, or <think> tags. Just respond plainly.
-                """
-            }
-        ]
-    )
-    return response.choices[0].message.content
-
+# -- Answer user questions using design inputs/outputs --
 def answer_user_query(user_query, design_data):
     """Return a precise, factual answer using available project data."""
     
@@ -710,6 +643,7 @@ def answer_user_query(user_query, design_data):
 
     return response.choices[0].message.content
 
+# -- Suggest practical, data-driven design improvements --
 def suggest_improvements(user_prompt, design_data):
     """Give 1–2 brief, practical suggestions based on the design data and SQL dataset insights."""
     design_data_json = json.dumps(design_data)
@@ -784,7 +718,7 @@ If helpful, compare with previous versions or point out changes.
 
     return response.choices[0].message.content
 
-
+# -- Convert ML parameter dictionary to readable summary for user --
 def generate_user_summary(ml_dict):
     """Turn model inputs into a readable summary"""
     material_map = {
@@ -808,8 +742,7 @@ def generate_user_summary(ml_dict):
         print(f"[SUMMARY ERROR] {e}")
         return "✅ Design updated successfully (could not summarize changes)."
 
-
-#NEW VERSION OF SUGGEST_CHANGE 08.06.25
+# -- Suggest a change and update model inputs via JSON patching --
 def suggest_change(user_prompt, design_data):
 
     # --- Prompt construction ---
@@ -876,15 +809,25 @@ def suggest_change(user_prompt, design_data):
             if not isinstance(parsed, dict):
                 raise ValueError("Parsed content is not a dictionary.")
 
+            # Fill any missing required keys
             missing = REQUIRED_KEYS - parsed.keys()
             for key in missing:
                 print(f"[VALIDATION] Missing key: {key} → filling from defaults")
                 parsed[key] = default_inputs[key]
 
+            # Prevent edits to protected fields
+            PROTECTED_KEYS = {"av", "gfa", "number_of_levels"}
+            for key in PROTECTED_KEYS:
+                if parsed.get(key) != default_inputs.get(key):
+                    print(f"[PROTECTION] Rejected LLM change to protected key: {key}")
+                    parsed[key] = default_inputs[key]
+
+            # Type casting
             for key in ["wwr", "av", "gfa"]:
                 parsed[key] = float(parsed[key]) if not isinstance(parsed[key], float) else parsed[key]
             for key in REQUIRED_KEYS - {"wwr", "av", "gfa"}:
                 parsed[key] = int(parsed[key]) if not isinstance(parsed[key], int) else parsed[key]
+
 
             return parsed
 
@@ -918,19 +861,6 @@ def suggest_change(user_prompt, design_data):
             f.write(raw_response)
         return "⚠️ I couldn't generate a valid parameter set. Please try again."
 
-    def get_last_version_data():
-        folder = "knowledge/iterations"
-        try:
-            files = [f for f in os.listdir(folder) if re.match(r"V\d+\.json", f)]
-            files.sort(key=lambda x: int(re.search(r"\d+", x).group()), reverse=True)
-            if not files:
-                return None
-            latest_path = os.path.join(folder, files[0])
-            with open(latest_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"[COMPARE] Failed to load previous version: {e}")
-            return None
 
     previous_data = get_last_version_data()
 
@@ -991,36 +921,10 @@ def suggest_change(user_prompt, design_data):
 
 
     return interpretation
-        
-
-#NEW CALLS 08.06.25
-
-def query_version_outputs():
-    """Return a brief summary of all version outputs"""
-    try:
-        versions = summarize_version_outputs()
-        summary_lines = [
-            f"{v['version']}: {v['outputs'].get('GWP total', 'N/A')} kg CO2e/m²"
-            for v in versions
-        ]
-        return "📊 Project Versions:\n" + "\n".join(summary_lines)
-    except Exception as e:
-        return f"⚠️ Could not summarize version outputs: {e}"
-
-def get_best_version_summary(metric="GWP total"):
-    """Identify the best version based on a given metric (default: GWP total)."""
-    try:
-        best_version, best_value = get_best_version(metric)
-        if best_version:
-            return f"🏆 Best version: **{best_version}** with {metric} = {best_value} kg CO2e/m²"
-        return "⚠️ No suitable version found for comparison."
-
-    except Exception as e:
-        print(f"[BEST VERSION ERROR] {e}")
-        return "⚠️ Could not determine the best version."
-
+ 
+# -- Compare specific versions and explain differences --
 def compare_versions_summary(user_input):
-    """Compare selected versions based on inputs and outputs."""
+    """Compare multiple versions based on decoded inputs and outputs, with an LLM-crafted concise summary."""
     try:
         version_names = extract_versions_from_input(user_input)
         if not version_names or len(version_names) < 2:
@@ -1030,8 +934,10 @@ def compare_versions_summary(user_input):
         if not data:
             return "⚠️ No matching data found for the specified versions."
 
+        # Build raw summary table
         response_lines = ["🔍 Version Comparison:"]
-        for version, details in data.items():
+        for version in version_names:
+            details = data.get(version, {})
             inputs = details.get("inputs_decoded", {})
             outputs = details.get("outputs", {})
             gwp = outputs.get("GWP total", "N/A")
@@ -1040,45 +946,72 @@ def compare_versions_summary(user_input):
             ec = outputs.get("Embodied Carbon A-D (kg CO2e/m²a GFA)", "N/A")
 
             response_lines.append(
-                f"\n📦 **{version}**\n"
+                f"\n📦 {version}\n"
                 f"- GWP: {gwp} kg CO2e/m²\n"
                 f"- EUI: {eui}\n"
                 f"- Operational: {oc}\n"
                 f"- Embodied A-D: {ec}"
             )
 
-                # New LLM-crafted summary
-        llm_prompt = f"""
-        You are an expert sustainability assistant. Compare the materials and performance of these two versions:
+        # Build structured prompt for LLM
+        llm_versions_info = "\n".join([
+            f"{v}:\nInputs: {json.dumps(data[v].get('inputs_decoded', {}))}\n"
+            f"Outputs: {json.dumps(data[v].get('outputs', {}))}\n"
+            for v in version_names if v in data
+        ])
 
-        Version 1:
-        Inputs: {json.dumps(data[version_names[0]].get("inputs_decoded", {}), indent=2)}
-        Outputs: {json.dumps(data[version_names[0]].get("outputs", {}), indent=2)}
+        prompt = f"""
+You are a sustainability assistant helping architects compare design alternatives.
 
-        Version 2:
-        Inputs: {json.dumps(data[version_names[1]].get("inputs_decoded", {}), indent=2)}
-        Outputs: {json.dumps(data[version_names[1]].get("outputs", {}), indent=2)}
+- Summarize the main differences across these {len(version_names)} versions.
+- Focus on GWP, materials, insulation, and energy usage.
+- Be concise and insightful. Write a single paragraph (max 3 sentences).
+- Avoid bullet points and technical jargon.
 
-        Explain the main material and performance differences. Be brief, plain, and human. Mention key differences in materials or insulation and any major shifts in operational or embodied carbon.
-        """
+{llm_versions_info}
+"""
 
         llm_response = client.chat.completions.create(
             model=completion_model,
             messages=[
-                {"role": "system", "content": llm_prompt},
-                {"role": "user", "content": f"Compare version {version_names[0]} and {version_names[1]}."}
+                {"role": "system", "content": prompt}
             ]
         )
 
-        natural_summary = llm_response.choices[0].message.content.strip()
-
-        return f"{natural_summary}\n\n🧾 Raw data:\n" + "\n".join(response_lines)
-
+        summary = llm_response.choices[0].message.content.strip()
+        return f"{summary}\n\n🧾 Raw data:\n" + "\n".join(response_lines)
 
     except Exception as e:
         print(f"[COMPARE VERSIONS ERROR] {e}")
         return "⚠️ Could not compare versions due to an internal error."
 
+# -- Return summary of all known version outputs --
+def query_version_outputs():
+    """Return a brief summary of all version outputs"""
+    try:
+        versions = summarize_version_outputs()
+        summary_lines = [
+            f"• {v['version']}: {v['outputs'].get('GWP total (kg CO2e/m²a GFA)', 'N/A')} kg CO2e/m²"
+            for v in versions
+        ]
+        return "📊 Project Versions:\n" + "\n".join(summary_lines)
+    except Exception as e:
+        return f"⚠️ Could not summarize version outputs: {e}"
+
+# -- Return best performing version based on a given metric --
+from utils.version_analysis_utils import get_best_version
+def get_best_version_summary():
+    """Return a human-readable summary of the best version based on GWP"""
+    try:
+        best, value = get_best_version(metric="GWP total (kg CO2e/m²a GFA)")
+        if best is None or value is None or value == float("inf"):
+            return "⚠️ No suitable version found for comparison."
+        return f"🏆 The best performing design is **{best}** with the lowest GWP: **{value:.2f} kg CO2e/m²a**."
+    except Exception as e:
+        print(f"[BEST VERSION SUMMARY ERROR] {e}")
+        return "❌ Error while evaluating the best performing version."
+
+# -- Return input/output details for one specific version --
 def load_version_details_summary(version_name):
     """Return decoded design inputs and outputs of a specific version"""
     try:
@@ -1092,6 +1025,7 @@ def load_version_details_summary(version_name):
     except Exception as e:
         return f"⚠️ Failed to load version {version_name}: {e}"
 
+# -- Summarize material selection in a specific version --
 def summarize_version_materials(version_name):
     try:
         from utils.version_analysis_utils import load_version_details
@@ -1113,44 +1047,28 @@ def summarize_version_materials(version_name):
         print(f"[VERSION MATERIALS] Error: {e}")
         return f"⚠️ Could not retrieve materials for {version_name}"
 
+# -- Optional helper: generate diff summary for raw param dicts --
+def generate_diff_summary(before: dict, after: dict):
+    """Return a human-readable summary of parameter changes."""
+    diff = []
+    for key in before:
+        if key in after and before[key] != after[key]:
+            diff.append(f"{key}: {before[key]} → {after[key]}")
+    return "\n".join(diff) if diff else "No parameter differences detected."
 
-# ==========================================
-# DYNAMIC GREETING
-# ==========================================
-
-#NEW FUNCTION 07.06.25
-# Add this function to your llm_calls.py file if it doesn't exist:
-
-def generate_dynamic_greeting():
-    """Generate a varied, engaging greeting for the design assistant"""
+# -- Optional helper: get latest saved version data (V*.json) --
+def get_last_version_data():
+    folder = "knowledge/iterations"
     try:
-        print("[GREETING] Starting dynamic greeting generation...")
-        
-        response = client.chat.completions.create(
-            model=completion_model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": """
-                    You are a friendly architectural design assistant. Generate a brief, welcoming greeting that:
-                    - Is warm and engaging
-                    - Mentions sustainable design or architecture
-                    - Varies each time (don't be repetitive)
-                    - Is 1-2 sentences maximum
-                    
-                    Generate a unique, engaging greeting now.
-                    """
-                }
-            ],
-            timeout=50.0  # 30 second timeout
-        )
-        
-        greeting = response.choices[0].message.content.strip()
-        print(f"[GREETING] Generated: {greeting}")
-        return greeting
-        
+        files = [f for f in os.listdir(folder) if re.match(r"V\d+\.json", f)]
+        files.sort(key=lambda x: int(re.search(r"\d+", x).group()), reverse=True)
+        if not files:
+            return None
+        latest_path = os.path.join(folder, files[0])
+        with open(latest_path, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        print(f"[GREETING] Error: {e}")
-        import traceback
-        traceback.print_exc()
-        raise e  # Don't return fallback, raise error instead
+        print(f"[COMPARE] Failed to load previous version: {e}")
+        return None
+
+
