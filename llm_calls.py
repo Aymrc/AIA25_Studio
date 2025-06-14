@@ -1057,18 +1057,18 @@ def generate_diff_summary(before: dict, after: dict):
     return "\n".join(diff) if diff else "No parameter differences detected."
 
 # -- Optional helper: get latest saved version data (V*.json) --
-    def get_last_version_data():
-        folder = "knowledge/iterations"
-        try:
-            files = [f for f in os.listdir(folder) if re.match(r"V\d+\.json", f)]
-            files.sort(key=lambda x: int(re.search(r"\d+", x).group()), reverse=True)
-            if not files:
-                return None
-            latest_path = os.path.join(folder, files[0])
-            with open(latest_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"[COMPARE] Failed to load previous version: {e}")
+def get_last_version_data():
+    folder = "knowledge/iterations"
+    try:
+        files = [f for f in os.listdir(folder) if re.match(r"V\d+\.json", f)]
+        files.sort(key=lambda x: int(re.search(r"\d+", x).group()), reverse=True)
+        if not files:
             return None
+        latest_path = os.path.join(folder, files[0])
+        with open(latest_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[COMPARE] Failed to load previous version: {e}")
+        return None
 
 
