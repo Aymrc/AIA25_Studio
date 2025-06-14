@@ -13,7 +13,7 @@ from pathlib import Path
 import socket
 import subprocess
 import re
-
+from utils.embeddings import classify_intent_via_embeddings
 
 # Try to import watchdog for file monitoring
 try:
@@ -114,49 +114,6 @@ def start_file_watcher():
         print(f"⚠️ Could not start file watcher: {e}")
         return None
 
-#classify_intent(): Determines user intent using rules or falls back to the LLM.
-def classify_intent(user_input):
-    """Hybrid intent classification: use rules first, fallback to LLM if needed."""
-    input_lower = user_input.lower()
-
-    # Step 1: Fast rule-based matches
-    if any(word in input_lower for word in ["gwp", "carbon", "embodied", "emissions"]):
-        return "carbon_query"
-    if any(word in input_lower for word in ["optimize", "reduce", "improve", "suggest"]):
-        return "improvement_suggestion"
-    if any(word in input_lower for word in ["switch", "change", "update", "replace", "use"]):
-        return "design_change"
-    if any(word in input_lower for word in ["versions", "compare", "history", "gwp history", "best version"]):
-        return "version_query"
-
-    # Step 2: Fallback to LLM if unclear
-    try:
-        intent_prompt = f"""
-You are an intent classifier for an architectural design assistant.
-
-Classify the following user message into one of:
-- carbon_query
-- improvement_suggestion
-- design_change
-- general_query
-
-Message: "{user_input}"
-Only return the label.
-"""
-        from llm_calls import client, completion_model
-        response = client.chat.completions.create(
-            model=completion_model,
-            messages=[{"role": "system", "content": intent_prompt}]
-        )
-        label = response.choices[0].message.content.strip().lower()
-        if label in ["carbon_query", "improvement_suggestion", "design_change", "general_query"]:
-            return label
-        return "general_query"
-
-    except Exception as e:
-        print(f"[INTENT HYBRID ERROR] {e}")
-        return "general_query"
-
 #ChatRequest: Data model for receiving chat messages via POST.
 class ChatRequest(BaseModel):
     message: str
@@ -181,8 +138,10 @@ def chat_endpoint(req: ChatRequest):
         print("🔍 Starting ML analysis pipeline...")
 
         # Classify intent
-        intent = classify_intent(user_input)
-        print(f"🔍 Intent classified as: {intent}")
+        from utils.embeddings import classify_intent_via_embeddings
+
+        intent, score = classify_intent_via_embeddings(user_input)
+        print(f"[🔎 EMBEDDING INTENT] → {intent} (score={score:.4f})")
 
         # Get current design data
         design_data = conversation_state.get("design_data", {})
