@@ -199,8 +199,10 @@ def chat_endpoint(req: ChatRequest):
             response = llm_calls.suggest_change(user_input, comprehensive_data)
         elif intent == "version_query":
             versions = re.findall(r"\bv\d+\b", user_input.lower())
+
             if len(versions) >= 2:
                 response = llm_calls.compare_versions_summary(user_input)
+
             elif len(versions) == 1:
                 version_name = versions[0].upper()
                 material_keywords = ["material", "materials", "partition", "insulation", "wall", "roof", "slab"]
@@ -208,10 +210,49 @@ def chat_endpoint(req: ChatRequest):
                     response = llm_calls.summarize_version_materials(version_name)
                 else:
                     response = llm_calls.load_version_details_summary(version_name)
-            elif "best" in user_input.lower():
-                response = llm_calls.get_best_version_summary()
+
             else:
-                response = llm_calls.query_version_outputs()
+                # Subintent detection via embeddings
+                subintent_examples = {
+                    "list_versions": [
+                        "list all versions",
+                        "show saved iterations",
+                        "version history",
+                        "show project versions",
+                        "summarize saved versions",
+                        "which designs do we have"
+                    ],
+                    "best_version": [
+                        "which version is most sustainable",
+                        "what design performs best",
+                        "lowest GWP",
+                        "best performing design",
+                        "most efficient iteration",
+                        "top sustainability version",
+                        "preferred version",
+                        "lowest carbon footprint version",
+                        "which version is the greenest"
+                    ],
+                    "version_summary": [
+                        "what are the saved versions",
+                        "summarize designs",
+                        "overview of versions",
+                        "available iterations",
+                        "give me a version summary"
+                    ]
+                }
+
+                subintent, score = classify_intent_via_embeddings(user_input, subintent_examples)
+                print(f"[🔎 SUBINTENT via EMBEDDINGS] → {subintent} (score={score:.4f})")
+
+                if subintent == "best_version":
+                    response = llm_calls.get_best_version_summary()
+                elif subintent in ["list_versions", "version_summary"]:
+                    response = llm_calls.query_version_outputs()
+                else:
+                    # fallback
+                    response = llm_calls.query_version_outputs()
+       
         else:
             response = llm_calls.answer_user_query(user_input, comprehensive_data)
 
