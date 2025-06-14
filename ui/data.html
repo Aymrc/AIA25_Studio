@@ -127,32 +127,38 @@
 				}
 				loadTableData();
 
-				setInterval(loadTableData, 3000); // 3 sec check
+				setInterval(loadTableData, 2000); // 2 sec check
 			</script>
 			
 
 			<div class="trendModel3D">
 				<h3>3D model GWP trend</h3><div id="gwp-change-label" style="font-size: 0.9em;"></div>
 				<script>
-					fetch("http://127.0.0.1:5001/api/gwp_change")
-						.then(res => res.json())
-						.then(data => {
-							const label = document.getElementById("gwp-change-label");
+					function fetchGWPChange() {
+						fetch("http://127.0.0.1:5001/api/gwp_change")
+							.then(res => res.json())
+							.then(data => {
+								const label = document.getElementById("gwp-change-label");
 
-							if (data.percent_change !== undefined) {
-							const change = data.percent_change;
-							const sign = change > 0 ? "+" : "";
-							const color = change > 0 ? "red" : "green";
-							const arrow = change > 0 ? "▲" : "▼";
+								if (data.percent_change !== undefined) {
+								const change = data.percent_change;
+								const sign = change > 0 ? "+" : "";
+								const color = change > 0 ? "red" : "green";
+								const arrow = change > 0 ? "▲" : "▼";
 
-							label.innerHTML = `<span style="color: ${color}; font-weight: bold;">${arrow} ${sign}${change}%</span> vs last model`;
-							} else {
-							label.textContent = "No change data available";
-							}
-						})
-						.catch(err => {
-							console.error("Error fetching GWP change:", err);
-						});
+								label.innerHTML = `<span style="color: ${color}; font-weight: bold;">${arrow} ${sign}${change}%</span> vs previous 3D`;
+								} else {
+								label.textContent = "No change data available";
+								}
+							})
+							.catch(err => {
+								console.error("Error fetching GWP change:", err);
+							});
+					}
+
+					fetchGWPChange();
+
+					setInterval(fetchGWPChange, 1500); // every 1.5 seconds
 				</script>
 			</div>
 			
