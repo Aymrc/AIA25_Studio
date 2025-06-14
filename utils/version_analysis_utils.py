@@ -11,7 +11,7 @@ from server.config import client, completion_model
 def list_all_version_files(folder="knowledge/iterations"):
     """Return a sorted list of all version filenames (e.g., V0.json … V19.json)"""
     try:
-        files = [f for f in os.listdir(folder) if re.match(r"V\d+\\.json", f)]
+        files = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
         return sorted(files, key=lambda x: int(re.search(r"\d+", x).group()))
     except Exception as e:
         print(f"[VERSION LIST] Error: {e}")

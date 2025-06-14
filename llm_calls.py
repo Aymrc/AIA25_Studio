@@ -989,7 +989,7 @@ def query_version_outputs():
     try:
         versions = summarize_version_outputs()
         summary_lines = [
-            f"{v['version']}: {v['outputs'].get('GWP total', 'N/A')} kg CO2e/m²"
+            f"• {v['version']}: {v['outputs'].get('GWP total (kg CO2e/m²a GFA)', 'N/A')} kg CO2e/m²"
             for v in versions
         ]
         return "📊 Project Versions:\n" + "\n".join(summary_lines)
