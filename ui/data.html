@@ -167,16 +167,55 @@
 			<div class="plotGWP">
 				<h3>Sustainability Trend</h3>
 
-				<label for="metricSelect">Select Metric:</label>
-				<select id="metricSelect">
-					<option value="GWP total (kg CO2e/m²a GFA)">GWP total</option>
-					<option value="Operational Carbon (kg CO2e/m²a GFA)">Op. Carbon</option>
-					<option value="Embodied Carbon A-D (kg CO2e/m²a GFA)">EC A-D</option>
-					<option value="Energy Intensity - EUI (kWh/m²a)">EUI</option>
-					<option value="Cooling Demand (kWh/m²a)">Cooling</option>
-					<option value="Heating Demand (kWh/m²a)">Heating</option>
-				</select>
+				<!-- TAB LINKS -->
+				<div class="tab">
+					<button class="tablinks active"
+							data-metric="GWP total (kg CO2e/m²a GFA)"
+							onclick="openMetric(event)">
+					GWP total
+					</button>
+					<button class="tablinks"
+							data-metric="Operational Carbon (kg CO2e/m²a GFA)"
+							onclick="openMetric(event)">
+					Op. Carbon
+					</button>
+					<button class="tablinks"
+							data-metric="Embodied Carbon A-D (kg CO2e/m²a GFA)"
+							onclick="openMetric(event)">
+					EC A-D
+					</button>
+					<button class="tablinks"
+							data-metric="Energy Intensity - EUI (kWh/m²a)"
+							onclick="openMetric(event)">
+					EUI
+					</button>
+					<button class="tablinks"
+							data-metric="Cooling Demand (kWh/m²a)"
+							onclick="openMetric(event)">
+					Cooling
+					</button>
+					<button class="tablinks"
+							data-metric="Heating Demand (kWh/m²a)"
+							onclick="openMetric(event)">
+					Heating
+					</button>
+				</div>
+				<!-- js for tabs event -->
+				<script>
+					function openMetric(evt) {
+						// deactivate all buttons
+						document.querySelectorAll('.tab button').forEach(btn =>
+							btn.classList.remove('active')
+						);
+						// activate clicked only
+						const btn = evt.currentTarget;
+						btn.classList.add('active');
 
+						// retrieve the metric from data-metric
+						const metric = btn.getAttribute('data-metric');
+						plotMetric(metric);
+					}
+				</script>
 
 				<div id="gwp-plot"></div>
 			</div>
@@ -272,7 +311,6 @@
 			<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
 			<script>
 				window.addEventListener("load", () => {
-					const select = document.getElementById("metricSelect");
 					const plotContainer = document.getElementById("gwp-plot");
 
 					const displayNames = {
@@ -395,8 +433,13 @@
 									plotContainer.innerText = "No data received from server.";
 									return;
 								}
+
 								window.gwpData = data;
-								plotMetric(select.value);
+								const activeMetric = document
+								.querySelector('.tab button.active')
+								.getAttribute('data-metric');
+
+								plotMetric(activeMetric);
 							})
 							.catch(err => {
 								console.warn(`Fetch failed (${retries} retries left):`, err);
@@ -410,13 +453,6 @@
 
 					// Initial load
 					tryFetchGWPData();
-
-					// Replot when user changes metric
-					select.addEventListener("change", () => {
-						if (window.gwpData) {
-							plotMetric(select.value);
-						}
-					});
 
 					// Auto-refresh every 2 seconds with new data
 					setInterval(() => {
