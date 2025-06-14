@@ -999,17 +999,17 @@ def query_version_outputs():
         return f"⚠️ Could not summarize version outputs: {e}"
 
 # -- Return best performing version based on a given metric --
-def get_best_version_summary(metric="GWP total"):
-    """Identify the best version based on a given metric (default: GWP total)."""
+from utils.version_analysis_utils import get_best_version
+def get_best_version_summary():
+    """Return a human-readable summary of the best version based on GWP"""
     try:
-        best_version, best_value = get_best_version(metric)
-        if best_version:
-            return f"🏆 Best version: **{best_version}** with {metric} = {best_value} kg CO2e/m²"
-        return "⚠️ No suitable version found for comparison."
-
+        best, value = get_best_version(metric="GWP total (kg CO2e/m²a GFA)")
+        if best is None or value is None or value == float("inf"):
+            return "⚠️ No suitable version found for comparison."
+        return f"🏆 The best performing design is **{best}** with the lowest GWP: **{value:.2f} kg CO2e/m²a**."
     except Exception as e:
-        print(f"[BEST VERSION ERROR] {e}")
-        return "⚠️ Could not determine the best version."
+        print(f"[BEST VERSION SUMMARY ERROR] {e}")
+        return "❌ Error while evaluating the best performing version."
 
 # -- Return input/output details for one specific version --
 def load_version_details_summary(version_name):
