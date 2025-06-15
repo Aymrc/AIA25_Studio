@@ -309,157 +309,6 @@
 
 			<!-- js for plotly -->
 			<script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
-			<!-- <script>
-				window.addEventListener("load", () => {
-					const plotContainer = document.getElementById("gwp-plot");
-
-					const displayNames = {
-						"GWP total (kg CO2e/m²a GFA)": "GWP total",
-						"Operational Carbon (kg CO2e/m²a GFA)": "Op. Carbon",
-						"Embodied Carbon A-D (kg CO2e/m²a GFA)": "EC A-D",
-						"Energy Intensity - EUI (kWh/m²a)": "EUI",
-						"Cooling Demand (kWh/m²a)": "Cooling",
-						"Heating Demand (kWh/m²a)": "Heating"
-					};
-
-					function plotMetric(metricName) {
-						const data = window.gwpData || [];
-
-						const filtered = data
-						.filter(d =>
-							d.outputs && typeof d.outputs[metricName] === "number" && !isNaN(d.outputs[metricName])
-						)
-						.sort((a, b) => {
-							const numA = parseInt(a.version.replace("V", ""));
-							const numB = parseInt(b.version.replace("V", ""));
-							return numA - numB;
-						});
-
-						console.log("Selected metric:", metricName);
-						console.log("Filtered data:", filtered);
-
-						const x = filtered.map(d => d.version);
-						const y = filtered.map(d => d.outputs[metricName]);
-
-						if (x.length === 0 || y.length === 0) {
-							plotContainer.innerText = "No valid data to display.";
-							return;
-						}
-
-						const min = Math.min(...y);
-						const max = Math.max(...y);
-						const minIndex = y.indexOf(min);
-						const maxIndex = y.indexOf(max);
-						const shortName = displayNames[metricName] || metricName;
-
-						const trace = {
-							x,
-							y,
-							type: 'scatter',
-							mode: 'markers',
-							marker: {
-								size: 10,
-								color: y,
-								colorscale: [
-									[0, 'da70d6'],
-									[0.5, 'ffd700'],
-									[1, 'add8e6']
-								],
-								reversescale: true,
-								cmin: min,
-								cmax: max,
-								colorbar: {
-									title: {
-										text: "", // shortName
-										font: { size: 12 }
-									},
-									thickness: 15,
-									tickvals: [min, max], // remove those 3 next lines to get legend's ticks again
-									ticktext: ["Best", "Worst"], 
-									tickmode: "array"
-								}
-							},
-							hovertemplate: `Version: %{x}<br>${shortName}: %{y}<extra></extra>`
-						};
-
-						const layout = {
-							title: `${shortName} per Design Iteration`,
-							xaxis: {
-								title: 'Version',
-								tickmode: 'linear',
-								fixedrange: false
-							},
-							yaxis: {
-								title: shortName,
-								range: [0, max + 20],
-								fixedrange: false
-							},
-							dragmode: 'pan',
-							margin: { t: 40, b: 40 },
-							annotations: [
-								{
-									x: x[minIndex], // highlithg the best iteration
-									y: min,
-									text: "🌿", //"Best"
-									showarrow: false,
-									yshift: -20, // -15
-									font: { color: 'add8e6', size: 20 } // 12
-								},
-								{
-									x: x[maxIndex], // highlight the worst iteration
-									y: max,
-									text: "",
-									showarrow: false,
-									yshift: -15,
-									font: { color: 'red', size: 12 }
-								}
-							],
-							paper_bgcolor: "#f3f3f3",
-							plot_bgcolor: "#ffffff",
-							font: {
-								color: "#727272"
-							}
-						};
-
-						Plotly.newPlot(plotContainer, [trace], layout);
-					}
-
-					function tryFetchGWPData(retries = 5, delay = 1000) {
-						fetch("http://127.0.0.1:5001/api/gwp_data")
-							.then(res => res.json())
-							.then(data => {
-								console.log("Fetched gwpData:", data);
-								if (!Array.isArray(data) || data.length === 0) {
-									plotContainer.innerText = "No data received from server.";
-									return;
-								}
-
-								window.gwpData = data;
-								const activeMetric = document
-								.querySelector('.tab button.active')
-								.getAttribute('data-metric');
-
-								plotMetric(activeMetric);
-							})
-							.catch(err => {
-								console.warn(`Fetch failed (${retries} retries left):`, err);
-								if (retries > 0) {
-									setTimeout(() => tryFetchGWPData(retries - 1, delay), delay);
-								} else {
-									plotContainer.innerText = "Failed to connect to server.";
-								}
-							});
-					}
-
-					// Initial load
-					tryFetchGWPData();
-
-					// Auto-refresh every 2 seconds with new data
-					setInterval(() => {
-						tryFetchGWPData();
-					}, 2000);
-				});
-			</script> -->
 			<script>
 				window.addEventListener("load", () => {
 				const plotContainer = document.getElementById("gwp-plot");
@@ -529,7 +378,85 @@
 					Plotly.newPlot(plotContainer, [trace], layout);
 				}
 
-				// New stacked bar for GWP total
+
+
+				// // New stacked bar for "GWP total"
+				// function plotGWPStackedBar() {
+				// 	const data = (window.gwpData || [])
+				// 		.sort((a,b) => parseInt(a.version.slice(1)) - parseInt(b.version.slice(1)));
+
+				// 	const versions = data.map(d => d.version);
+				// 	const a13 = data.map(d => d.outputs["Embodied Carbon A1-A3 (kg CO2e/m²a GFA)"] || 0);
+				// 	const ad  = data.map(d => d.outputs["Embodied Carbon A-D (kg CO2e/m²a GFA)"]   || 0);
+
+				// 	// Compute A4–D as AD minus A1–A3
+				// 	const a4d = ad.map((val, i) => val - a13[i]);
+
+				// 	const traceA13 = {
+				// 		x: versions,
+				// 		y: a13,
+				// 		name: 'Embodied A1–A3',
+				// 		type: 'bar',
+				// 		showlegend: true,
+				// 		marker: {
+				// 			color: a13, // one color‐value per bar
+				// 			colorscale: [ // custom gradient to update
+				// 			[0, 'da70d6'],
+				// 			[0.5, 'ffd700'],
+				// 			[1, 'add8e6']
+				// 			],
+				// 			cmin: Math.min(...a13),
+				// 			cmax: Math.max(...a13),
+				// 			reversescale: true,
+				// 			colorbar: {
+				// 			title: 'A1–A3',
+				// 			thickness: 15,
+				// 			tickmode: 'array',
+				// 			tickvals: [Math.min(...a13), Math.max(...a13)],
+				// 			ticktext: ['Best','Worst']
+				// 			}
+				// 		}
+				// 	};
+				// 	const traceA4D = {
+				// 		x: versions,
+				// 		y: a4d,
+				// 		name: 'Embodied A4–D',
+				// 		type: 'bar',
+				// 		showlegend: true,
+				// 		marker: {
+				// 			color: 'rgba(0,0,0,0)',
+				// 			pattern: {
+				// 			shape: '/', // pattern
+				// 			size: 4, // space between
+				// 			solidity: 0.2, // thickness of the line
+				// 			fgcolor: 'grey'
+				// 			}
+				// 		}
+				// 	};
+
+				// 	const layout = {
+				// 		barmode: 'stack',
+				// 		title: 'Embodied Carbon Breakdown per Iteration',
+				// 		xaxis: { title: 'Version' },
+				// 		yaxis: { title: 'kg CO₂e/m²a GFA' },
+				// 		paper_bgcolor: '#f3f3f3',
+				// 		plot_bgcolor: '#ffffff',
+				// 		font: { color: '#727272' },
+				// 		legend: {
+				// 			orientation: 'h',
+				// 			x: 0.5,
+				// 			y: 1.15,
+				// 			xanchor: 'center',
+				// 			font: { size: 12 }
+				// 		}
+				// 	};
+
+				// 	Plotly.newPlot(plotContainer, [ traceA13, traceA4D ], layout);
+				// }
+
+
+
+				// New stacked bar for "GWP total"
 				function plotGWPStackedBar() {
 					const data = (window.gwpData || [])
 						.sort((a,b) => parseInt(a.version.slice(1)) - parseInt(b.version.slice(1)));
@@ -537,54 +464,124 @@
 					const versions = data.map(d => d.version);
 					const a13 = data.map(d => d.outputs["Embodied Carbon A1-A3 (kg CO2e/m²a GFA)"] || 0);
 					const ad  = data.map(d => d.outputs["Embodied Carbon A-D (kg CO2e/m²a GFA)"]   || 0);
-
-					// Compute A4–D as AD minus A1–A3
 					const a4d = ad.map((val, i) => val - a13[i]);
+					const total = ad;
 
+
+					function mapValueToColor(value, min, max) { // manual gradient for "total" marker
+						const percent = (value - min) / (max - min);
+						const p = Math.max(0, Math.min(1, percent));
+
+						if (p < 0.5) {
+							return interpolateColor('#add8e6', '#ffd700', p * 2);
+						} else {
+							return interpolateColor('#ffd700', '#da70d6', (p - 0.5) * 2);
+						}
+					}
+
+					// Utility: hex color interpolation
+					function interpolateColor(hex1, hex2, t) {
+						const c1 = hexToRgb(hex1);
+						const c2 = hexToRgb(hex2);
+						const r = Math.round(c1.r + (c2.r - c1.r) * t);
+						const g = Math.round(c1.g + (c2.g - c1.g) * t);
+						const b = Math.round(c1.b + (c2.b - c1.b) * t);
+						return `rgb(${r},${g},${b})`;
+					}
+
+					function hexToRgb(hex) {
+						const bigint = parseInt(hex.replace('#', ''), 16);
+						return {
+							r: (bigint >> 16) & 255,
+							g: (bigint >> 8) & 255,
+							b: bigint & 255
+						};
+					}
+
+
+					// A1–A3 bars
 					const traceA13 = {
 						x: versions,
 						y: a13,
-						name: 'Embodied A1–A3',
+						name: 'A1–A3',
 						type: 'bar',
-						showlegend: true,
+						offsetgroup: 0,
 						marker: {
-							color: a13,                     // one color‐value per bar
-							colorscale: [                   // your custom scale
-							[0, 'da70d6'],
-							[0.5, 'ffd700'],
-							[1, 'add8e6']
-							],
-							cmin: Math.min(...a13),
-							cmax: Math.max(...a13),
-							reversescale: true,
-							colorbar: {
-							title: 'A1–A3',
-							thickness: 15,
-							tickmode: 'array',
-							tickvals: [Math.min(...a13), Math.max(...a13)],
-							ticktext: ['Best','Worst']
-							}
+							color: '#CDCCCC'
 						}
 					};
+
+					// A4–D bars
 					const traceA4D = {
 						x: versions,
 						y: a4d,
-						name: 'Embodied A4–D',
+						name: 'A4–D',
 						type: 'bar',
-						showlegend: true,
+						offsetgroup: 1,
+						// marker: {
+						// 	color: '#E5E5E5'
+						// }
 						marker: {
-							color: 'rgba(0,0,0,0)',
+							color: '#E5E5E5',
 							pattern: {
-							shape: '/', // pattern
-							size: 4, // space between
-							solidity: 0.2, // thickness of the line
-							fgcolor: 'grey'
+								shape: '/',
+								size: 5, // space between
+								solidity: 0.3, // thickness
+								fgcolor: '#999999'
 							}
 						}
 					};
 
+					// const minTotal = Math.min(...total);
+					// const maxTotal = Math.max(...total);
+					// const totalColors = total.map(val => mapValueToColor(val, minTotal, maxTotal));
+					// // Total markers
+					// const traceTotal = {
+					// 	x: versions,
+					// 	y: total,
+					// 	name: 'Total (A–D)',
+					// 	type: 'scatter',
+					// 	mode: 'markers',
+					// 	marker: {
+					// 		symbol: 'line-ew',
+					// 		size: 20,
+					// 		line: {
+					// 			width: 3,
+					// 			color: totalColors
+					// 		}
+					// 	},
+					// 	showlegend: true
+					// };
+					const traceTotal = {
+						x: versions,
+						y: total,
+						name: 'Total A–D',
+						type: 'scatter',
+						mode: 'markers',
+						marker: {
+							color: total,  // <-- numeric array
+							colorscale: [
+								[0, '#add8e6'],
+								[0.5, '#ffd700'],
+								[1, '#da70d6']
+							],
+							cmin: Math.min(...total),
+							cmax: Math.max(...total),
+							reversescale: false,
+							symbol: '.',
+							size: 10,
+							colorbar: {
+								title: '', //'Total A–D'
+								tickvals: [Math.min(...total), Math.max(...total)],
+								ticktext: ['Best', 'Worst'],
+								thickness: 15
+							}
+						},
+						showlegend: true
+					};
+
 					const layout = {
-						barmode: 'stack',
+						barmode: 'group',
 						title: 'Embodied Carbon Breakdown per Iteration',
 						xaxis: { title: 'Version' },
 						yaxis: { title: 'kg CO₂e/m²a GFA' },
@@ -600,8 +597,10 @@
 						}
 					};
 
-					Plotly.newPlot(plotContainer, [ traceA13, traceA4D ], layout);
+					Plotly.newPlot(plotContainer, [ traceA13, traceA4D, traceTotal], layout);
 				}
+
+
 
 
 				// Fetch & redraw
@@ -627,6 +626,7 @@
 						}
 					});
 				}
+
 
 				// kick off and repeat
 				tryFetchGWPData();
