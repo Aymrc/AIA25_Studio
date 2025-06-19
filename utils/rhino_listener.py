@@ -22,47 +22,51 @@ is_running = False
 listener_active = True
 
 def capture_viewport(version_name, output_folder):
-    Rhino.RhinoApp.WriteLine("\ud83d\udcf8 Starting USER VIEW capture for: {}".format(version_name))
+    import Rhino
+    import scriptcontext as sc
+    import System
+    import System.Drawing
+    import os
+
+    version_name = version_name.strip().split()[0]
+    Rhino.RhinoApp.WriteLine("[📸] Starting USER VIEW capture for: {}".format(version_name))
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-        Rhino.RhinoApp.WriteLine("\ud83d\udcc1 Created folder: {}".format(output_folder))
+        Rhino.RhinoApp.WriteLine("[📁] Created folder: {}".format(output_folder))
 
     filepath = os.path.join(output_folder, "{}_user.png".format(version_name))
-    Rhino.RhinoApp.WriteLine("\ud83d\uddbc\ufe0f Saving to: {}".format(filepath))
+    Rhino.RhinoApp.WriteLine("[💾] Saving to: {}".format(filepath))
 
     try:
-        rs.CurrentView("Perspective")
-        rs.ViewDisplayMode("Perspective", "Shaded")
-        sc.doc.Views.ActiveView.Redraw()
-
-        view = sc.doc.Views.ActiveView
+        view = sc.doc.Views.Find("Perspective", False)
         if not view:
-            Rhino.RhinoApp.WriteLine("\u274c No active view found.")
+            Rhino.RhinoApp.WriteLine("[⚠️] 'Perspective' view not found. Using ActiveView instead.")
+            view = sc.doc.Views.ActiveView
+
+        if not isinstance(view, Rhino.Display.RhinoView):
+            Rhino.RhinoApp.WriteLine("[❌] Invalid view type: {}".format(type(view)))
             return
 
+        view.Redraw()
         size = view.ActiveViewport.Size
-        Rhino.RhinoApp.WriteLine("\ud83d\udd0d View size: {} x {}".format(size.Width, size.Height))
+        width, height = size.Width, size.Height
+        Rhino.RhinoApp.WriteLine("[ℹ️] Viewport size: {} x {}".format(width, height))
 
-        capture = Rhino.Display.ViewCapture()
-        capture.Width = size.Width
-        capture.Height = size.Height
-        capture.ScaleScreenItems = False
-        capture.DrawAxes = False
-        capture.DrawGrid = False
-        capture.DrawGridAxes = False
-        capture.TransparentBackground = False
-        capture.View = view
+        # Use only attributes known to work in IronPython + Rhino 8
+        settings = Rhino.Display.ViewCaptureSettings(view, System.Drawing.Size(width, height), 96)
 
-        bitmap = capture.CaptureToBitmap()
+        bitmap = Rhino.Display.ViewCapture.CaptureToBitmap(settings)
         if bitmap:
             bitmap.Save(filepath)
-            Rhino.RhinoApp.WriteLine("\u2705 Viewport saved: {}".format(filepath))
+            Rhino.RhinoApp.WriteLine("[✅] Image saved: {}".format(filepath))
         else:
-            Rhino.RhinoApp.WriteLine("\u274c Failed to capture bitmap.")
+            Rhino.RhinoApp.WriteLine("[❌] Bitmap capture returned None.")
 
     except Exception as e:
-        Rhino.RhinoApp.WriteLine("\u274c Exception while capturing view: {}".format(e))
+        Rhino.RhinoApp.WriteLine("[🚨] Exception during capture: {}".format(e))
+
+
 
 # === POST METRICS ===
 def post_json(url, data):
