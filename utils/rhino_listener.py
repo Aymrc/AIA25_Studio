@@ -108,6 +108,20 @@ def show_capture_dialog(show_ui=False):
             except Exception as e:
                 self.label.Text = "Capture error: {}".format(e)
 
+
+            # ➕ Save 3DM file
+            try:
+                model_path = os.path.join(base_dir, "knowledge", "iterations", "{}.3dm".format(version_id))
+                opts = Rhino.FileIO.FileWriteOptions()
+                doc = Rhino.RhinoDoc.ActiveDoc
+                success = doc.Write3dmFile(model_path, opts)
+                if success:
+                    Rhino.RhinoApp.WriteLine("✔️ .3dm file saved: {}".format(model_path))
+                else:
+                    Rhino.RhinoApp.WriteLine("❌ Failed to save .3dm file.")
+            except Exception as e:
+                Rhino.RhinoApp.WriteLine("❌ Error saving .3dm file: {}".format(e))
+
         def on_close(self, sender, e):
             self.Close(True if self.image_view.Image else False)
 
@@ -143,7 +157,18 @@ def show_capture_dialog(show_ui=False):
         except Exception as e:
             Rhino.RhinoApp.WriteLine("Image capture error: {}".format(e))
 
-
+        # ➕ Save 3DM file (headless mode)
+        try:
+            model_path = os.path.join(base_dir, "knowledge", "iterations", "{}.3dm".format(version_id))
+            opts = Rhino.FileIO.FileWriteOptions()
+            doc = Rhino.RhinoDoc.ActiveDoc
+            success = doc.Write3dmFile(model_path, opts)
+            if success:
+                Rhino.RhinoApp.WriteLine("✔️ .3dm file saved: {}".format(model_path))
+            else:
+                Rhino.RhinoApp.WriteLine("❌ Failed to save .3dm file.")
+        except Exception as e:
+            Rhino.RhinoApp.WriteLine("❌ Error saving .3dm file: {}".format(e))
 
 
 # def capture_viewport(version_name, output_folder):

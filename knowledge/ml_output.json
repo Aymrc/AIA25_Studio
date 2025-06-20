@@ -1,6 +1,6 @@
 {
-    "version": "V9",
-    "timestamp": "2025-06-20T16:01:13.080151",
+    "version": "V11",
+    "timestamp": "2025-06-20T17:45:08.132101",
     "inputs_raw": {
         "Ext.Wall_Partition": 1,
         "Ext.Wall_Insulation": 0,
@@ -10,8 +10,8 @@
         "Roof_Partition": 0,
         "Roof_Insulation": 7,
         "Window-to-Wall_Ratio": 0.3,
-        "Compactness": 0.34465,
-        "Gross-Floor-Area": 3017.015
+        "Compactness": 0.29283,
+        "Gross-Floor-Area": 3107.082
     },
     "inputs_decoded": {
         "Ext.Wall_Partition": "Concrete",
@@ -22,8 +22,8 @@
         "Roof_Partition": "Concrete",
         "Roof_Insulation": "XPS",
         "Window-to-Wall_Ratio": 0.3,
-        "Compactness": 0.34465,
-        "Gross-Floor-Area": 3017.015
+        "Compactness": 0.29283,
+        "Gross-Floor-Area": 3107.082
     },
     "outputs": {
         "Energy Intensity - EUI (kWh/m²a)": 235.71,
