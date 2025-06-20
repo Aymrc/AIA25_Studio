@@ -124,7 +124,7 @@ class ChatRequest(BaseModel):
 def export_report():
     try:
         result = subprocess.run(
-            ["python", "utils/export.py"],  # asegúrate que la ruta es correcta
+            ["python", "utils/export.py"],
             capture_output=True,
             text=True,
             check=True
