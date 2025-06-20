@@ -118,7 +118,22 @@ def start_file_watcher():
 class ChatRequest(BaseModel):
     message: str
 
-#chat_endpoint(): Main chat handler that routes user input to the appropriate LLM function using ML data.
+
+# export report endpoint
+@app.post("/api/export_report")
+def export_report():
+    try:
+        result = subprocess.run(
+            ["python", "utils/export.py"],  # asegúrate que la ruta es correcta
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return {"status": "success", "message": result.stdout}
+    except subprocess.CalledProcessError as e:
+        return {"status": "error", "message": e.stderr}
+
+# chat_endpoint(): Main chat handler that routes user input to the appropriate LLM function using ML data.
 # @app.post("/chat")
 # def chat_endpoint(req: ChatRequest):
 #     """Handle user input using ML-enhanced analysis"""
@@ -339,7 +354,6 @@ def chat_endpoint(req: ChatRequest):
     })
 
     return response
-
 
 #ping(): Health check endpoint that returns "alive".
 @app.get("/ping")

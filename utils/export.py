@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 from fpdf import FPDF, XPos, YPos
 
 # =====  directory & version filter  =========================
-OUT_DIR = r"C:\Users\User\Documents\IAAC\Module03\Studio\AIA25_Studio\Outputs"
+OUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "outputs"))
+VERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "knowledge", "iterations"))
 os.makedirs(OUT_DIR, exist_ok=True)
 
 SHOW_VERSIONS = []   # empty → include all
@@ -35,10 +36,10 @@ def beautify(k:str)->str:
     k=re.sub(r"[_\-]"," ",k); k=re.sub(r"(?<=[a-z])(?=[A-Z])"," ",k)
     return k.strip().title()
 
-def find_val(fragment:str,d:dict,default=0.0)->float:
-    for k,v in d.items():
+def find_val(fragment: str, d: dict, default=0.0) -> float:
+    for k, v in d.items():
         if fragment.lower() in k.lower():
-            try:return float(v)
+            try: return float(v)
             except: return default
     return default
 
@@ -231,19 +232,22 @@ class PDF(FPDF):
 # =====  build PDF ===========================================
 pdf = PDF()
 # register Georgia (TTF paths may vary on non-English Windows)
-pdf.add_font("Georgia",  "",  r"C:\Windows\Fonts\georgia.ttf",  uni=True)
-pdf.add_font("Georgia",  "B", r"C:\Windows\Fonts\georgiab.ttf", uni=True)
-pdf.add_font("Georgia",  "I", r"C:\Windows\Fonts\georgiai.ttf", uni=True)
-pdf.add_font("Georgia",  "BI",r"C:\Windows\Fonts\georgiaz.ttf", uni=True)
+pdf.add_font("Georgia", "",  r"C:\Windows\Fonts\georgia.ttf")
+pdf.add_font("Georgia", "B", r"C:\Windows\Fonts\georgiab.ttf")
+pdf.add_font("Georgia", "I", r"C:\Windows\Fonts\georgiai.ttf")
+pdf.add_font("Georgia", "BI",r"C:\Windows\Fonts\georgiaz.ttf")
 
 
 # load JSONs
-vers={}
-for f in sorted(os.listdir("Knowledge/Optioneering")):
-    if f.lower().endswith(".json"):
-        name=os.path.splitext(f)[0]
-        with open(os.path.join("Knowledge/Optioneering",f)) as fp:
-            vers[name]=json.load(fp)
+vers = {}
+version_pattern = re.compile(r"^V\d+\.json$", re.IGNORECASE)
+
+for f in sorted(os.listdir(VERS_DIR)):
+    if version_pattern.match(f):
+        name = os.path.splitext(f)[0]
+        with open(os.path.join(VERS_DIR, f)) as fp:
+            vers[name] = json.load(fp)
+
 if not vers: raise SystemExit("No JSON files found.")
 
 # filter order for trend pages
@@ -316,4 +320,4 @@ pdf.text_page("GWP Trend by Version",2," ".join(describe_gwp(gwp_df)),gwp_trend_
 
 pdf_path=os.path.join(OUT_DIR,"Full_Building_Report.pdf")
 pdf.output(pdf_path)
-print("✅  PDF and PNGs saved to:", OUT_DIR)
+print("PDF and PNGs saved to:", OUT_DIR)
