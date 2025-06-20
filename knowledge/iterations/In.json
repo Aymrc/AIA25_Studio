@@ -1,6 +1,6 @@
 {
-    "version": "V6",
-    "timestamp": "2025-06-19T18:37:54.169313",
+    "version": "V10",
+    "timestamp": "2025-06-20T13:45:59.995223",
     "inputs_raw": {
         "Ext.Wall_Partition": 1,
         "Ext.Wall_Insulation": 0,
@@ -10,8 +10,8 @@
         "Roof_Partition": 0,
         "Roof_Insulation": 7,
         "Window-to-Wall_Ratio": 0.3,
-        "Compactness": 0,
-        "Gross-Floor-Area": 0
+        "Compactness": 1.38602,
+        "Gross-Floor-Area": 29.065
     },
     "inputs_decoded": {
         "Ext.Wall_Partition": "Concrete",
@@ -22,16 +22,16 @@
         "Roof_Partition": "Concrete",
         "Roof_Insulation": "XPS",
         "Window-to-Wall_Ratio": 0.3,
-        "Compactness": 0,
-        "Gross-Floor-Area": 0
+        "Compactness": 1.38602,
+        "Gross-Floor-Area": 29.065
     },
     "outputs": {
-        "Energy Intensity - EUI (kWh/m²a)": 243.7,
-        "Cooling Demand (kWh/m²a)": 174.43,
+        "Energy Intensity - EUI (kWh/m²a)": 277.24,
+        "Cooling Demand (kWh/m²a)": 207.94,
         "Heating Demand (kWh/m²a)": 0.0,
-        "Operational Carbon (kg CO2e/m²a GFA)": 109.67,
-        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 152.63,
-        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 374.66,
-        "GWP total (kg CO2e/m²a GFA)": 453.27
+        "Operational Carbon (kg CO2e/m²a GFA)": 124.63,
+        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 147.53,
+        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 369.26,
+        "GWP total (kg CO2e/m²a GFA)": 453.66
     }
 }

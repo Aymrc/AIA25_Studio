@@ -1,37 +1,37 @@
 {
-    "version": "V5",
-    "timestamp": "2025-06-09T14:17:49.797996",
+    "version": "V9",
+    "timestamp": "2025-06-20T13:36:05.635171",
     "inputs_raw": {
-        "Ext.Wall_Partition": 0,
+        "Ext.Wall_Partition": 1,
         "Ext.Wall_Insulation": 0,
         "Int.Wall_Partition": 0,
         "Ext.Slab_Insulation": 1,
-        "Int.Slab_Partition": 0,
+        "Int.Slab_Partition": 2,
         "Roof_Partition": 0,
-        "Roof_Insulation": 0,
+        "Roof_Insulation": 7,
         "Window-to-Wall_Ratio": 0.3,
-        "Compactness": 0.25,
-        "Gross-Floor-Area": 6666.667
+        "Compactness": 0.37782,
+        "Gross-Floor-Area": 1427.193
     },
     "inputs_decoded": {
-        "Ext.Wall_Partition": "Brick",
+        "Ext.Wall_Partition": "Concrete",
         "Ext.Wall_Insulation": "Cellulose",
         "Int.Wall_Partition": "Brick",
         "Ext.Slab_Insulation": "XPS",
-        "Int.Slab_Partition": "Concrete",
+        "Int.Slab_Partition": "Timber_mass",
         "Roof_Partition": "Concrete",
-        "Roof_Insulation": "Cellulose",
+        "Roof_Insulation": "XPS",
         "Window-to-Wall_Ratio": 0.3,
-        "Compactness": 0.25,
-        "Gross-Floor-Area": 6666.667
+        "Compactness": 0.37782,
+        "Gross-Floor-Area": 1427.193
     },
     "outputs": {
-        "Energy Intensity - EUI (kWh/m²a)": 236.18,
-        "Cooling Demand (kWh/m²a)": 166.91,
+        "Energy Intensity - EUI (kWh/m²a)": 243.7,
+        "Cooling Demand (kWh/m²a)": 174.43,
         "Heating Demand (kWh/m²a)": 0.0,
-        "Operational Carbon (kg CO2e/m²a GFA)": 106.28,
-        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 129.01,
-        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 115.82,
-        "GWP total (kg CO2e/m²a GFA)": 217.36
+        "Operational Carbon (kg CO2e/m²a GFA)": 109.67,
+        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 7.92,
+        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 141.72,
+        "GWP total (kg CO2e/m²a GFA)": 255.94
     }
 }

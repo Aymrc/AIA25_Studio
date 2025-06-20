@@ -12,6 +12,14 @@ import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "utils")))
 
 
+# Set up correct paths
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, ".."))
+
+# Add utils to path
+sys.path.append(os.path.join(project_root, "utils"))
+
+
 app = FastAPI()
 
 app.add_middleware(
@@ -76,44 +84,54 @@ async def receive_geometry(request: Request):
 #         return f"error: {e}"
 
 
+# @app.get("/screenshot/", response_class=PlainTextResponse)
+# def manual_screenshot():
+#     try:
+#         sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
+#         from ML_predictor import create_manual_iteration
+
+#         # 1. Create new version JSON first
+#         success, version_id_or_error = create_manual_iteration()
+#         if not success:
+#             return f"error: {version_id_or_error}"
+#         version_id = version_id_or_error  # e.g., "I4"
+#         print(f"✔️ Created new version JSON: {version_id}")
+
+#         # 2. Trigger Rhino capture via flag file
+#         base_dir = os.path.dirname(os.path.dirname(__file__))
+#         flag_path = os.path.join(base_dir, "knowledge", "capture_now.txt")
+#         screenshot_path = os.path.join(base_dir, "knowledge", "iterations", f"{version_id}_user.png")
+
+#         if os.path.exists(flag_path):
+#             os.remove(flag_path)
+
+#         with open(flag_path, "w") as f:
+#             f.write(version_id)
+#         print(f"Capture flag written: {flag_path}")
+
+#         # 3. Wait up to 10 seconds for the screenshot file to appear
+#         for i in range(10):
+#             if os.path.exists(screenshot_path):
+#                 print(f"Screenshot saved: {screenshot_path}")
+#                 return f"{version_id} created successfully"
+#             time.sleep(1)
+
+#         return f"Screenshot for {version_id} was not created in time."
+
+#     except Exception as e:
+#         return f"error: {e}"
+
 @app.get("/screenshot/", response_class=PlainTextResponse)
-def manual_screenshot():
+def trigger_capture_dialog():
     try:
-        sys.path.append(os.path.join(os.path.dirname(__file__), "utils"))
-        from ML_predictor import create_manual_iteration
-
-        # 1. Create new version JSON first
-        success, version_id_or_error = create_manual_iteration()
-        if not success:
-            return f"error: {version_id_or_error}"
-        version_id = version_id_or_error  # e.g., "I4"
-        print(f"✔️ Created new version JSON: {version_id}")
-
-        # 2. Trigger Rhino capture via flag file
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        flag_path = os.path.join(base_dir, "knowledge", "capture_now.txt")
-        screenshot_path = os.path.join(base_dir, "knowledge", "iterations", f"{version_id}_user.png")
-
-        if os.path.exists(flag_path):
-            os.remove(flag_path)
-
+        flag_path = os.path.join(project_root, "knowledge", "show_dialog.flag")
         with open(flag_path, "w") as f:
-            f.write(version_id)
-        print(f"🟢 Capture flag written: {flag_path}")
-
-        # 3. Wait up to 10 seconds for the screenshot file to appear
-        for i in range(10):
-            if os.path.exists(screenshot_path):
-                print(f"✅ Screenshot saved: {screenshot_path}")
-                return f"{version_id} created successfully"
-            time.sleep(1)
-
-        return f"❌ Screenshot for {version_id} was not created in time."
-
+            f.write("trigger")
+        print("🟢 Dialog trigger flag written.")
+        return "flag_written"
     except Exception as e:
+        print("❌ Failed to write flag file:", str(e))
         return f"error: {e}"
-
-
 
 
 
