@@ -128,10 +128,10 @@ def trigger_capture_dialog():
         with open(flag_path, "w") as f:
             f.write("trigger")
         print("🟢 Dialog trigger flag written.")
-        return "flag_written"
+        #return "flag_written"
     except Exception as e:
         print("❌ Failed to write flag file:", str(e))
-        return f"error: {e}"
+        #return f"error: {e}"
 
 
 

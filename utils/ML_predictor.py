@@ -201,35 +201,35 @@ def copy_latest_version():
         print("No versioned files found.")
 
 #WIP (Andres)
-def create_manual_iteration(get_id_only=False, use_existing_id=None):
-    dst_folder = json_folder
-    os.makedirs(dst_folder, exist_ok=True)
+# def create_manual_iteration(get_id_only=False, use_existing_id=None):
+#     dst_folder = json_folder
+#     os.makedirs(dst_folder, exist_ok=True)
 
-    if use_existing_id:
-        next_id = use_existing_id
-    else:
-        print(f"🧭 Writing to iteration folder: {dst_folder}")
-        existing = [f for f in os.listdir(dst_folder) if f.startswith("I") and f.endswith(".json")]
-        existing_numbers = [int(f[1:-5]) for f in existing if f[1:-5].isdigit()]
-        next_number = max(existing_numbers, default=0) + 1
-        next_id = f"I{next_number}"
+#     if use_existing_id:
+#         next_id = use_existing_id
+#     else:
+#         print(f"🧭 Writing to iteration folder: {dst_folder}")
+#         existing = [f for f in os.listdir(dst_folder) if f.startswith("I") and f.endswith(".json")]
+#         existing_numbers = [int(f[1:-5]) for f in existing if f[1:-5].isdigit()]
+#         next_number = max(existing_numbers, default=0) + 1
+#         next_id = f"I{next_number}"
 
-    if get_id_only:
-        return True, next_id
+#     if get_id_only:
+#         return True, next_id
 
-    dst_json = os.path.join(dst_folder, f"{next_id}.json")
-    src_json = os.path.join(destination_folder, destination_filename)
+#     dst_json = os.path.join(dst_folder, f"{next_id}.json")
+#     src_json = os.path.join(destination_folder, destination_filename)
 
-    if not os.path.exists(src_json):
-        return False, "❌ ml_output.json not found"
+#     if not os.path.exists(src_json):
+#         return False, "❌ ml_output.json not found"
 
-    try:
-        shutil.copy2(src_json, dst_json)
-        print(f"✅ Saved manual JSON: {dst_json}")
-        # No need to move images — they are saved directly by Rhino
-        return True, f"{next_id} created"
-    except Exception as e:
-        return False, f"❌ Error saving iteration: {e}"
+#     try:
+#         shutil.copy2(src_json, dst_json)
+#         print(f"✅ Saved manual JSON: {dst_json}")
+#         # No need to move images — they are saved directly by Rhino
+#         return True, f"{next_id} created"
+#     except Exception as e:
+#         return False, f"❌ Error saving iteration: {e}"
 
 
 #WIP (Andres)

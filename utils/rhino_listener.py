@@ -33,7 +33,17 @@ from System import EventHandler, EventArgs
 
 
 
-def show_capture_dialog(show_ui=False): # if pop up for capture is wanted, set to True
+def show_capture_dialog(show_ui=False):
+    import sys
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    sys.path.append(os.path.join(base_dir, "utils"))
+
+    try:
+        from iteration_saver import create_manual_iteration
+    except Exception as e:
+        Rhino.RhinoApp.WriteLine("Could not import create_manual_iteration(): {}".format(e))
+        return
+
     class SampleEtoViewCaptureDialog(Dialog[bool]):
         def __init__(self):
             self.Title = 'Capture Viewport'
@@ -55,31 +65,48 @@ def show_capture_dialog(show_ui=False): # if pop up for capture is wanted, set t
 
         def create_buttons(self):
             self.capture_btn = Button(Text='Capture')
-            self.capture_btn.Click += EventHandler[EventArgs](self.on_capture)
+            self.capture_btn.Click += System.EventHandler(self.on_capture)
 
             self.close_btn = Button(Text='Close')
-            self.close_btn.Click += EventHandler[EventArgs](self.on_close)
+            self.close_btn.Click += System.EventHandler(self.on_close)
             return TableRow(None, self.capture_btn, self.close_btn)
 
         def on_capture(self, sender=None, e=None):
-            view = sc.doc.Views.ActiveView
-            if not view:
-                Rhino.RhinoApp.WriteLine("No active view.")
-                return
-            bmp = view.CaptureToBitmap()
-            if bmp:
-                stream = System.IO.MemoryStream()
-                bmp.Save(stream, Imaging.ImageFormat.Png)
-                if stream.Length != 0:
-                    self.image_view.Image = Bitmap(stream)
-                    self.label.Text = 'Captured view: {}'.format(view.ActiveViewport.Name)
-                stream.Dispose()
+            try:
+                destination_folder = os.path.join(base_dir, "knowledge")
+                destination_filename = "ml_output.json"
+                json_folder = os.path.join(base_dir, "knowledge", "iterations")
 
-                # Save to file
-                filename = "{}_user.png".format(version_id)
-                out_path = os.path.join(os.path.dirname(__file__), "..", "knowledge", "iterations", filename)
-                bmp.Save(out_path)
-                Rhino.RhinoApp.WriteLine("✅ Captured and saved image to: {}".format(out_path))
+                success, version_id = create_manual_iteration(destination_folder, destination_filename, json_folder)
+
+                if not success:
+                    self.label.Text = "Failed to create version: {}".format(version_id)
+                    return
+                Rhino.RhinoApp.WriteLine("Created new JSON: {}".format(version_id))
+            except Exception as ex:
+                self.label.Text = "JSON error: {}".format(ex)
+                return
+
+            try:
+                view = sc.doc.Views.ActiveView
+                if not view:
+                    self.label.Text = 'No active view.'
+                    return
+
+                bmp = view.CaptureToBitmap()
+                if bmp:
+                    stream = System.IO.MemoryStream()
+                    bmp.Save(stream, Imaging.ImageFormat.Png)
+                    if stream.Length != 0:
+                        self.image_view.Image = Bitmap(stream)
+                        self.label.Text = 'Captured view: {}'.format(view.ActiveViewport.Name)
+                    stream.Dispose()
+
+                    img_path = os.path.join(base_dir, "knowledge", "iterations", "{}.png".format(version_id))
+                    bmp.Save(img_path)
+                    Rhino.RhinoApp.WriteLine("Screenshot saved to: {}".format(img_path))
+            except Exception as e:
+                self.label.Text = "Capture error: {}".format(e)
 
         def on_close(self, sender, e):
             self.Close(True if self.image_view.Image else False)
@@ -88,7 +115,21 @@ def show_capture_dialog(show_ui=False): # if pop up for capture is wanted, set t
         dlg = SampleEtoViewCaptureDialog()
         dlg.ShowModal(RhinoEtoApp.MainWindow)
     else:
-        # Silent mode: directly run capture logic
+        try:
+            destination_folder = os.path.join(base_dir, "knowledge")
+            destination_filename = "ml_output.json"
+            json_folder = os.path.join(base_dir, "knowledge", "iterations")
+
+            success, version_id = create_manual_iteration(destination_folder, destination_filename, json_folder)
+
+            if not success:
+                Rhino.RhinoApp.WriteLine("Could not create version: {}".format(version_id))
+                return
+            Rhino.RhinoApp.WriteLine("JSON version created: {}".format(version_id))
+        except Exception as ex:
+            Rhino.RhinoApp.WriteLine("JSON creation error: {}".format(ex))
+            return
+
         try:
             view = sc.doc.Views.ActiveView
             if not view:
@@ -96,12 +137,12 @@ def show_capture_dialog(show_ui=False): # if pop up for capture is wanted, set t
                 return
             bmp = view.CaptureToBitmap()
             if bmp:
-                filename = "manual_capture.png"
-                out_path = os.path.join(os.path.dirname(__file__), "..", "knowledge", "iterations", filename)
-                bmp.Save(out_path)
-                Rhino.RhinoApp.WriteLine("✅ Captured and saved image (silent mode) to: {}".format(out_path))
+                img_path = os.path.join(base_dir, "knowledge", "iterations", "{}.png".format(version_id))
+                bmp.Save(img_path)
+                Rhino.RhinoApp.WriteLine("Screenshot saved to: {}".format(img_path))
         except Exception as e:
-            Rhino.RhinoApp.WriteLine("❌ Silent capture failed: {}".format(e))
+            Rhino.RhinoApp.WriteLine("Image capture error: {}".format(e))
+
 
 
 
