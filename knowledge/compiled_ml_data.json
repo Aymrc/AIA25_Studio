@@ -1,12 +1,15 @@
 {
-  "ew_par": 0, 
-  "ew_ins": 0, 
-  "iw_par": 0, 
-  "es_ins": 0, 
-  "is_par": 0, 
-  "ro_par": 0, 
-  "ro_ins": 0, 
-  "wwr": 0, 
-  "av": 0.39507999999999999, 
-  "gfa": 4907.6740000000000
+  "Typology": 1, 
+  "WWR": 3, 
+  "EW_PAR": 0, 
+  "EW_INS": 0, 
+  "IW_PAR": 0, 
+  "ES_INS": 0, 
+  "IS_PAR": 0, 
+  "RO_PAR": 0, 
+  "RO_INS": 0, 
+  "BC": 2, 
+  "A/V": 0.40000000000000002, 
+  "Volume(m3)": 3999.9999999999964, 
+  "VOL/VOLBBOX": 1.0
 }
