@@ -230,7 +230,7 @@ def compute_total_metrics():
     breps = []
 
     # Ensure "Copilot" layer exists
-    copilot_layer_name = "Copilot"
+    copilot_layer_name = "___COPILOT_LAYER"
     copilot_layer_index = sc.doc.Layers.FindByFullPath(copilot_layer_name, True)
 
     if copilot_layer_index == -1:
