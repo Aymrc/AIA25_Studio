@@ -23,25 +23,20 @@
 						.then(response => response.text())
 						.then(result => {
 							if (result.startsWith("error")) {
-								alert("❌ Failed to save viewport:\n" + result);
+								alert("Failed to save viewport:\n" + result);
 							} else {
-								alert("✅ Rhino viewport saved at:\n" + result);
+								// alert("Rhino viewport saved at:\n" + result);
 							}
 						})
 						.catch(err => {
 							console.error("Fetch error:", err);
-							alert("⚠️ Could not contact Rhino viewport server.");
+							alert("Could not contact Rhino viewport server.");
 						});
 				});
 			</script>
 
 			<!-- button clear iteration -->
 			<button id="clearBtn">Clear Iterations</button>
-			<!-- <span id="clearStatus"></span> --><!-- show if worked -->
-
-			<button id="Report">Export Report</button>
-			
-			<!-- script clear iteration -->
 			<script>
 				document.getElementById("clearBtn").addEventListener("click", () => {
 					const status = document.getElementById("clearStatus");
@@ -73,7 +68,14 @@
 					});
 				});
 			</script>
+
+			<button id="Report">🍒</button><!--  Export Report  -->
+			
+			<button id="WebApp">🍒</button><!--  Web View  -->
+			
 		</div>
+		
+		<span id="clearStatus"></span><!-- show user if it worked -->
 
 		<div class="main_container">
 

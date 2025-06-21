@@ -108,7 +108,6 @@ def get_universal_python_path():
     print("No Python installation found!")
     return None
 
-
 def install_requirements_if_needed():
     python_path = get_universal_python_path()
     req_file = "requirements.txt"
