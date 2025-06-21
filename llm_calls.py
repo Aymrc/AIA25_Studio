@@ -259,17 +259,20 @@ def apply_overall_material_change(material_name):
     try:
         mapper = MaterialMapper()
         parameters = mapper.map_simple_material_to_parameters(material_name)
-        
+
+        # If beams/columns are influenced by overall material, set BC accordingly
+        if material_name in mapper.material_mappings.get("Beams_Columns", {}):
+            parameters["BC"] = mapper.material_mappings["Beams_Columns"][material_name]
+
         print(f"[OVERALL MATERIAL] Changing to {material_name}: {parameters}")
-        
-        # Update the compiled ML data
+
         success = update_compiled_ml_data_with_changes(parameters)
-        
+
         if success:
             return f"Changed overall building material to {material_name.replace('_', ' ')}"
         else:
             return f"Updated material selection to {material_name.replace('_', ' ')}"
-            
+
     except Exception as e:
         print(f"[OVERALL MATERIAL] Error: {e}")
         return f"Selected {material_name.replace('_', ' ')} material"
@@ -279,44 +282,44 @@ def apply_component_specific_change(component, material):
     """Apply component-specific material change"""
     try:
         mapper = MaterialMapper()
-        
+
         # Map component codes to parameter keys
         component_mapping = {
-            "ew": "ew_par",           # Exterior wall partition
-            "ew_ins": "ew_ins",       # Exterior wall insulation  
-            "iw": "iw_par",           # Interior wall partition
-            "wall": "ew_par",         # Default wall to exterior wall
-            "roof": "ro_par",         # Roof partition
-            "ro_par": "ro_par",       # Roof partition
-            "ro_ins": "ro_ins",       # Roof insulation
-            "slab": "is_par",         # Interior slab partition
-            "is_par": "is_par",       # Interior slab partition
-            "es_ins": "es_ins"        # Exterior slab insulation
+            "ew": "EW_PAR",            # Exterior wall partition
+            "ew_ins": "EW_INS",        # Exterior wall insulation
+            "iw": "IW_PAR",            # Interior wall partition
+            "wall": "EW_PAR",          # Default wall to exterior wall
+            "roof": "RO_PAR",          # Roof partition
+            "ro_par": "RO_PAR",        # Roof partition
+            "ro_ins": "RO_INS",        # Roof insulation
+            "slab": "IS_PAR",          # Interior slab partition
+            "is_par": "IS_PAR",        # Interior slab partition
+            "es_ins": "ES_INS",        # Exterior slab insulation
+            "bc": "BC",                # Beams and columns
+            "bc_material": "BC"        # Alias for beams/columns
         }
-        
-        param_key = component_mapping.get(component)
+
+        param_key = component_mapping.get(component.lower())
         if not param_key:
             return f"Updated {component} to {material}"
-        
-        # Get the material value using MaterialMapper
+
         category = mapper.get_category_for_param(param_key)
-        if category and material in mapper.material_mappings[category]:
+        if category and material in mapper.material_mappings.get(category, {}):
             material_value = mapper.material_mappings[category][material]
-            
-            # Update only this specific parameter
+
             parameter_updates = {param_key: material_value}
             success = update_compiled_ml_data_with_changes(parameter_updates)
-            
+
             component_name = param_key.replace("_", " ").title()
             print(f"[COMPONENT CHANGE] {component_name}: {material} (value: {material_value})")
-            
+
             if success:
                 return f"Changed {component_name.lower()} to {material.replace('_', ' ')}"
             else:
                 return f"Updated {component_name.lower()} to {material.replace('_', ' ')}"
         else:
             return f"Selected {material.replace('_', ' ')} for {component}"
-            
+
     except Exception as e:
         print(f"[COMPONENT CHANGE] Error: {e}")
         return f"Updated {component} to {material.replace('_', ' ')}"
@@ -658,19 +661,22 @@ def generate_user_summary(ml_dict):
         0: "cellulose", 1: "cork", 2: "EPS", 3: "glass wool", 4: "mineral wool",
         5: "wood fiber", 6: "XPS", 7: "XPS"  # reused for roof
     }
+    structure_map = ["concrete", "timber frame", "mass timber"]
 
     try:
         summary = f"Updated design with:\n"
-        summary += f"• Exterior walls: {material_map.get(ml_dict['ew_par'], 'unknown')} + {insulation_map.get(ml_dict['ew_ins'], 'unknown')} insulation\n"
-        summary += f"• Interior walls: {material_map.get(ml_dict['iw_par'], 'unknown')}\n"
-        summary += f"• Roof: {['concrete', 'timber frame', 'mass timber'][ml_dict['ro_par']]} + {insulation_map.get(ml_dict['ro_ins'], 'unknown')} insulation\n"
-        summary += f"• Slab: {['concrete', 'timber frame', 'mass timber'][ml_dict['is_par']]}\n"
-        summary += f"• WWR: {int(ml_dict['wwr'] * 100)}%\n"
-        summary += f"• GFA: {ml_dict['gfa']} m²\n"
+        summary += f"• Exterior walls: {material_map.get(ml_dict['EW_PAR'], 'unknown')} + {insulation_map.get(ml_dict['EW_INS'], 'unknown')} insulation\n"
+        summary += f"• Interior walls: {material_map.get(ml_dict['IW_PAR'], 'unknown')}\n"
+        summary += f"• Roof: {structure_map[ml_dict['RO_PAR']]} + {insulation_map.get(ml_dict['RO_INS'], 'unknown')} insulation\n"
+        summary += f"• Slab: {structure_map[ml_dict['IS_PAR']]}\n"
+        summary += f"• Structure (beams/columns): {structure_map[ml_dict['BC']]}\n"
+        summary += f"• WWR: {int(ml_dict['WWR'] * 100)}%\n"
+        summary += f"• GFA: {ml_dict['Volume(m3)']} m³\n"
         return summary
     except Exception as e:
         print(f"[SUMMARY ERROR] {e}")
         return "Design updated successfully (could not summarize changes)."
+
 
 # -- Suggest a change and update model inputs via JSON patching --
 def suggest_change(user_prompt, design_data):
@@ -699,6 +705,8 @@ def suggest_change(user_prompt, design_data):
 
     DO NOT include explanations or any text. Respond ONLY with a plain JSON dictionary.
 
+    If the user mentions "structure", "frame", "beams", or "columns", update the `BC` parameter accordingly.
+
     ### Current Parameters:
     {json.dumps(current_parameters, indent=2)}
 
@@ -711,6 +719,8 @@ def suggest_change(user_prompt, design_data):
     - IS_PAR / RO_PAR: CONCRETE=0, TIMBER FRAME=1, TIMBER MASS=2
     - RO_INS: CELLULOSE=0, CORK=1, EPS=2, EXTRUDED GLASS=3, GLASS WOOL=4, MINERAL WOOL=5, WOOD FIBER=6, XPS=7
     - A/V, Volume(m3), VOL/VOLBBOX: floats from geometry system
+    - BC (Beams & Columns STRUCTURE): STEEL=0, CONCRETE=1, TIMBER=2 ← can be changed by user prompts like "change beams to steel"
+
     """
 
         # --- Call the LLM ---
@@ -748,6 +758,16 @@ def suggest_change(user_prompt, design_data):
                 parsed = json.loads(response_text)
                 if not isinstance(parsed, dict):
                     raise ValueError("Parsed content is not a dictionary.")
+
+                user_prompt_lower = user_prompt.lower()
+                if "beam" in user_prompt_lower or "column" in user_prompt_lower:
+                    if "steel" in user_prompt_lower:
+                        parsed["BC"] = 0
+                    elif "concrete" in user_prompt_lower:
+                        parsed["BC"] = 1
+                    elif "timber" in user_prompt_lower:
+                        parsed["BC"] = 2
+                    print(f"[FORCED STRUCTURE OVERRIDE] Detected BC update in user prompt → BC = {parsed['BC']}")
 
                 missing = REQUIRED_KEYS - parsed.keys()
                 for key in missing:
