@@ -21,48 +21,201 @@ debounce_timer = None
 is_running = False
 listener_active = True
 
-def capture_viewport(version_name, output_folder):
-    Rhino.RhinoApp.WriteLine("\ud83d\udcf8 Starting USER VIEW capture for: {}".format(version_name))
+from Rhino.UI import RhinoEtoApp
+from Eto.Forms import Dialog, Label, ImageView, Button, TableLayout, TableRow
+from Eto.Drawing import Size, Padding
+from Eto.Drawing import Bitmap as EtoBitmap
+import scriptcontext as sc
+import System.IO
+from System.Drawing import Imaging
+from System import EventHandler, EventArgs
 
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-        Rhino.RhinoApp.WriteLine("\ud83d\udcc1 Created folder: {}".format(output_folder))
 
-    filepath = os.path.join(output_folder, "{}_user.png".format(version_name))
-    Rhino.RhinoApp.WriteLine("\ud83d\uddbc\ufe0f Saving to: {}".format(filepath))
+
+
+def show_capture_dialog(show_ui=False):
+    import sys
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    sys.path.append(os.path.join(base_dir, "utils"))
 
     try:
-        rs.CurrentView("Perspective")
-        rs.ViewDisplayMode("Perspective", "Shaded")
-        sc.doc.Views.ActiveView.Redraw()
+        from iteration_saver import create_manual_iteration
+    except Exception as e:
+        Rhino.RhinoApp.WriteLine("Could not import create_manual_iteration(): {}".format(e))
+        return
 
-        view = sc.doc.Views.ActiveView
-        if not view:
-            Rhino.RhinoApp.WriteLine("\u274c No active view found.")
+    class SampleEtoViewCaptureDialog(Dialog[bool]):
+        def __init__(self):
+            self.Title = 'Capture Viewport'
+            self.Padding = Padding(10)
+            layout = TableLayout(Padding=Padding(10), Spacing=Size(5, 5))
+            layout.Rows.Add(self.create_label())
+            layout.Rows.Add(self.create_image_view())
+            layout.Rows.Add(None)
+            layout.Rows.Add(self.create_buttons())
+            self.Content = layout
+
+        def create_label(self):
+            self.label = Label(Text='Click "Capture" to take screenshot...')
+            return self.label
+
+        def create_image_view(self):
+            self.image_view = ImageView(Size=Size(300, 200))
+            return self.image_view
+
+        def create_buttons(self):
+            self.capture_btn = Button(Text='Capture')
+            self.capture_btn.Click += System.EventHandler(self.on_capture)
+
+            self.close_btn = Button(Text='Close')
+            self.close_btn.Click += System.EventHandler(self.on_close)
+            return TableRow(None, self.capture_btn, self.close_btn)
+
+        def on_capture(self, sender=None, e=None):
+            try:
+                destination_folder = os.path.join(base_dir, "knowledge")
+                destination_filename = "ml_output.json"
+                json_folder = os.path.join(base_dir, "knowledge", "iterations")
+
+                success, version_id = create_manual_iteration(destination_folder, destination_filename, json_folder)
+
+                if not success:
+                    self.label.Text = "Failed to create version: {}".format(version_id)
+                    return
+                Rhino.RhinoApp.WriteLine("Created new JSON: {}".format(version_id))
+            except Exception as ex:
+                self.label.Text = "JSON error: {}".format(ex)
+                return
+
+            try:
+                view = sc.doc.Views.ActiveView
+                if not view:
+                    self.label.Text = 'No active view.'
+                    return
+
+                bmp = view.CaptureToBitmap()
+                if bmp:
+                    stream = System.IO.MemoryStream()
+                    bmp.Save(stream, Imaging.ImageFormat.Png)
+                    if stream.Length != 0:
+                        self.image_view.Image = Bitmap(stream)
+                        self.label.Text = 'Captured view: {}'.format(view.ActiveViewport.Name)
+                    stream.Dispose()
+
+                    img_path = os.path.join(base_dir, "knowledge", "iterations", "{}.png".format(version_id))
+                    bmp.Save(img_path)
+                    Rhino.RhinoApp.WriteLine("Screenshot saved to: {}".format(img_path))
+            except Exception as e:
+                self.label.Text = "Capture error: {}".format(e)
+
+
+            # ➕ Save 3DM file
+            try:
+                model_path = os.path.join(base_dir, "knowledge", "iterations", "{}.3dm".format(version_id))
+                opts = Rhino.FileIO.FileWriteOptions()
+                doc = Rhino.RhinoDoc.ActiveDoc
+                success = doc.Write3dmFile(model_path, opts)
+                if success:
+                    Rhino.RhinoApp.WriteLine("✔️ .3dm file saved: {}".format(model_path))
+                else:
+                    Rhino.RhinoApp.WriteLine("❌ Failed to save .3dm file.")
+            except Exception as e:
+                Rhino.RhinoApp.WriteLine("❌ Error saving .3dm file: {}".format(e))
+
+        def on_close(self, sender, e):
+            self.Close(True if self.image_view.Image else False)
+
+    if show_ui:
+        dlg = SampleEtoViewCaptureDialog()
+        dlg.ShowModal(RhinoEtoApp.MainWindow)
+    else:
+        try:
+            destination_folder = os.path.join(base_dir, "knowledge")
+            destination_filename = "ml_output.json"
+            json_folder = os.path.join(base_dir, "knowledge", "iterations")
+
+            success, version_id = create_manual_iteration(destination_folder, destination_filename, json_folder)
+
+            if not success:
+                Rhino.RhinoApp.WriteLine("Could not create version: {}".format(version_id))
+                return
+            Rhino.RhinoApp.WriteLine("JSON version created: {}".format(version_id))
+        except Exception as ex:
+            Rhino.RhinoApp.WriteLine("JSON creation error: {}".format(ex))
             return
 
-        size = view.ActiveViewport.Size
-        Rhino.RhinoApp.WriteLine("\ud83d\udd0d View size: {} x {}".format(size.Width, size.Height))
+        try:
+            view = sc.doc.Views.ActiveView
+            if not view:
+                Rhino.RhinoApp.WriteLine("No active view.")
+                return
+            bmp = view.CaptureToBitmap()
+            if bmp:
+                img_path = os.path.join(base_dir, "knowledge", "iterations", "{}.png".format(version_id))
+                bmp.Save(img_path)
+                Rhino.RhinoApp.WriteLine("Screenshot saved to: {}".format(img_path))
+        except Exception as e:
+            Rhino.RhinoApp.WriteLine("Image capture error: {}".format(e))
 
-        capture = Rhino.Display.ViewCapture()
-        capture.Width = size.Width
-        capture.Height = size.Height
-        capture.ScaleScreenItems = False
-        capture.DrawAxes = False
-        capture.DrawGrid = False
-        capture.DrawGridAxes = False
-        capture.TransparentBackground = False
-        capture.View = view
+        # ➕ Save 3DM file (headless mode)
+        try:
+            model_path = os.path.join(base_dir, "knowledge", "iterations", "{}.3dm".format(version_id))
+            opts = Rhino.FileIO.FileWriteOptions()
+            doc = Rhino.RhinoDoc.ActiveDoc
+            success = doc.Write3dmFile(model_path, opts)
+            if success:
+                Rhino.RhinoApp.WriteLine("✔️ .3dm file saved: {}".format(model_path))
+            else:
+                Rhino.RhinoApp.WriteLine("❌ Failed to save .3dm file.")
+        except Exception as e:
+            Rhino.RhinoApp.WriteLine("❌ Error saving .3dm file: {}".format(e))
 
-        bitmap = capture.CaptureToBitmap()
-        if bitmap:
-            bitmap.Save(filepath)
-            Rhino.RhinoApp.WriteLine("\u2705 Viewport saved: {}".format(filepath))
-        else:
-            Rhino.RhinoApp.WriteLine("\u274c Failed to capture bitmap.")
 
-    except Exception as e:
-        Rhino.RhinoApp.WriteLine("\u274c Exception while capturing view: {}".format(e))
+# def capture_viewport(version_name, output_folder):
+#     import Rhino
+#     import scriptcontext as sc
+#     import System.Drawing as sd
+#     import os
+
+#     version_name = version_name.strip().split()[0]
+#     filename = "{}_user.png".format(version_name)
+#     filepath = os.path.join(output_folder, filename)
+
+#     if not os.path.exists(output_folder):
+#         os.makedirs(output_folder)
+#         Rhino.RhinoApp.WriteLine("Created folder: {}".format(output_folder))
+
+#     try:
+#         view = sc.doc.Views.Find("Perspective", False)
+#         if not view:
+#             Rhino.RhinoApp.WriteLine("'Perspective' view not found. Using ActiveView instead.")
+#             view = sc.doc.Views.ActiveView
+
+#         if not view or not isinstance(view, Rhino.Display.RhinoView):
+#             Rhino.RhinoApp.WriteLine("Invalid view object.")
+#             return
+
+#         # Force display mode and zoom
+#         view.ActiveViewport.DisplayMode = Rhino.Display.DisplayModeDescription.FindByName("Rendered")
+#         rs.ZoomExtents()
+#         sc.doc.Views.Redraw()
+
+#         size = view.ActiveViewport.Size
+#         width, height = size.Width, size.Height
+#         Rhino.RhinoApp.WriteLine("Viewport size: {} x {}".format(width, height))
+
+#         settings = Rhino.Display.ViewCaptureSettings(view, sd.Size(width, height), 96)
+#         bitmap = Rhino.Display.ViewCapture.CaptureToBitmap(settings)
+
+#         if bitmap:
+#             bitmap.Save(filepath)
+#             Rhino.RhinoApp.WriteLine("Image saved to: {}".format(filepath))
+#         else:
+#             Rhino.RhinoApp.WriteLine("Bitmap capture failed.")
+
+#     except Exception as e:
+#         Rhino.RhinoApp.WriteLine("Exception during capture: {}".format(e))
+
 
 # === POST METRICS ===
 def post_json(url, data):
@@ -115,6 +268,7 @@ def update_compiled_ml_data(gfa_value, av_value):
     Rhino.RhinoApp.WriteLine("\u2705 Updated {} with av={} and gfa={} preserving key order.".format(path, av_value, gfa_value))
 
 def compute_total_metrics():
+    sc.doc = Rhino.RhinoDoc.ActiveDoc  # Ensure active doc is set
     Rhino.RhinoApp.WriteLine("\ud83d\udcca Computing total geometry metrics...")
     breps = []
     for obj in sc.doc.Objects:
@@ -266,35 +420,85 @@ def setup_listeners():
     Rhino.RhinoDoc.ModifyObjectAttributes += on_modify
     Rhino.RhinoApp.WriteLine("\ud83c\udfb7 Rhino listener is active and monitoring geometry changes.")
 
-def watch_for_capture_signal():
+# def watch_for_capture_signal():
+#     def watcher():
+
+#         sc.doc = Rhino.RhinoDoc.ActiveDoc  # ✅ Ensure proper document context
+
+#         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+#         flag_path = os.path.join(base_dir, "knowledge", "capture_now.txt")
+#         iterations_folder = os.path.join(base_dir, "knowledge", "iterations")
+#         last_version = None
+
+#         while True:
+#             if os.path.exists(flag_path):
+#                 try:
+#                     with open(flag_path, "r") as f:
+#                         version_name = f.read().strip()
+#                     if version_name and version_name != last_version:
+#                         last_version = version_name
+#                         Rhino.RhinoApp.WriteLine("Triggered capture for version: {}".format(version_name))
+
+#                         capture_viewport(version_name, iterations_folder)
+
+#                         filename = "{}_user.png".format(version_name.strip().split()[0])
+#                         filepath = os.path.join(iterations_folder, filename)
+
+#                         if os.path.exists(filepath):
+#                             Rhino.RhinoApp.WriteLine("Screenshot exists: {}".format(filepath))
+
+#                 except Exception as e:
+#                     Rhino.RhinoApp.WriteLine("Error reading flag file: {}".format(e))
+#             time.sleep(2)
+
+#     t = threading.Thread(target=watcher)
+#     t.setDaemon(True)
+#     t.start()
+#     Rhino.RhinoApp.WriteLine("Screenshot watcher thread started.")
+
+def watch_for_dialog_signal():
+    def safe_show_dialog(sender=None, args=None):
+        try:
+            show_capture_dialog()
+        except Exception as e:
+            Rhino.RhinoApp.WriteLine("❌ Dialog error: {}".format(e))
+
     def watcher():
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        flag_path = os.path.join(base_dir, "knowledge", "capture_now.txt")
-        iterations_folder = os.path.join(base_dir, "knowledge", "iterations")
-        last_version = None
+        flag_path = os.path.join(base_dir, "knowledge", "show_dialog.flag")
+        last_trigger_time = 0
+
         while True:
             if os.path.exists(flag_path):
                 try:
-                    with open(flag_path, "r") as f:
-                        version_name = f.read().strip()
-                    if version_name and version_name != last_version:
-                        last_version = version_name
-                        Rhino.RhinoApp.WriteLine("\ud83d\udd14 Triggered capture for version: {}".format(version_name))
-                        capture_viewport(version_name, iterations_folder)
+                    if time.time() - last_trigger_time > 1:
+                        last_trigger_time = time.time()
+                        os.remove(flag_path)
+                        Rhino.RhinoApp.WriteLine("⚡ Triggered Eto viewport capture dialog.")
+
+                        # ✅ Correct delegate usage
+                        Rhino.RhinoApp.InvokeOnUiThread(System.Action(safe_show_dialog))
+
                 except Exception as e:
-                    Rhino.RhinoApp.WriteLine("\u26a0\ufe0f Error reading flag file: {}".format(e))
-            time.sleep(2)
+                    Rhino.RhinoApp.WriteLine("⚠️ Error launching dialog: {}".format(e))
+            time.sleep(1)
+
     t = threading.Thread(target=watcher)
     t.setDaemon(True)
     t.start()
-    Rhino.RhinoApp.WriteLine("Screenshot watcher thread started.")
+    Rhino.RhinoApp.WriteLine("Dialog watcher thread started.")
+
+
+
 
 # === INIT SCRIPT ===
 Rhino.RhinoApp.WriteLine("\ud83d\udea6 Starting Rhino listener script...")
 setup_listeners()
 compute_total_metrics()
 Rhino.RhinoApp.WriteLine("\u2705 Rhino listener initialized and ready.")
-watch_for_capture_signal()
+#watch_for_capture_signal()
+watch_for_dialog_signal()
+
 
 def shutdown_listener():
     global listener_active

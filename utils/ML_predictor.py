@@ -89,10 +89,10 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         print(f"Could not load materials.json: {e}")
         materials_map = {}
 
-    existing_versions = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
+    existing_versions = [f for f in os.listdir(folder) if f.startswith("I") and f.endswith(".json")]
     existing_numbers = [int(f[1:-5]) for f in existing_versions if f[1:-5].isdigit()]
     next_version = max(existing_numbers, default=-1) + 1
-    version_name = f"V{next_version}"
+    version_name = f"I{next_version}"
     json_path = os.path.join(folder, f"{version_name}.json")
 
     inputs_raw = {}
@@ -177,7 +177,7 @@ except Exception as e:
 # VERSION MANAGEMENT
 # ============================
 
-version_pattern = re.compile(r'V(\d+)', re.IGNORECASE)
+version_pattern = re.compile(r'I(\d+)', re.IGNORECASE)
 
 def get_version(filename):
     match = version_pattern.search(filename)
@@ -233,69 +233,68 @@ def copy_latest_version():
 
 
 #WIP (Andres)
-# def cleanup_old_versions(folder: str, keep: int = 2):
-#     """
-#     Keeps only the latest two manual iteration files (e.g., I1.json, I2.png),
-#     and renames the latest as In.* and second-latest as In-1.*
-#     Deletes older ones.
-#     """
-#     version_pattern = re.compile(r'^I(\d+)\.(json|png)$', re.IGNORECASE)
-#     files = os.listdir(folder)
-#     versioned_files = {}
+def cleanup_old_versions(folder: str, keep: int = 2):
+    """
+    Keeps only the latest two manual iteration files (e.g., I1.json, I2.png),
+    and renames the latest as In.* and second-latest as In-1.*
+    Deletes older ones.
+    """
+    version_pattern = re.compile(r'^I(\d+)\.(json|png)$', re.IGNORECASE)
+    files = os.listdir(folder)
+    versioned_files = {}
 
-#     # Group files by iteration number
-#     for file in files:
-#         match = version_pattern.match(file)
-#         if match:
-#             version = int(match.group(1))
-#             versioned_files.setdefault(version, []).append(file)
+    # Group files by iteration number
+    for file in files:
+        match = version_pattern.match(file)
+        if match:
+            version = int(match.group(1))
+            versioned_files.setdefault(version, []).append(file)
 
-#     if len(versioned_files) < 2:
-#         print("⚠️ Less than two iterations found — skipping cleanup.")
-#         return
+    if len(versioned_files) < 2:
+        print("⚠️ Less than two iterations found — skipping cleanup.")
+        return
 
-#     # Sort and select the two most recent iterations
-#     sorted_versions = sorted(versioned_files.keys(), reverse=True)
-#     latest = sorted_versions[0]
-#     second_latest = sorted_versions[1]
+    # Sort and select the two most recent iterations
+    sorted_versions = sorted(versioned_files.keys(), reverse=True)
+    latest = sorted_versions[0]
+    second_latest = sorted_versions[1]
 
-#     # Define alias mapping
-#     mapping = {
-#         latest: "In",
-#         second_latest: "In-1"
-#     }
+    # Define alias mapping
+    mapping = {
+        latest: "In",
+        second_latest: "In-1"
+    }
 
-#     # Copy latest iterations with aliases
-#     for original_version, alias in mapping.items():
-#         for ext in ["json", "png"]:
-#             for view_type in ["", "_user", "_axon"]:
-#                 original = f"I{original_version}{view_type}.{ext}"
-#                 if original in files:
-#                     src = os.path.join(folder, original)
-#                     dst = os.path.join(folder, f"{alias}{view_type}.{ext}")
-#                     try:
-#                         shutil.copy2(src, dst)
-#                         print(f"✅ Copied {original} → {alias}{view_type}.{ext}")
-#                     except Exception as e:
-#                         print(f"⚠️ Failed to copy {original}: {e}")
+    # Copy latest iterations with aliases
+    for original_version, alias in mapping.items():
+        for ext in ["json", "png"]:
+            for view_type in ["", "_user", "_axon"]:
+                original = f"I{original_version}{view_type}.{ext}"
+                if original in files:
+                    src = os.path.join(folder, original)
+                    dst = os.path.join(folder, f"{alias}{view_type}.{ext}")
+                    try:
+                        shutil.copy2(src, dst)
+                        print(f"✅ Copied {original} → {alias}{view_type}.{ext}")
+                    except Exception as e:
+                        print(f"⚠️ Failed to copy {original}: {e}")
 
-#     # Delete all other iterations
-#     for version, version_files in versioned_files.items():
-#         if version not in mapping:
-#             for filename in version_files:
-#                 try:
-#                     os.remove(os.path.join(folder, filename))
-#                     print(f"🗑️ Deleted: {filename}")
-#                 except Exception as e:
-#                     print(f"⚠️ Failed to delete {filename}: {e}")
+    # Delete all other iterations
+    for version, version_files in versioned_files.items():
+        if version not in mapping:
+            for filename in version_files:
+                try:
+                    os.remove(os.path.join(folder, filename))
+                    print(f"🗑️ Deleted: {filename}")
+                except Exception as e:
+                    print(f"⚠️ Failed to delete {filename}: {e}")
 
 
 def copy_last_two_versions_as_iterations(folder: str):
-    """
-    Copies the last two versioned JSON files (V*.json) to In.json and In-1.json.
-    No files are deleted or renamed.
-    """
-    version_pattern = re.compile(r"^V(\d+)\.json$", re.IGNORECASE)
+    #Copies the last two versioned JSON files (V*.json) to In.json and In-1.json.
+    #No files are deleted or renamed.
+    
+    version_pattern = re.compile(r"^I(\d+)\.json$", re.IGNORECASE)
     files = os.listdir(folder)
     print("📄 All files in folder:")
     
@@ -305,7 +304,7 @@ def copy_last_two_versions_as_iterations(folder: str):
                  if (match := version_pattern.match(f))]
 
     if len(versioned) < 2:
-        print("⚠️ Not enough V*.json files found to copy.")
+        print("⚠️ Not enough I*.json files found to copy.")
         return
 
     # Sort by version number descending
@@ -336,5 +335,5 @@ def copy_last_two_versions_as_iterations(folder: str):
 # === MAIN FLOW ===
 version_name = save_version_json(inputs, prediction, labels, json_folder)
 copy_latest_version()
-#cleanup_old_versions(json_folder, keep=2)
 copy_last_two_versions_as_iterations(json_folder)
+cleanup_old_versions(json_folder, keep=2)
