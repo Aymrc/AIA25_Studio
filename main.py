@@ -122,6 +122,7 @@ def install_requirements_if_needed():
             print("Failed to install requirements: {}".format(e))
     else:
         print("requirements.txt not found!")
+
 install_requirements_if_needed()
 
 def show_copilot_ui():
