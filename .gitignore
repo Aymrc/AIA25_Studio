@@ -1,6 +1,8 @@
 # Ignore all V*.json files inside knowledge/iterations
 knowledge/iterations/V*.json
 knowledge/iterations/V*.png
+knowledge/iterations/V*.3dm
+knowledge/iterations/I*.json
 
 # Ignore everything inside knowledge/iterations (png, json, ...)
 # knowledge/iterations/*
