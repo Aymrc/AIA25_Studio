@@ -1,6 +1,7 @@
 {
-  "gfa": 1749.8099999999999, 
-  "total_face_area": 2136.4639999999999, 
-  "compactness": 0.40699000000000002, 
-  "total_volume": 5249.4300000000003
+  "bbox_volume": 4000.0, 
+  "total_volume": 4000.0, 
+  "compactness": 0.40000000000000002, 
+  "shape_efficiency": 1.0, 
+  "total_face_area": 1600.0
 }

@@ -38,6 +38,29 @@
 			<!-- button clear iteration -->
 			<button id="clearBtn">Clear Iterations</button>
 			<script>
+				document.getElementById("Report").addEventListener("click", () => {
+					fetch("http://127.0.0.1:5001/api/export_report", {
+						method: "POST"
+					})
+					.then(res => res.json())
+					.then(data => {
+						if (data.status === "success") {
+							alert("PDF report successfully generated.");
+						} else {
+							alert("Error exporting report:\n" + data.message);
+						}
+					})
+					.catch(err => {
+						console.error("Export error:", err);
+						alert("Could not contact export endpoint.");
+					});
+				});
+			</script>
+
+
+			
+			<!-- script clear iteration -->
+			<script>
 				document.getElementById("clearBtn").addEventListener("click", () => {
 					const status = document.getElementById("clearStatus");
 					status.textContent = "Clearing...";
