@@ -9,10 +9,10 @@ def create_manual_iteration(destination_folder, destination_filename, json_folde
         os.makedirs(json_folder)
 
     # Find existing iteration files like I1.json, I2.json, etc.
-    existing = [f for f in os.listdir(json_folder) if f.startswith("I") and f.endswith(".json")]
+    existing = [f for f in os.listdir(json_folder) if f.startswith("V") and f.endswith(".json")]
     existing_numbers = [int(f[1:-5]) for f in existing if f[1:-5].isdigit()]
     next_number = max(existing_numbers) + 1 if existing_numbers else 1
-    next_id = "I{}".format(next_number)
+    next_id = "V{}".format(next_number)
 
     # Set full paths
     dst_json = os.path.join(json_folder, "{}.json".format(next_id))
