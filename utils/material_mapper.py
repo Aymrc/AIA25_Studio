@@ -27,7 +27,13 @@ class MaterialMapper:
             "Roof_Insulation": {
                 "cellulose": 0, "cork": 1, "eps": 2, "extruded_glas": 3,
                 "glass_wool": 4, "mineral_wool": 5, "wood_fiber": 6, "xps": 7
+            },
+            "Beams_Columns": {
+                "steel": 0,
+                "concrete": 1,
+                "timber": 2
             }
+
         }
 
         self.value_to_material = {
@@ -35,7 +41,8 @@ class MaterialMapper:
             for category, mapping in self.material_mappings.items()
         }
 
-    def map_simple_material_to_parameters(self, simple_material):
+    def map_simple_material_to_parameters(self, material):
+        material = material.lower()
         parameters = {
             "EW_PAR": 0,
             "EW_INS": 0,
@@ -43,24 +50,33 @@ class MaterialMapper:
             "ES_INS": 1,
             "IS_PAR": 0,
             "RO_PAR": 0,
-            "RO_INS": 0
+            "RO_INS": 0,
+            "BC": 1
         }
 
-        material = simple_material.lower()
+        # First, map beam/column material if it exists
+        if material in self.material_mappings["Beams_Columns"]:
+            parameters["BC"] = self.material_mappings["Beams_Columns"][material]
 
+            # Optional: propagate structure logic to other parts (if applicable)
+            if material == "concrete":
+                parameters["IS_PAR"] = 0
+                parameters["RO_PAR"] = 0
+            elif material == "timber":
+                parameters["IS_PAR"] = 2  # mass timber default
+                parameters["RO_PAR"] = 2
+            elif material == "steel":
+                parameters["IS_PAR"] = 0  # fallback if you want to keep concrete
+                parameters["RO_PAR"] = 0
+
+        # Additionally, try matching wall materials if relevant
         if material in self.material_mappings["Ext.Wall_Partition"]:
             val = self.material_mappings["Ext.Wall_Partition"][material]
             parameters["EW_PAR"] = val
             parameters["IW_PAR"] = val
 
-        if material in ["timber_frame", "timber_mass"]:
-            parameters["IS_PAR"] = 1 if material == "timber_frame" else 2
-            parameters["RO_PAR"] = 1 if material == "timber_frame" else 2
-        else:
-            parameters["IS_PAR"] = 0
-            parameters["RO_PAR"] = 0
-
         return parameters
+
 
     def map_materials_to_parameters(self, extracted):
         parameters = {}
@@ -71,7 +87,8 @@ class MaterialMapper:
             "roof_material": ["RO_PAR"],
             "roof_insulation": ["RO_INS"],
             "slab_material": ["IS_PAR"],
-            "slab_insulation": ["ES_INS"]
+            "slab_insulation": ["ES_INS"],
+            "bc_material": ["BC"] 
         }
 
         for material_key, material_value in extracted.items():
@@ -92,7 +109,8 @@ class MaterialMapper:
             "RO_PAR": "Roof_Partition",
             "RO_INS": "Roof_Insulation",
             "IS_PAR": "Int.Slab_Partition",
-            "ES_INS": "Ext.Slab_Insulation"
+            "ES_INS": "Ext.Slab_Insulation",
+            "BC": "Beams_Columns"
         }.get(key)
 
     def get_material_name(self, param_key, value):
