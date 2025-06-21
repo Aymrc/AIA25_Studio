@@ -605,23 +605,17 @@ def get_gwp_data():
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-#get_gwp_change(): Compares current (In.json) and previous (In-1.json) model GWP values.
-@app.get("/api/gwp_change")
-def get_gwp_change():
-    """
-    Compare GWP between In.json (current model) and In-1.json (previous model).
-    """
-    iteration_dir = Path(__file__).resolve().parent.parent / "knowledge" / "iterations"
-    file_current = iteration_dir / "In.json"
-    file_previous = iteration_dir / "In-1.json"
 
-    if not file_current.exists() or not file_previous.exists():
-        return JSONResponse(content={
-            "error": "Required GWP files not found in iterations directory.",
-            "files_found": list(p.name for p in iteration_dir.glob("*.json"))
-        }, status_code=404)
+# LLM message for GWP trend in UI data + ▲ ▼ visual indicator
+@app.get("/api/gwp_summary")
+def get_gwp_summary():
+    from pathlib import Path
+
+    file_current = Path("knowledge/iterations/In.json")
+    file_previous = Path("knowledge/iterations/In-1.json")
 
     try:
+        # Load data
         with open(file_current, "r", encoding="utf-8") as f:
             current = json.load(f)
         with open(file_previous, "r", encoding="utf-8") as f:
@@ -629,25 +623,28 @@ def get_gwp_change():
 
         curr_gwp = current.get("outputs", {}).get("GWP total (kg CO2e/m²a GFA)")
         prev_gwp = previous.get("outputs", {}).get("GWP total (kg CO2e/m²a GFA)")
-
-        if curr_gwp is None or prev_gwp is None:
-            return {"error": "Missing GWP value in one of the files."}
-
-        if prev_gwp == 0:
-            return {"error": "Previous GWP is zero, cannot compute change."}
+        if not curr_gwp or not prev_gwp or prev_gwp == 0:
+            return {"summary": "GWP change unavailable."}
 
         delta = curr_gwp - prev_gwp
         percent_change = round((delta / prev_gwp) * 100, 2)
+        arrow = "▲" if percent_change > 0 else "▼"
+        color = "red" if percent_change > 0 else "green"
+        summary = llm_calls.summarize_gwp_change_between_versions()
+
+        timestamp = file_current.stat().st_mtime
 
         return {
-            "current": curr_gwp,
-            "previous": prev_gwp,
-            "delta": round(delta, 2),
-            "percent_change": percent_change
+            "summary": summary,
+            "percent": percent_change,
+            "arrow": arrow,
+            "color": color,
+            "timestamp": timestamp
         }
 
     except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+        return {"summary": f"Error generating summary: {e}"}
+
 
 #clear_iterations(): Deletes all V*.json and .png iteration files for cleanup.
 @app.post("/api/clear_iterations")

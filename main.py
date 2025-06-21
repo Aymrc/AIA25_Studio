@@ -152,7 +152,7 @@ def show_copilot_ui():
     chat_form.Topmost = True
 
     # === icon ===
-    icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
+    icon_path = os.path.abspath("ui/assets/copilot_icon.ico")
     if os.path.exists(icon_path):
         chat_form.Icon = drawing.Icon(icon_path)
     else:
@@ -176,7 +176,7 @@ def show_copilot_ui():
     data_form.Topmost = True
 
     # === icon ===
-    icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
+    icon_path = os.path.abspath("ui/assets/copilot_icon.ico")
     if os.path.exists(icon_path):
         data_form.Icon = drawing.Icon(icon_path)
     else:

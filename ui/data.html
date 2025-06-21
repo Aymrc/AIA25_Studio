@@ -15,7 +15,8 @@
         <div class="copTitle">Copilot Data</div>
 
 		<div class="top-button-bar">
-			<!-- button save iteration's data / image viewport / 3D -->
+
+			<!-- button save iteration's data / image viewport / 3dm -->
 			<button id="SaveIt">Save Iteration</button>
 			<script>
 				document.getElementById("SaveIt").addEventListener("click", () => {
@@ -23,9 +24,9 @@
 						.then(response => response.text())
 						.then(result => {
 							if (result.startsWith("error")) {
-								alert("Failed to save viewport:\n" + result);
+								showStatus("Failed to save viewport", "red");
 							} else {
-								// alert("Rhino viewport saved at:\n" + result);
+								showStatus("Iteration saved", "#727272");
 							}
 						})
 						.catch(err => {
@@ -38,33 +39,19 @@
 			<!-- button clear iteration -->
 			<button id="clearBtn">Clear Iterations</button>
 			<script>
-				document.getElementById("Report").addEventListener("click", () => {
-					fetch("http://127.0.0.1:5001/api/export_report", {
-						method: "POST"
-					})
-					.then(res => res.json())
-					.then(data => {
-						if (data.status === "success") {
-							alert("PDF report successfully generated.");
-						} else {
-							alert("Error exporting report:\n" + data.message);
-						}
-					})
-					.catch(err => {
-						console.error("Export error:", err);
-						alert("Could not contact export endpoint.");
-					});
-				});
-			</script>
-
-
-			
-			<!-- script clear iteration -->
-			<script>
-				document.getElementById("clearBtn").addEventListener("click", () => {
+				// auto-hide messages
+				function showStatus(message, color = "#727272") {
 					const status = document.getElementById("clearStatus");
-					status.textContent = "Clearing...";
-					status.style.color = "black";
+					status.textContent = message;
+					status.style.color = color;
+
+					setTimeout(() => {
+						status.textContent = "";
+					}, 2500); // Hide status after 2.5 seconds
+				}
+
+				document.getElementById("clearBtn").addEventListener("click", () => {
+					showStatus("Clearing...", "#727272");
 
 					fetch("http://127.0.0.1:5001/api/clear_iterations", {
 						method: "POST"
@@ -72,33 +59,54 @@
 					.then(res => res.json())
 					.then(data => {
 						if (data.status === "success") {
-							status.textContent = `Deleted ${data.deleted.length} file(s)`;
-							status.style.color = "green";
+							showStatus(`Deleted ${data.deleted.length} file(s)`, "green");
 
 							// Refresh visualizations & plots
 							document.getElementById("vizGrid").innerHTML = '<div class="viz-tile empty">Waiting for image...</div>';
 							window.gwpData = [];
 							document.getElementById("gwp-plot").innerText = "No data yet.";
 						} else {
-							status.textContent = `Error: ${data.error}`;
-							status.style.color = "red";
+							showStatus(`Error: ${data.error}`, "red");
 						}
 					})
 					.catch(err => {
-						status.textContent = "Request failed";
-						status.style.color = "red";
+						showStatus("Request failed", "red");
 						console.error("Clear error:", err);
 					});
 				});
 			</script>
 
-			<button id="Report">🍒</button><!--  Export Report  -->
-			
-			<button id="WebApp">🍒</button><!--  Web View  -->
-			
-		</div>
+
+			<button id="Report">🍒📄</button><!--  Export Report  -->
+			<script>
+				document.getElementById("Report").addEventListener("click", () => {
+					fetch("http://127.0.0.1:5001/api/export_report", {
+						method: "POST"
+					})
+					.then(res => res.json())
+					.then(data => {
+						if (data.status === "success") {
+							showStatus("Report exported", "#727272"); // message to user
+						} else {
+							showStatus("Error exporting report", "red");
+						}
+					})
+					.catch(err => {
+						console.error("Export error:", err);
+						alert("⚠️ Could not contact export endpoint.");
+					});
+				});
+			</script>
+
+			<a href="cherry/index.html" target="_blank">
+				<button class="button"><!-- WebApp -->
+					<img src="assets/copilot_icon_chat.png" alt="Copilot" class="chat-icon">
+				</button>
+			</a>
 		
+		</div>
 		<span id="clearStatus"></span><!-- show user if it worked -->
+		
 
 		<div class="main_container">
 
@@ -160,27 +168,33 @@
 			<div class="trendModel3D">
 				<h3>3D model GWP trend</h3><div id="gwp-change-label" style="font-size: 0.9em;"></div>
 				<script>
-					function fetchGWPChange() {
-						fetch("http://127.0.0.1:5001/api/gwp_change")
-							.then(res => res.json())
-							.then(data => {
-								const label = document.getElementById("gwp-change-label");
+					let lastTimestamp = null;
 
-								if (data.percent_change !== undefined) {
-								const change = data.percent_change;
-								const sign = change > 0 ? "+" : "";
-								const color = change > 0 ? "red" : "green";
-								const arrow = change > 0 ? "▲" : "▼";
+					function fetchGWPChangeSummary() {
+					fetch("http://127.0.0.1:5001/api/gwp_summary")
+						.then(res => res.json())
+						.then(data => {
+						if (data.timestamp !== lastTimestamp) {
+							lastTimestamp = data.timestamp;
 
-								label.innerHTML = `<span style="color: ${color}; font-weight: bold;">${arrow} ${sign}${change}%</span> vs previous 3D`;
-								} else {
-								label.textContent = "No change data available";
-								}
-							})
-							.catch(err => {
-								console.error("Error fetching GWP change:", err);
-							});
+							const label = document.getElementById("gwp-change-label");
+							label.innerHTML = `
+							<span style="color: ${data.color}; font-weight: bold;">
+								${data.arrow} ${Math.abs(data.percent)}%
+							</span>
+							&nbsp;GWP change<br>
+							<span style="font-size: 0.9em; color: #555;">
+								${data.summary}
+							</span>
+							`;
+						}
+						})
+						.catch(err => {
+						console.error("Error fetching GWP summary:", err);
+						});
 					}
+
+					setInterval(fetchGWPChangeSummary, 2000);
 
 					fetchGWPChange();
 
@@ -249,7 +263,7 @@
 
 			<!-- Gallery Iterations -->
 			<div class="gallerySection" id="gallery">
-				<h3>Visualization</h3>
+				<h3>Gallery</h3>
 
 				<div id="vizGrid" class="viz-grid">
 					<div class="viz-tile empty">Waiting for image...</div>
@@ -259,10 +273,12 @@
 					<script>
 						function loadVizGallery() {
 							const grid = document.getElementById("vizGrid");
+							const scrollY = window.scrollY; // Save scrolling Y (because page is jumping back to the top)
 							grid.innerHTML = "";
+							window.scrollTo(0, scrollY); // Restore Y
 
 							const images = [];
-							let i = 0;
+							let i = 1;
 
 							const tryNext = () => {
 								const imgPath = `../knowledge/iterations/V${i}.png`;
@@ -405,83 +421,6 @@
 				}
 
 
-
-				// // New stacked bar for "GWP total"
-				// function plotGWPStackedBar() {
-				// 	const data = (window.gwpData || [])
-				// 		.sort((a,b) => parseInt(a.version.slice(1)) - parseInt(b.version.slice(1)));
-
-				// 	const versions = data.map(d => d.version);
-				// 	const a13 = data.map(d => d.outputs["Embodied Carbon A1-A3 (kg CO2e/m²a GFA)"] || 0);
-				// 	const ad  = data.map(d => d.outputs["Embodied Carbon A-D (kg CO2e/m²a GFA)"]   || 0);
-
-				// 	// Compute A4–D as AD minus A1–A3
-				// 	const a4d = ad.map((val, i) => val - a13[i]);
-
-				// 	const traceA13 = {
-				// 		x: versions,
-				// 		y: a13,
-				// 		name: 'Embodied A1–A3',
-				// 		type: 'bar',
-				// 		showlegend: true,
-				// 		marker: {
-				// 			color: a13, // one color‐value per bar
-				// 			colorscale: [ // custom gradient to update
-				// 			[0, 'da70d6'],
-				// 			[0.5, 'ffd700'],
-				// 			[1, 'add8e6']
-				// 			],
-				// 			cmin: Math.min(...a13),
-				// 			cmax: Math.max(...a13),
-				// 			reversescale: true,
-				// 			colorbar: {
-				// 			title: 'A1–A3',
-				// 			thickness: 15,
-				// 			tickmode: 'array',
-				// 			tickvals: [Math.min(...a13), Math.max(...a13)],
-				// 			ticktext: ['Best','Worst']
-				// 			}
-				// 		}
-				// 	};
-				// 	const traceA4D = {
-				// 		x: versions,
-				// 		y: a4d,
-				// 		name: 'Embodied A4–D',
-				// 		type: 'bar',
-				// 		showlegend: true,
-				// 		marker: {
-				// 			color: 'rgba(0,0,0,0)',
-				// 			pattern: {
-				// 			shape: '/', // pattern
-				// 			size: 4, // space between
-				// 			solidity: 0.2, // thickness of the line
-				// 			fgcolor: 'grey'
-				// 			}
-				// 		}
-				// 	};
-
-				// 	const layout = {
-				// 		barmode: 'stack',
-				// 		title: 'Embodied Carbon Breakdown per Iteration',
-				// 		xaxis: { title: 'Version' },
-				// 		yaxis: { title: 'kg CO₂e/m²a GFA' },
-				// 		paper_bgcolor: '#f3f3f3',
-				// 		plot_bgcolor: '#ffffff',
-				// 		font: { color: '#727272' },
-				// 		legend: {
-				// 			orientation: 'h',
-				// 			x: 0.5,
-				// 			y: 1.15,
-				// 			xanchor: 'center',
-				// 			font: { size: 12 }
-				// 		}
-				// 	};
-
-				// 	Plotly.newPlot(plotContainer, [ traceA13, traceA4D ], layout);
-				// }
-
-
-
 				// New stacked bar for "GWP total"
 				function plotGWPStackedBar() {
 					const data = (window.gwpData || [])
@@ -558,26 +497,6 @@
 						}
 					};
 
-					// const minTotal = Math.min(...total);
-					// const maxTotal = Math.max(...total);
-					// const totalColors = total.map(val => mapValueToColor(val, minTotal, maxTotal));
-					// // Total markers
-					// const traceTotal = {
-					// 	x: versions,
-					// 	y: total,
-					// 	name: 'Total (A–D)',
-					// 	type: 'scatter',
-					// 	mode: 'markers',
-					// 	marker: {
-					// 		symbol: 'line-ew',
-					// 		size: 20,
-					// 		line: {
-					// 			width: 3,
-					// 			color: totalColors
-					// 		}
-					// 	},
-					// 	showlegend: true
-					// };
 					const traceTotal = {
 						x: versions,
 						y: total,

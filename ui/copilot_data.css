@@ -247,3 +247,27 @@ h3 {
   background: #ccc;
 }
 
+.chat-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+#webapp-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#webapp-button:hover {
+  background-color: #45a049;
+}
