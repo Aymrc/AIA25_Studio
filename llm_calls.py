@@ -183,77 +183,6 @@ def merge_design_data(existing_data, new_data):
     
     return merged
 
-# -- Build ML dictionary from design data (with material mapping) --
-# ======= [COMMENTED OUT] Build full ML dictionary from design_data (bring it back if we introduce weathers)=======
-# def create_ml_dictionary(design_data):
-#     try:
-#         mapper = MaterialMapper()
-        
-#         # Complete dictionary with placeholder values from the start
-#         ml_dict = {
-#             "ew_par": 1,      # Default: concrete
-#             "ew_ins": 2,      # Default: EPS insulation
-#             "iw_par": 1,      # Default: concrete
-#             "es_ins": 1,      # Default: XPS
-#             "is_par": 0,      # Default: concrete slab
-#             "ro_par": 0,      # Default: concrete roof
-#             "ro_ins": 7,      # Default: XPS roof insulation
-#             "wwr": 0.3,       # Default: 30% window ratio
-#             "av": None,       # Will come from geometry
-#             "gfa": None       # Will come from geometry
-#         }
-        
-#         # Override with actual design data if available
-#         if "materiality" in design_data:
-#             material = design_data["materiality"]
-#             print(f"[ML DICT] Processing material: {material}")
-            
-#             material_params = mapper.map_simple_material_to_parameters(material)
-#             ml_dict.update(material_params)
-#             print(f"[ML DICT] Material parameters: {material_params}")
-        
-#         if "wwr" in design_data:
-#             ml_dict["wwr"] = design_data["wwr"]
-#             print(f"[ML DICT] WWR: {design_data['wwr']}")
-        
-#         print(f"[ML DICT] Complete dictionary with placeholders: {ml_dict}")
-#         return ml_dict
-        
-#     except Exception as e:
-#         print(f"[ML DICT] Error creating ML dictionary: {e}")
-#         return None
-
-# -- Check if GFA geometry value is available --
-# ======= [COMMENTED OUT]
-# def check_geometry_available():
-#     """Check if geometry data (GFA) exists in compiled_ml_data.json"""
-#     try:
-#         knowledge_folder = "knowledge"
-#         filepath = os.path.join(knowledge_folder, "compiled_ml_data.json")
-        
-#         if not os.path.exists(filepath):
-#             return False
-            
-#         with open(filepath, 'r') as f:
-#             ml_data = json.load(f)
-        
-#         # Check if GFA exists and is not None/0
-#         gfa = ml_data.get("gfa")
-#         return gfa is not None and gfa > 0
-        
-#     except Exception as e:
-#         print(f"[GEOMETRY CHECK] Error: {e}")
-#         return False
-
-# -- Determine next missing parameter based on current data --
-# ======= [COMMENTED OUT]
-# def determine_next_missing_parameter(design_data):
-    # Check if geometry data (GFA) is available
-    # if not check_geometry_available():
-    #     return "waiting_geometry", "I have your design parameters ready! Create a geometry in Rhino to see predictions."
-    
-    # return "complete", "Perfect! Geometry detected. Generating ML predictions..."
-
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║                     3. Material & Parameter Intelligence                   ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
@@ -470,7 +399,8 @@ def update_compiled_ml_data_with_changes(parameter_updates):
         
         # Maintain proper order
         ordered_data = OrderedDict()
-        key_order = ["ew_par", "ew_ins", "iw_par", "es_ins", "is_par", "ro_par", "ro_ins", "wwr", "av", "gfa"]
+        key_order = ["EW_PAR", "EW_INS", "IW_PAR", "ES_INS", "IS_PAR", "RO_PAR", "RO_INS", "WWR", "BC", "Typology", "A/V", "Volume(m3)", "VOL/VOLBBOX"
+]
         for key in key_order:
             ordered_data[key] = current_data.get(key, 0)
         
@@ -502,7 +432,7 @@ def manage_conversation_state(current_state, user_input, design_data):
         if not design_data:
             return "initial", "Hello! I'm your design assistant. What would you like to build today?", design_data
         else:
-            next_state, next_question = "complete", "✅ Parameters received. Ready to continue!"
+            next_state, next_question = "complete", "Parameters received. Ready to continue!"
             return next_state, next_question, design_data
     
     extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
@@ -510,7 +440,7 @@ def manage_conversation_state(current_state, user_input, design_data):
     if extracted_params:
         design_data = merge_design_data(design_data, extracted_params)
     
-    next_state, next_question = "complete", "✅ Parameters received. Ready to continue!"
+    next_state, next_question = "complete", "Parameters received. Ready to continue!"
     
     response_parts = []
     
@@ -544,11 +474,11 @@ def manage_conversation_state(current_state, user_input, design_data):
         # if ml_dict:
             # save_success = save_ml_dictionary(ml_dict)
             # if save_success:
-            #     response_parts.append("✅ Material parameters ready! Geometry data will be added when you create/analyze the building geometry in Rhino.")
+            #     response_parts.append("Material parameters ready! Geometry data will be added when you create/analyze the building geometry in Rhino.")
             # else:
-            #     response_parts.append("⚠️ Parameters collected but dictionary save failed.")
+            #     response_parts.append("Parameters collected but dictionary save failed.")
         # else:
-        #     response_parts.append("⚠️ Parameters collected but dictionary creation failed.")
+        #     response_parts.append("Parameters collected but dictionary creation failed.")
     else:
         response_parts.append(next_question)
     
@@ -730,7 +660,7 @@ def generate_user_summary(ml_dict):
     }
 
     try:
-        summary = f"✅ Updated design with:\n"
+        summary = f"Updated design with:\n"
         summary += f"• Exterior walls: {material_map.get(ml_dict['ew_par'], 'unknown')} + {insulation_map.get(ml_dict['ew_ins'], 'unknown')} insulation\n"
         summary += f"• Interior walls: {material_map.get(ml_dict['iw_par'], 'unknown')}\n"
         summary += f"• Roof: {['concrete', 'timber frame', 'mass timber'][ml_dict['ro_par']]} + {insulation_map.get(ml_dict['ro_ins'], 'unknown')} insulation\n"
@@ -740,162 +670,151 @@ def generate_user_summary(ml_dict):
         return summary
     except Exception as e:
         print(f"[SUMMARY ERROR] {e}")
-        return "✅ Design updated successfully (could not summarize changes)."
+        return "Design updated successfully (could not summarize changes)."
 
 # -- Suggest a change and update model inputs via JSON patching --
 def suggest_change(user_prompt, design_data):
+        import json
+        import re
+        import os
+        import subprocess
+        import sys
 
-    # --- Prompt construction ---
-    design_data_text = json.dumps(design_data)
+        # --- Load current parameters from file ---
+        compiled_path = os.path.join("knowledge", "compiled_ml_data.json")
+        with open(compiled_path, "r", encoding="utf-8") as f:
+            current_parameters = json.load(f)
 
-    # Load current compiled design dictionary
-    compiled_path = os.path.join("knowledge", "compiled_ml_data.json")
-    with open(compiled_path, "r", encoding="utf-8") as f:
-        current_parameters = json.load(f)
-
-
-    system_prompt = f"""
+        # --- Construct the system prompt ---
+        system_prompt = f"""
     You are a design assistant helping update building parameters.
 
-    The user will describe a design change (e.g., "Change exterior wall insulation to mineral wool").
-    You must:
+    The user will describe a design change (e.g., "Change exterior wall insulation to mineral wool"). You must:
 
     1. Read the current parameters below.
     2. Modify ONLY the parameters explicitly mentioned by the user.
     3. Leave all other values unchanged.
-    4. Output a full dictionary with exactly these 10 keys:
-       - ew_par, ew_ins, iw_par, es_ins, is_par, ro_par, ro_ins, wwr, av, gfa
+    4. Output a full dictionary with exactly these 13 keys:
+    - Typology, WWR, EW_PAR, EW_INS, IW_PAR, ES_INS, IS_PAR, RO_PAR, RO_INS, BC, A/V, Volume(m3), VOL/VOLBBOX
 
-    Do NOT explain the changes or include any text. Respond ONLY with a plain JSON dictionary.
+    DO NOT include explanations or any text. Respond ONLY with a plain JSON dictionary.
 
     ### Current Parameters:
     {json.dumps(current_parameters, indent=2)}
 
     ### Parameter Options:
-    - ew_par / iw_par: BRICK=0, CONCRETE=1, EARTH=2, STRAW=3, TIMBER FRAME=4, TIMBER MASS=5
-    - ew_ins: CELLULOSE=0, CORK=1, EPS=2, GLASS WOOL=3, MINERAL WOOL=4, WOOD FIBER=5
-    - es_ins: EXPANDED GLASS=0, XPS=1
-    - is_par / ro_par: CONCRETE=0, TIMBER FRAME=1, TIMBER MASS=2
-    - ro_ins: CELLULOSE=0, CORK=1, EPS=2, EXPANDED GLASS=3, GLASS WOOL=4, MINERAL WOOL=5, WOOD FIBER=6, XPS=7
-    - wwr: Window-to-Wall Ratio (0.0–1.0 float)
-    - av, gfa: floats from geometry system
+    - Typology: BLOCK=0, L-SHAPE=1, C-SHAPE=2, COURTYARD=3
+    - WWR: VERY LOW=0, LOW=1, MODERATE=2, HIGH=3
+    - EW_PAR / IW_PAR: BRICK=0, CONCRETE=1, EARTH=2, STRAW=3, TIMBER FRAME=4, TIMBER MASS=5
+    - EW_INS: CELLULOSE=0, CORK=1, EPS=2, GLASS WOOL=3, MINERAL WOOL=4, WOOD FIBER=5
+    - ES_INS: EXTRUDED GLASS=0, XPS=1
+    - IS_PAR / RO_PAR: CONCRETE=0, TIMBER FRAME=1, TIMBER MASS=2
+    - RO_INS: CELLULOSE=0, CORK=1, EPS=2, EXTRUDED GLASS=3, GLASS WOOL=4, MINERAL WOOL=5, WOOD FIBER=6, XPS=7
+    - A/V, Volume(m3), VOL/VOLBBOX: floats from geometry system
     """
 
+        # --- Call the LLM ---
+        response = client.chat.completions.create(
+            model=completion_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
+        )
 
-    response = client.chat.completions.create(
-        model=completion_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    )
+        raw_response = response.choices[0].message.content
+        print(f"[RAW LLM RESPONSE]\n{raw_response}")
 
-    raw_response = response.choices[0].message.content
-    print(f"[RAW LLM RESPONSE]\n{raw_response}")
+        # --- Extract and parse the JSON ---
+        def extract_json_block(text):
+            match = re.search(r'\{[\s\S]*?\}', text)
+            return match.group(0).strip() if match else None
 
+        REQUIRED_KEYS = {
+            "Typology", "WWR", "EW_PAR", "EW_INS", "IW_PAR", "ES_INS",
+            "IS_PAR", "RO_PAR", "RO_INS", "BC", "A/V", "Volume(m3)", "VOL/VOLBBOX"
+        }
 
-    def extract_json_block(text):
-        match = re.search(r'\{[\s\S]*?\}', text)
-        return match.group(0).strip() if match else None
+        PROTECTED_KEYS = {"A/V", "Volume(m3)", "VOL/VOLBBOX"}
 
-    REQUIRED_KEYS = {
-        "ew_par", "ew_ins", "iw_par", "es_ins", "is_par",
-        "ro_par", "ro_ins", "wwr", "av", "gfa"
-    }
+        default_inputs = {
+            "Typology": 1, "WWR": 2, "EW_PAR": 0, "EW_INS": 0, "IW_PAR": 0,
+            "ES_INS": 0, "IS_PAR": 0, "RO_PAR": 0, "RO_INS": 0, "BC": 2,
+            "A/V": 0.4, "Volume(m3)": 1000.0, "VOL/VOLBBOX": 1.0
+        }
 
-    def parse_and_validate_model_response(response_text, default_inputs):
-        try:
-            parsed = json.loads(response_text)
-            if not isinstance(parsed, dict):
-                raise ValueError("Parsed content is not a dictionary.")
+        def parse_and_validate_model_response(response_text, default_inputs):
+            try:
+                parsed = json.loads(response_text)
+                if not isinstance(parsed, dict):
+                    raise ValueError("Parsed content is not a dictionary.")
 
-            # Fill any missing required keys
-            missing = REQUIRED_KEYS - parsed.keys()
-            for key in missing:
-                print(f"[VALIDATION] Missing key: {key} → filling from defaults")
-                parsed[key] = default_inputs[key]
-
-            # Prevent edits to protected fields
-            PROTECTED_KEYS = {"av", "gfa", "number_of_levels"}
-            for key in PROTECTED_KEYS:
-                if parsed.get(key) != default_inputs.get(key):
-                    print(f"[PROTECTION] Rejected LLM change to protected key: {key}")
+                missing = REQUIRED_KEYS - parsed.keys()
+                for key in missing:
+                    print(f"[VALIDATION] Missing key: {key} → using default")
                     parsed[key] = default_inputs[key]
 
-            # Type casting
-            for key in ["wwr", "av", "gfa"]:
-                parsed[key] = float(parsed[key]) if not isinstance(parsed[key], float) else parsed[key]
-            for key in REQUIRED_KEYS - {"wwr", "av", "gfa"}:
-                parsed[key] = int(parsed[key]) if not isinstance(parsed[key], int) else parsed[key]
+                for key in PROTECTED_KEYS:
+                    if key in parsed and key in current_parameters:
+                        if parsed[key] != current_parameters[key]:
+                            print(f"[PROTECTION] Ignoring unauthorized edit to {key}")
+                            parsed[key] = current_parameters[key]
 
+                float_keys = {"A/V", "Volume(m3)", "VOL/VOLBBOX"}
+                for key in float_keys:
+                    parsed[key] = float(parsed[key])
+                for key in REQUIRED_KEYS - float_keys:
+                    parsed[key] = int(parsed[key])
 
-            return parsed
+                return parsed
+            except Exception as e:
+                raise ValueError(f"Invalid model response: {e}")
 
-        except Exception as e:
-            raise ValueError(f"Invalid model response: {e}")
+        cleaned_json = extract_json_block(raw_response)
 
-    cleaned_json = extract_json_block(raw_response)
-    default_inputs = {
-        "ew_par": 0, "ew_ins": 0, "iw_par": 0,
-        "es_ins": 1, "is_par": 0, "ro_par": 0, "ro_ins": 0,
-        "wwr": 0.3, "av": 1.0, "gfa": 1000.0
-    }
-
-    try:
-        validated_dict = parse_and_validate_model_response(cleaned_json, default_inputs)
-
-        # Merge changes with current parameters
-        merged_result = current_parameters.copy()
-        merged_result.update(validated_dict)
-
-        # Enforce no unexpected changes
-        for key in merged_result:
-            if key not in validated_dict:
-                merged_result[key] = current_parameters[key]  # Keep it unchanged
-
-
-        save_ml_dictionary(merged_result)
-    except ValueError as e:
-        print(f"❌ Error validating LLM output: {e}")
-        with open("invalid_llm_output.json", "w", encoding="utf-8") as f:
-            f.write(raw_response)
-        return "⚠️ I couldn't generate a valid parameter set. Please try again."
-
-
-    previous_data = get_last_version_data()
-
-    def run_ml_predictor():
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        predictor_path = os.path.join(project_root, "utils", "ML_predictor.py")
-        python_path = sys.executable
         try:
-            result = subprocess.run(
-                [python_path, predictor_path],
-                cwd=project_root,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            print("✅ ML Predictor output:\n", result.stdout)
-        except subprocess.CalledProcessError as e:
-            print("❌ ML Predictor failed:\n", e.stderr)
+            validated_dict = parse_and_validate_model_response(cleaned_json, default_inputs)
 
-    run_ml_predictor()
+            merged_result = current_parameters.copy()
+            merged_result.update(validated_dict)
 
-    try:
-        with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
-            new_data = json.load(f)
-    except Exception as e:
-        print(f"[COMPARE] Failed to load new output: {e}")
-        return "✅ Change saved, but unable to analyze results right now."
+            save_ml_dictionary(merged_result)
+        except ValueError as e:
+            print(f"❌ Error validating LLM output: {e}")
+            with open("invalid_llm_output.json", "w", encoding="utf-8") as f:
+                f.write(raw_response)
+            return "⚠️ Unable to process design change due to invalid output."
 
-    diff_summary = generate_diff_summary(
-        current_parameters,
-        merged_result
-    )
+        # --- Run ML predictor ---
+        def run_ml_predictor():
+            project_root = os.path.dirname(os.path.abspath(__file__))
+            predictor_path = os.path.join(project_root, "utils", "ML_predictor.py")
+            python_path = sys.executable
+            try:
+                result = subprocess.run(
+                    [python_path, predictor_path],
+                    cwd=project_root,
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                print("✅ ML Predictor Output:\n", result.stdout)
+            except subprocess.CalledProcessError as e:
+                print("❌ ML Predictor failed:\n", e.stderr)
 
+        run_ml_predictor()
 
-    change_explanation_prompt = f"""
+        # --- Load new output for comparison ---
+        try:
+            with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
+                new_data = json.load(f)
+        except Exception as e:
+            print(f"[COMPARE] Failed to load new output: {e}")
+            return "✅ Change saved, but result analysis unavailable."
+
+        previous_data = get_last_version_data()
+
+        change_explanation_prompt = f"""
     You are a helpful sustainability design advisor. The user made updates to their building design.
 
     Below are the two versions of the design. Use this to explain what changed in a friendly, human way. Mention only what changed.
@@ -909,18 +828,16 @@ def suggest_change(user_prompt, design_data):
     {json.dumps(new_data.get("inputs_decoded", {}), indent=2)}
     """
 
-    llm_response = client.chat.completions.create(
-        model=completion_model,
-        messages=[
-            {"role": "system", "content": change_explanation_prompt},
-            {"role": "user", "content": "Explain the design update."}
-        ]
-    )
+        llm_response = client.chat.completions.create(
+            model=completion_model,
+            messages=[
+                {"role": "system", "content": change_explanation_prompt},
+                {"role": "user", "content": "Explain the design update."}
+            ]
+        )
 
-    interpretation = llm_response.choices[0].message.content.strip()
-
-
-    return interpretation
+        interpretation = llm_response.choices[0].message.content.strip()
+        return interpretation
  
 # -- Compare specific versions and explain differences --
 def compare_versions_summary(user_input):
@@ -928,11 +845,11 @@ def compare_versions_summary(user_input):
     try:
         version_names = extract_versions_from_input(user_input)
         if not version_names or len(version_names) < 2:
-            return "⚠️ Please specify at least two versions to compare (e.g., 'Compare V2 and V5')."
+            return "Please specify at least two versions to compare (e.g., 'Compare V2 and V5')."
 
         data = summarize_versions_data(version_names)
         if not data:
-            return "⚠️ No matching data found for the specified versions."
+            return "No matching data found for the specified versions."
 
         # Build raw summary table
         response_lines = ["🔍 Version Comparison:"]
@@ -946,7 +863,7 @@ def compare_versions_summary(user_input):
             ec = outputs.get("Embodied Carbon A-D (kg CO2e/m²a GFA)", "N/A")
 
             response_lines.append(
-                f"\n📦 {version}\n"
+                f"\n{version}\n"
                 f"- GWP: {gwp} kg CO2e/m²\n"
                 f"- EUI: {eui}\n"
                 f"- Operational: {oc}\n"
@@ -994,9 +911,9 @@ def query_version_outputs():
             f"• {v['version']}: {v['outputs'].get('GWP total (kg CO2e/m²a GFA)', 'N/A')} kg CO2e/m²"
             for v in versions
         ]
-        return "📊 Project Versions:\n" + "\n".join(summary_lines)
+        return "Project Versions:\n" + "\n".join(summary_lines)
     except Exception as e:
-        return f"⚠️ Could not summarize version outputs: {e}"
+        return f"Could not summarize version outputs: {e}"
 
 # -- Return best performing version based on a given metric --
 from utils.version_analysis_utils import get_best_version
@@ -1005,11 +922,11 @@ def get_best_version_summary():
     try:
         best, value = get_best_version(metric="GWP total (kg CO2e/m²a GFA)")
         if best is None or value is None or value == float("inf"):
-            return "⚠️ No suitable version found for comparison."
-        return f"🏆 The best performing design is **{best}** with the lowest GWP: **{value:.2f} kg CO2e/m²a**."
+            return "No suitable version found for comparison."
+        return f"The best performing design is **{best}** with the lowest GWP: **{value:.2f} kg CO2e/m²a**."
     except Exception as e:
         print(f"[BEST VERSION SUMMARY ERROR] {e}")
-        return "❌ Error while evaluating the best performing version."
+        return "Error while evaluating the best performing version."
 
 # -- Return input/output details for one specific version --
 def load_version_details_summary(version_name):
@@ -1017,13 +934,13 @@ def load_version_details_summary(version_name):
     try:
         data = load_version_details(version_name)
         if not data:
-            return f"⚠️ Version {version_name} not found."
+            return f"Version {version_name} not found."
         
         decoded = json.dumps(data.get("inputs_decoded", {}), indent=2)
         outputs = json.dumps(data.get("outputs", {}), indent=2)
-        return f"📦 Design {version_name}\n\nInputs:\n{decoded}\n\nOutputs:\n{outputs}"
+        return f"Design {version_name}\n\nInputs:\n{decoded}\n\nOutputs:\n{outputs}"
     except Exception as e:
-        return f"⚠️ Failed to load version {version_name}: {e}"
+        return f"Failed to load version {version_name}: {e}"
 
 # -- Summarize material selection in a specific version --
 def summarize_version_materials(version_name):
@@ -1032,7 +949,7 @@ def summarize_version_materials(version_name):
         data = load_version_details(version_name)
         decoded = data.get("inputs_decoded", {})
 
-        response = f"📦 Materials for {version_name}:\n"
+        response = f"Materials for {version_name}:\n"
         response += f"• Exterior Wall Partition: {decoded.get('Ext.Wall_Partition', 'N/A')}\n"
         response += f"• Exterior Wall Insulation: {decoded.get('Ext.Wall_Insulation', 'N/A')}\n"
         response += f"• Interior Wall Partition: {decoded.get('Int.Wall_Partition', 'N/A')}\n"
@@ -1045,7 +962,7 @@ def summarize_version_materials(version_name):
         return response
     except Exception as e:
         print(f"[VERSION MATERIALS] Error: {e}")
-        return f"⚠️ Could not retrieve materials for {version_name}"
+        return f"Could not retrieve materials for {version_name}"
 
 # -- Optional helper: generate diff summary for raw param dicts --
 def generate_diff_summary(before: dict, after: dict):
