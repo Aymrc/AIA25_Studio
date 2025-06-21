@@ -14,3 +14,4 @@ langgraph>=0.4.8
 fpdf2>=2.8.3
 matplotlib>=3.10.3
 pandas>=2.2.3
+lightgbm>=4.6.0
