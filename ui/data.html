@@ -28,6 +28,10 @@
 							} else {
 								showStatus("Iteration saved", "#727272");
 							}
+
+							setTimeout(() => {
+								loadVizGallery(); // Refresh the gallery after few saving delay
+							}, 500);
 						})
 						.catch(err => {
 							console.error("Fetch error:", err);

@@ -654,7 +654,7 @@ def clear_iterations(request: Request):
 
     try:
         for filename in os.listdir(folder):
-            if filename.startswith("V") and (filename.endswith(".json") or filename.endswith(".png")):
+            if filename.startswith("V") and (filename.endswith(".json") or filename.endswith(".png") or filename.endswith(".3dm")):
                 path = os.path.join(folder, filename)
                 os.remove(path)
                 deleted_files.append(filename)
