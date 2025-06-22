@@ -202,3 +202,72 @@ h3 {
   justify-content: center;
   font-size: 0.8em;
 }
+
+
+/* Plots */
+.tab {
+  display: flex;
+  justify-content: center;
+  width: fit-content;
+  background: #e7e7e7;
+  border-radius: 0.5em;
+  padding: 0.25em;
+  gap: 0.2em;
+  margin: 0 auto;
+  color: #333;
+}
+
+.tab button {
+  background: transparent;
+  border: none;
+  padding: 0.25em 0.5em;
+  border-radius: 0.4em;
+  cursor: pointer;
+  font-size: 0.8em;
+  color: #333;
+}
+
+.tab button.active {
+  background: #ffffff;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* separator between buttons */
+.tab button:not(.active) {
+  position: relative;
+}
+
+/* remove separator between buttons when active*/
+.tab button:not(.active) + button:not(.active)::before {
+  content: "";
+  position: absolute;
+  left: -0.1em; top: 20%;
+  height: 60%;
+  width: 1px;
+  background: #ccc;
+}
+
+.chat-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+#webapp-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#webapp-button:hover {
+  background-color: #45a049;
+}

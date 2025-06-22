@@ -1,126 +1,103 @@
-/* === General Page Styling === */
-body {
+* {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+  font-family: Arial, sans-serif;
   background-color: #f3f3f3;
-  color: #727272;
   overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
 }
 
-/* === Glowing Gradient Line === */
-.glow-line {
+.container {
+  padding: 80px 20px 20px 20px;
+}
+
+/* COPILOT title */
+.floating-title {
   position: fixed;
-  top: 0;
-  left: 5%;
-  width: 90%;
-  height: 2px;
-  background: linear-gradient(to right, #add8e6, #4682b4, #da70d6, #ff8c00, #ffd700);
-  filter: blur(2px);
-  opacity: 0.85;
-  border-radius: 4px;
-  z-index: 100;
-  animation: pulseGlow 2.5s ease-in-out infinite, glowShift 8s ease infinite;
-  background-size: 150% 150%;
-}
+  top: 20px;
+  left: 20px;
+  font-size: 36px;
+  font-weight: 700;
+  z-index: 9999;
+  pointer-events: none;
 
-@keyframes pulseGlow {
-  0%, 100% {
-    opacity: 0.5;
-    filter: blur(2px) brightness(1);
-  }
-  50% {
-    opacity: 1;
-    filter: blur(5px) brightness(1.1);
-  }
-}
-@keyframes glowShift {
-  0% {
-    background-position: 0% 50%;
-    left: 15%;
-    width: 70%;
-  }
-  50% {
-    background-position: 100% 50%;
-    left: 5%;
-    width: 90%;
-  }
-  100% {
-    background-position: 0% 50%;
-    left: 15%;
-    width: 70%;
-  }
-}
-
-/* === Page Title (Optional) === */
-h1 {
-  text-align: center;
-  font-size: 22px;
-  font-weight: bold;
-  margin: 16px 0 10px;
-  background: linear-gradient(90deg, #add8e6, #4682b4, #da70d6, #ff8c00, #ffd700);
+  background: linear-gradient(100deg, #add8e6, #4682b4, #da70d6, #ff8c00, #ffd700);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-}
 
-/* === Main Gallery Layout === */
-#gallery {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding: 20px;
-  justify-content: center;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
 }
-
-/* === Tile Style === */
-.viz-tile {
-  width: 150px;
-  height: 150px;
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+/* Animated compare panel */
+.compare-panel {
+  height: 0;
+  opacity: 0;
   overflow: hidden;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.25s ease, border 0.25s ease, box-shadow 0.25s ease;
+  transition: height 0.4s ease, opacity 0.3s ease, margin-bottom 0.3s ease;
+  background: white;
+  border-radius: 0px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 0 20px;
+  margin-bottom: 0;
 }
 
-/* Hover with glowing border */
-.viz-tile:hover {
-  /* transform: scale(1.0); */
-  border: 2px solid transparent;
-  border-image: linear-gradient(90deg, #add8e6, #4682b4, #da70d6, #ff8c00, #ffd700) 1;
-  box-shadow: 0 0 8px rgba(150, 150, 255, 0.2);
+/* When 2 items selected — reveal the full panel */
+.compare-panel.active {
+  height: 60vh;
+  opacity: 1;
+  padding: 20px;
+  margin-bottom: 20px;
 }
 
-/* === Image inside tile === */
-.viz-tile img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 6px;
+
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
 }
 
-/* === Handle missing image fallback === */
-.viz-tile.no-image {
+.tile {
   background-color: white;
-  border: 1px dashed #ddd;
+  border-radius: 0px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  padding: 10px;
 }
 
-/* === Version Label === */
-.viz-label {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  background-color: rgba(255, 255, 255, 0.75);
-  padding: 2px 6px;
-  font-size: 12px;
-  color: #727272;
-  border-radius: 4px;
-  font-weight: 500;
+.tile:hover {
+  transform: scale(1.02);
+}
+
+.tile.selected {
+  border: 2px solid #da70d6; /*#da70d6, #ff8c00, #ffd700);*/
+  box-shadow: none; /*0 0 0 2px #00000044;*/
+}
+
+.image-placeholder {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background-color: #d9d9d9;
+  border-radius: 0px;
+}
+
+.tile-info {
+  padding-top: 8px;
+}
+
+.tile-info h2 {
+  font-size: 16px;
+  margin-bottom: 4px;
+  color: #222;
+}
+
+.tile-info p {
+  font-size: 14px;
+  color: #666;
 }
