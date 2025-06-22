@@ -520,71 +520,98 @@ def answer_user_query(user_query, design_data):
 
 #     return response.choices[0].message.content
 
-
 def suggest_improvements(user_prompt, design_data):
-        """Give 1–2 brief, practical suggestions using design data and RAG precedents."""
-        design_data_json = json.dumps(design_data)
+    """Give 1–2 brief, practical suggestions using design data and RAG precedents."""
+    import json
+    from utils.rag_utils import search_rag
+    from utils.version_analysis_utils import summarize_version_outputs, get_best_version
+    from server.config import client, completion_model
 
-        version_summary = summarize_version_outputs()
-        version_summary_text = json.dumps(version_summary, indent=2)
+    # 1. Diseño actual en JSON
+    design_data_json = json.dumps(design_data)
 
-        best_version = get_best_version()
-        best_version_text = json.dumps(best_version, indent=2)
+    # 2. Versiones anteriores
+    version_summary = summarize_version_outputs()
+    version_summary_text = json.dumps(version_summary, indent=2)
 
-        ranking_block = "\nVersion ranking by GWP (best to worst):\n"
-        sorted_versions = sorted(version_summary, key=lambda x: x.get("GWP total", float('inf')))
-        for v in sorted_versions:
-            ranking_block += f"- {v['version']}: {v.get('GWP total', 'N/A')} kg CO2e/m²\n"
+    best_version = get_best_version()
+    best_version_text = json.dumps(best_version, indent=2)
 
-        # === RAG precedents instead of SQL ===
-        try:
-            rag_results = search_rag(user_prompt, k=3)
-        except Exception as e:
-            print(f"[RAG] Error fetching precedent examples: {e}")
-            rag_results = []
+    # 3. Ranking de versiones
+    ranking_block = "\nVersion ranking by GWP (best to worst):\n"
+    sorted_versions = sorted(version_summary, key=lambda x: x.get("GWP total", float('inf')))
+    for v in sorted_versions:
+        ranking_block += f"- {v['version']}: {v.get('GWP total', 'N/A')} kg CO2e/m²\n"
 
-        if rag_results:
-            formatted_examples = "\n".join(f"- {text}" for text in rag_results)
-            dataset_block = f"""
-    Reference examples from similar sustainable designs (RAG):
-    {formatted_examples}
-    """
-        else:
-            dataset_block = "\n(No similar precedents found from RAG.)\n"
+    # 4. RAG
+    try:
+        rag_results = search_rag(user_prompt, k=3)
+        print("🔎 [RAG] Top results:")
+        for r in rag_results:
+            print("•", r[:120])
+    except Exception as e:
+        print(f"[RAG] Error fetching precedent examples: {e}")
+        rag_results = []
 
-        # === System prompt with RAG + design data ===
-        system_prompt = f"""
-    You are a design advisor. Suggest practical improvements using this data:
+    if rag_results:
+        formatted_examples = "\n".join(f"- {text}" for text in rag_results)
+        dataset_block = f"""
+Reference examples from similar sustainable designs (RAG):
+{formatted_examples}
+"""
+    else:
+        dataset_block = "\n(No similar precedents found from RAG.)\n"
 
-    Current design:
-    {design_data_json}
+    # 5. Materiales disponibles
+    try:
+        with open("knowledge/materials.json", "r", encoding="utf-8") as f:
+            materials_data = json.load(f)
+    except Exception as e:
+        materials_data = {}
+        print(f"[MATERIALS] Could not load materials.json: {e}")
 
-    Recent version summaries:
-    {version_summary_text}
+    materials_block = ""
+    if materials_data:
+        materials_block = "\nAvailable materials:\n"
+        for category, values in materials_data.items():
+            readable = ", ".join(values.values())
+            materials_block += f"- {category}: {readable}\n"
+        materials_block += "\nOnly suggest materials from this list.\n"
 
-    Best performing version:
-    {best_version_text}
+    # 6. Prompt del sistema
+    system_prompt = f"""
+You are a design advisor. Suggest practical improvements using this data.
 
-    {ranking_block}
+Current design:
+{design_data_json}
 
-    {dataset_block}
+Recent version summaries:
+{version_summary_text}
 
-    Answer the user's prompt in 1–2 short, specific suggestions.
-    Be direct. No intros, no conclusions. Do not repeat the user prompt.
-    If helpful, compare with previous versions or point out changes.
-    """
+Best performing version:
+{best_version_text}
 
-        # === LLM call ===
-        response = client.chat.completions.create(
-            model=completion_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-        )
+{ranking_block}
 
-        return response.choices[0].message.content
+{dataset_block}
 
+{materials_block}
+
+Answer the user's prompt in 1–2 short, specific suggestions.
+Be direct. No intros, no conclusions. Do not repeat the user prompt.
+Use only materials and typologies from the provided list. Never invent or assume materials outside this list.
+"""
+
+    # 7. LLM call
+    response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+
+    return response.choices[0].message.content
 
 # -- Convert ML parameter dictionary to readable summary for user --
 def generate_user_summary(ml_dict):

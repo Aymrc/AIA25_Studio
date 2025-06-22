@@ -24,4 +24,9 @@ def search_rag(query, k=5):
     query_embedding = model.encode([query])
     distances, indices = index.search(query_embedding, k)
     results = [texts[i] for i in indices[0]]
+    
+    print("🔎 [RAG] RAG activated. Top results:")
+    for r in results:
+        print("•", r[:120])  # solo imprime un trozo del texto
     return results
+
