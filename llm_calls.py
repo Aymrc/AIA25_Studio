@@ -1009,3 +1009,71 @@ def get_last_version_data():
         return None
 
 
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                               6. Utils                                     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+
+# -- LLM GWP Trend message between In.json and In-1.json -- 
+def summarize_gwp_change_between_versions():
+    """Compare In.json and In-1.json and summarize GWP-related differences."""
+    try:
+        with open("knowledge/iterations/In.json", "r", encoding="utf-8") as f:
+            current = json.load(f)
+        with open("knowledge/iterations/In-1.json", "r", encoding="utf-8") as f:
+            previous = json.load(f)
+    except Exception as e:
+        return f"Unable to load version files: {e}"
+
+    prompt = f"""
+Compare the two building design versions below.
+
+Write **exactly ONE sentence**
+**Max 10 words**
+Focus only on the *main cause* of the GWP change
+Avoid any of these:
+- "The current design..."
+- "While the..."
+- "have decreased"
+- extra clauses or balance explanations
+
+Just the *key reason* GWP went up or down.
+
+
+### Previous Version:
+Inputs:
+{json.dumps(previous.get("inputs_decoded", {}), indent=2)}
+Outputs:
+{json.dumps(previous.get("outputs", {}), indent=2)}
+
+### Current Version:
+Inputs:
+{json.dumps(current.get("inputs_decoded", {}), indent=2)}
+Outputs:
+{json.dumps(current.get("outputs", {}), indent=2)}
+"""
+
+    try:
+        response = client.chat.completions.create(
+        model=completion_model,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a sustainability assistant.\n"
+                    "Always respond with **one sentence only**, maximum **10 words**.\n"
+                    "Be blunt and specific. Do **not** justify, balance, or explain. Avoid soft language.\n"
+                    "If unsure, say: 'No clear GWP cause detected.'"
+                )
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.3,
+        max_tokens=60
+    )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"LLM call failed: {e}"
+
