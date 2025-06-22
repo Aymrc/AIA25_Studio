@@ -9,6 +9,7 @@ import subprocess
 import re
 import traceback
 from server.config import client, completion_model
+from utils.rag_utils import search_rag
 
 # -- Optional imports for external features --
 try:
@@ -445,79 +446,145 @@ def answer_user_query(user_query, design_data):
     return response.choices[0].message.content
 
 # -- Suggest practical, data-driven design improvements --
+# def suggest_improvements(user_prompt, design_data):
+#     """Give 1–2 brief, practical suggestions based on the design data and SQL dataset insights."""
+#     design_data_json = json.dumps(design_data)
+
+#     version_summary = summarize_version_outputs()
+#     version_summary_text = json.dumps(version_summary, indent=2)
+
+#     best_version = get_best_version()
+#     best_version_text = json.dumps(best_version, indent=2)
+
+#     ranking_block = "\nVersion ranking by GWP (best to worst):\n"
+#     sorted_versions = sorted(version_summary, key=lambda x: x.get("GWP total", float('inf')))
+#     for v in sorted_versions:
+#         ranking_block += f"- {v['version']}: {v.get('GWP total', 'N/A')} kg CO2e/m²\n"
+
+#     # Step 1: Get dataset-based reference examples (if available)
+#     if SQL_DATASET_AVAILABLE:
+#         try:
+#             reference_examples = get_top_low_carbon_high_gfa(max_results=3)
+#         except Exception as e:
+#             print(f"Error accessing SQL dataset: {e}")
+#             reference_examples = []
+#     else:
+#         reference_examples = []
+
+#     if reference_examples:
+#         formatted_examples = "\n".join(
+#             [
+#                 f"- {row.get('Typology', 'Unknown')} | "
+#                 f"GFA: {row.get('GFA', 'N/A')} | "
+#                 f"GWP: {row.get('GWP total/m²GFA', row.get('GWP_total_per_m2_GFA', 'N/A'))}"
+#                 for row in reference_examples
+#             ]
+#         )
+#         dataset_block = f"""
+# Reference examples from other projects with high GFA and low carbon footprint:
+# {formatted_examples}
+# """
+#     else:
+#         dataset_block = "\n(No dataset matches found — skipping example injection.)\n"
+
+#     # ✅ Step 2: Build the system prompt (outside of the if block!)
+#     system_prompt = f"""
+# You are a design advisor. Suggest practical improvements using this data:
+
+# Current design:
+# {design_data_json}
+
+# Recent version summaries:
+# {version_summary_text}
+
+# Best performing version:
+# {best_version_text}
+
+# {ranking_block}
+
+# {dataset_block}
+
+# Answer the user's prompt in 1–2 short, specific suggestions.
+# Be direct. No intros, no conclusions. Do not repeat the user prompt.
+# If helpful, compare with previous versions or point out changes.
+# """
+
+#     # Step 3: Call the LLM
+#     response = client.chat.completions.create(
+#         model=completion_model,
+#         messages=[
+#             {"role": "system", "content": system_prompt},
+#             {"role": "user", "content": user_prompt}
+#         ]
+#     )
+
+#     return response.choices[0].message.content
+
+
 def suggest_improvements(user_prompt, design_data):
-    """Give 1–2 brief, practical suggestions based on the design data and SQL dataset insights."""
-    design_data_json = json.dumps(design_data)
+        """Give 1–2 brief, practical suggestions using design data and RAG precedents."""
+        design_data_json = json.dumps(design_data)
 
-    version_summary = summarize_version_outputs()
-    version_summary_text = json.dumps(version_summary, indent=2)
+        version_summary = summarize_version_outputs()
+        version_summary_text = json.dumps(version_summary, indent=2)
 
-    best_version = get_best_version()
-    best_version_text = json.dumps(best_version, indent=2)
+        best_version = get_best_version()
+        best_version_text = json.dumps(best_version, indent=2)
 
-    ranking_block = "\nVersion ranking by GWP (best to worst):\n"
-    sorted_versions = sorted(version_summary, key=lambda x: x.get("GWP total", float('inf')))
-    for v in sorted_versions:
-        ranking_block += f"- {v['version']}: {v.get('GWP total', 'N/A')} kg CO2e/m²\n"
+        ranking_block = "\nVersion ranking by GWP (best to worst):\n"
+        sorted_versions = sorted(version_summary, key=lambda x: x.get("GWP total", float('inf')))
+        for v in sorted_versions:
+            ranking_block += f"- {v['version']}: {v.get('GWP total', 'N/A')} kg CO2e/m²\n"
 
-    # Step 1: Get dataset-based reference examples (if available)
-    if SQL_DATASET_AVAILABLE:
+        # === RAG precedents instead of SQL ===
         try:
-            reference_examples = get_top_low_carbon_high_gfa(max_results=3)
+            rag_results = search_rag(user_prompt, k=3)
         except Exception as e:
-            print(f"Error accessing SQL dataset: {e}")
-            reference_examples = []
-    else:
-        reference_examples = []
+            print(f"[RAG] Error fetching precedent examples: {e}")
+            rag_results = []
 
-    if reference_examples:
-        formatted_examples = "\n".join(
-            [
-                f"- {row.get('Typology', 'Unknown')} | "
-                f"GFA: {row.get('GFA', 'N/A')} | "
-                f"GWP: {row.get('GWP total/m²GFA', row.get('GWP_total_per_m2_GFA', 'N/A'))}"
-                for row in reference_examples
+        if rag_results:
+            formatted_examples = "\n".join(f"- {text}" for text in rag_results)
+            dataset_block = f"""
+    Reference examples from similar sustainable designs (RAG):
+    {formatted_examples}
+    """
+        else:
+            dataset_block = "\n(No similar precedents found from RAG.)\n"
+
+        # === System prompt with RAG + design data ===
+        system_prompt = f"""
+    You are a design advisor. Suggest practical improvements using this data:
+
+    Current design:
+    {design_data_json}
+
+    Recent version summaries:
+    {version_summary_text}
+
+    Best performing version:
+    {best_version_text}
+
+    {ranking_block}
+
+    {dataset_block}
+
+    Answer the user's prompt in 1–2 short, specific suggestions.
+    Be direct. No intros, no conclusions. Do not repeat the user prompt.
+    If helpful, compare with previous versions or point out changes.
+    """
+
+        # === LLM call ===
+        response = client.chat.completions.create(
+            model=completion_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
             ]
         )
-        dataset_block = f"""
-Reference examples from other projects with high GFA and low carbon footprint:
-{formatted_examples}
-"""
-    else:
-        dataset_block = "\n(No dataset matches found — skipping example injection.)\n"
 
-    # ✅ Step 2: Build the system prompt (outside of the if block!)
-    system_prompt = f"""
-You are a design advisor. Suggest practical improvements using this data:
+        return response.choices[0].message.content
 
-Current design:
-{design_data_json}
-
-Recent version summaries:
-{version_summary_text}
-
-Best performing version:
-{best_version_text}
-
-{ranking_block}
-
-{dataset_block}
-
-Answer the user's prompt in 1–2 short, specific suggestions.
-Be direct. No intros, no conclusions. Do not repeat the user prompt.
-If helpful, compare with previous versions or point out changes.
-"""
-
-    # Step 3: Call the LLM
-    response = client.chat.completions.create(
-        model=completion_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-    )
-
-    return response.choices[0].message.content
 
 # -- Convert ML parameter dictionary to readable summary for user --
 def generate_user_summary(ml_dict):
