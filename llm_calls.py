@@ -9,8 +9,6 @@ import subprocess
 import re
 import traceback
 from server.config import client, completion_model
-import sys
-import subprocess
 
 # -- Optional imports for external features --
 try:
@@ -22,17 +20,8 @@ except ImportError:
 try:
     from utils.material_mapper import MaterialMapper
 except ImportError:
-    class MaterialMapper:
-        def map_simple_material_to_parameters(self, material):
-            mappings = {
-                "brick": {"ew_par": 0, "iw_par": 0},
-                "concrete": {"ew_par": 1, "iw_par": 1},
-                "earth": {"ew_par": 2, "iw_par": 2},
-                "straw": {"ew_par": 3, "iw_par": 3},
-                "timber_frame": {"ew_par": 4, "iw_par": 4, "is_par": 1, "ro_par": 1},
-                "timber_mass": {"ew_par": 5, "iw_par": 5, "is_par": 2, "ro_par": 2}
-            }
-            return mappings.get(material, {"ew_par": 0, "iw_par": 0})
+    print("Failed importing MaterialMapper")
+
 
 # -- Generate dynamic LLM greeting --
 def generate_dynamic_greeting():
@@ -127,17 +116,19 @@ def initialize_placeholder_dictionary():
         
         # Create placeholder dictionary
         placeholder_dict = {
-            "ew_par": 1,      # Concrete walls
-            "ew_ins": 2,      # EPS insulation  
-            "iw_par": 1,      # Concrete interior walls
-            "es_ins": 1,      # XPS slab insulation
-            "is_par": 0,      # Concrete slab
-            "ro_par": 0,      # Concrete roof
-            "ro_ins": 7,      # XPS roof insulation
-            "wwr": 0.3,       # 30% windows
-            "av": None,       # Pending geometry
-            "gfa": None       # Pending geometry
+            "ew_par": 1,
+            "ew_ins": 2,
+            "iw_par": 1,
+            "es_ins": 1,
+            "is_par": 0,
+            "ro_par": 0,
+            "ro_ins": 7,
+            "wwr": 0.3,
+            "A/V": 0.4,
+            "Volume(m3)": 1000.0,
+            "VOL/VOLBBOX": 1.0
         }
+
         
         with open(filepath, 'w') as f:
             json.dump(placeholder_dict, f, indent=2)
@@ -187,71 +178,71 @@ def merge_design_data(existing_data, new_data):
 # ║                     3. Material & Parameter Intelligence                   ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
-# -- Detect if user is asking for material change, component-specific edit, or comparison --
-def detect_change_request(user_input):
-    """Detect what type of change the user is requesting"""
-    user_lower = user_input.lower()
+# # -- Detect if user is asking for material change, component-specific edit, or comparison --
+# def detect_change_request(user_input):
+#     """Detect what type of change the user is requesting"""
+#     user_lower = user_input.lower()
     
-    # Overall material keywords
-    overall_materials = {
-        "timber": "timber", "wood": "timber", "timber mass": "timber_mass", 
-        "mass timber": "timber_mass", "timber frame": "timber_frame",
-        "concrete": "concrete", "steel": "steel", "brick": "brick", 
-        "earth": "earth", "adobe": "earth", "straw": "straw"
-    }
+#     # Overall material keywords
+#     overall_materials = {
+#         "timber": "timber", "wood": "timber", "timber mass": "timber_mass", 
+#         "mass timber": "timber_mass", "timber frame": "timber_frame",
+#         "concrete": "concrete", "steel": "steel", "brick": "brick", 
+#         "earth": "earth", "adobe": "earth", "straw": "straw"
+#     }
     
-    # Component-specific keywords
-    component_keywords = {
-        # Wall components
-        "wall": "wall", "exterior wall": "ew", "ext wall": "ew", "external wall": "ew",
-        "interior wall": "iw", "int wall": "iw", "internal wall": "iw",
+#     # Component-specific keywords
+#     component_keywords = {
+#         # Wall components
+#         "wall": "wall", "exterior wall": "ew", "ext wall": "ew", "external wall": "ew",
+#         "interior wall": "iw", "int wall": "iw", "internal wall": "iw",
         
-        # Insulation components  
-        "wall insulation": "ew_ins", "exterior wall insulation": "ew_ins",
-        "roof insulation": "ro_ins", "slab insulation": "es_ins",
+#         # Insulation components  
+#         "wall insulation": "ew_ins", "exterior wall insulation": "ew_ins",
+#         "roof insulation": "ro_ins", "slab insulation": "es_ins",
         
-        # Roof components
-        "roof": "roof", "roof partition": "ro_par",
+#         # Roof components
+#         "roof": "roof", "roof partition": "ro_par",
         
-        # Slab components
-        "slab": "slab", "floor": "slab", "slab partition": "is_par"
-    }
+#         # Slab components
+#         "slab": "slab", "floor": "slab", "slab partition": "is_par"
+#     }
     
-    # Material types for components
-    wall_materials = ["brick", "concrete", "earth", "straw", "timber_frame", "timber_mass"]
-    insulation_materials = ["cellulose", "cork", "eps", "glass_wool", "mineral_wool", "wood_fiber", "xps", "expanded_glass"]
+#     # Material types for components
+#     wall_materials = ["brick", "concrete", "earth", "straw", "timber_frame", "timber_mass"]
+#     insulation_materials = ["cellulose", "cork", "eps", "glass_wool", "mineral_wool", "wood_fiber", "xps", "expanded_glass"]
     
-    # Check for overall material change
-    for material_keyword, material_name in overall_materials.items():
-        if material_keyword in user_lower and any(word in user_lower for word in ["change", "switch", "use", "make", "set", "material", "to"]):
-            return {
-                "type": "overall_material",
-                "material": material_name,
-                "component": None
-            }
+#     # Check for overall material change
+#     for material_keyword, material_name in overall_materials.items():
+#         if material_keyword in user_lower and any(word in user_lower for word in ["change", "switch", "use", "make", "set", "material", "to"]):
+#             return {
+#                 "type": "overall_material",
+#                 "material": material_name,
+#                 "component": None
+#             }
     
-    # Check for component-specific changes
-    for component_keyword, component_code in component_keywords.items():
-        if component_keyword in user_lower:
-            # Check what material they want for this component
-            for material in wall_materials + insulation_materials:
-                if material in user_lower or material.replace("_", " ") in user_lower:
-                    return {
-                        "type": "component_specific",
-                        "material": material,
-                        "component": component_code
-                    }
+#     # Check for component-specific changes
+#     for component_keyword, component_code in component_keywords.items():
+#         if component_keyword in user_lower:
+#             # Check what material they want for this component
+#             for material in wall_materials + insulation_materials:
+#                 if material in user_lower or material.replace("_", " ") in user_lower:
+#                     return {
+#                         "type": "component_specific",
+#                         "material": material,
+#                         "component": component_code
+#                     }
     
-    # Check for material questions/comparisons
-    for material_keyword, material_name in overall_materials.items():
-        if material_keyword in user_lower and any(word in user_lower for word in ["?", "or", "which", "what", "should", "better", "choose"]):
-            return {
-                "type": "material_question",
-                "material": material_name,
-                "component": None
-            }
+#     # Check for material questions/comparisons
+#     for material_keyword, material_name in overall_materials.items():
+#         if material_keyword in user_lower and any(word in user_lower for word in ["?", "or", "which", "what", "should", "better", "choose"]):
+#             return {
+#                 "type": "material_question",
+#                 "material": material_name,
+#                 "component": None
+#             }
     
-    return None
+#     return None
 
 # -- Apply overall material change across multiple components --
 def apply_overall_material_change(material_name):
@@ -324,61 +315,10 @@ def apply_component_specific_change(component, material):
         print(f"[COMPONENT CHANGE] Error: {e}")
         return f"Updated {component} to {material.replace('_', ' ')}"
 
-# -- Main material-change entrypoint (auto classifies and applies or answers) --
-def enhanced_handle_change_or_question(user_input, design_data):
-    """Enhanced version handling both overall materials and individual components"""
-    try:
-        # Detect what type of change the user wants
-        change_request = detect_change_request(user_input)
-        
-        if change_request:
-            print(f"[ENHANCED RESPONSE] Detected change: {change_request}")
-            
-            # Process the change through normal flow (to maintain conversation state)
-            state, reply, updated_data = manage_conversation_state("active", user_input, design_data)
-            
-            change_type = change_request["type"]
-            material = change_request["material"]
-            component = change_request["component"]
-            
-            if change_type == "overall_material":
-                # Apply overall material change using MaterialMapper
-                change_description = apply_overall_material_change(material)
-                insight = provide_sustainability_insight("overall material", material.replace('_', ' '))
-                response = f"{change_description}. {insight}"
-                
-            elif change_type == "component_specific":
-                # Apply component-specific change
-                change_description = apply_component_specific_change(component, material)
-                insight = provide_sustainability_insight(f"{component} material", material.replace('_', ' '))
-                response = f"{change_description}. {insight}"
-                
-            elif change_type == "material_question":
-                # Answer material question without making changes
-                insight = provide_sustainability_insight("material", material.replace('_', ' '))
-                response = insight
-            
-            else:
-                response = reply
-            
-            print(f"[ENHANCED RESPONSE] Final response: {response}")
-            return state, response, updated_data
-        
-        # If not a material/component change, proceed with normal conversation
-        return manage_conversation_state("active", user_input, design_data)
-        
-    except Exception as e:
-        print(f"Error in enhanced_handle_change_or_question: {str(e)}")
-        traceback.print_exc()
-        # Fallback to original function
-        return manage_conversation_state("active", user_input, design_data)
-
 # -- Update compiled_ml_data.json with new parameter values --
 def update_compiled_ml_data_with_changes(parameter_updates):
     """Update compiled_ml_data.json with new parameter values"""
     try:
-        import os
-        import json
         from collections import OrderedDict
         
         ml_data_path = os.path.join("knowledge", "compiled_ml_data.json")
@@ -390,10 +330,15 @@ def update_compiled_ml_data_with_changes(parameter_updates):
         else:
             # Create default structure if file doesn't exist
             current_data = {
-                "ew_par": 1, "ew_ins": 2, "iw_par": 1, "es_ins": 1, 
-                "is_par": 0, "ro_par": 0, "ro_ins": 7, "wwr": 0.3,
-                "av": None, "gfa": None
+                "EW_PAR": 1, "EW_INS": 2, "IW_PAR": 1, "ES_INS": 1,
+                "IS_PAR": 0, "RO_PAR": 0, "RO_INS": 7, "WWR": 0.3,
+                "BC": 2,  # Default: timber
+                "Typology": 1,  # Default: L-shape
+                "A/V": 0.4,
+                "Volume(m3)": 1000.0,
+                "VOL/VOLBBOX": 1.0
             }
+
         
         # Update with new parameters
         for param_key, param_value in parameter_updates.items():
@@ -422,83 +367,6 @@ def update_compiled_ml_data_with_changes(parameter_updates):
 # ║                         4. Conversation Flow & State                       ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
-# -- Placeholder for extracting design intent from user message --
-def extract_all_parameters_from_input(user_input, current_state="unknown", design_data=None):
-    """Placeholder - parameter extraction disabled for new organic flow"""
-    return {}  # This function is reserved for future parsing logic.
-
-# -- Main state manager for building up design data from user input --
-def manage_conversation_state(current_state, user_input, design_data):
-    print(f"[CONVERSATION DEBUG] State: {current_state}, Input: '{user_input[:50]}...', Current data keys: {list(design_data.keys())}")
-    
-    if not user_input.strip():
-        if not design_data:
-            return "initial", "Hello! I'm your design assistant. What would you like to build today?", design_data
-        else:
-            next_state, next_question = "complete", "Parameters received. Ready to continue!"
-            return next_state, next_question, design_data
-    
-    extracted_params = extract_all_parameters_from_input(user_input, current_state, design_data)
-    
-    if extracted_params:
-        design_data = merge_design_data(design_data, extracted_params)
-    
-    next_state, next_question = "complete", "Parameters received. Ready to continue!"
-    
-    response_parts = []
-    
-    if extracted_params:
-        acknowledgments = []
-        
-        if "building_type" in extracted_params:
-            acknowledgments.append(f"building type: {extracted_params['building_type']}")
-        
-        if "geometry" in extracted_params:
-            geom = extracted_params["geometry"]
-            if "number_of_levels" in geom:
-                acknowledgments.append(f"{geom['number_of_levels']} levels")
-        
-        if "materiality" in extracted_params:
-            acknowledgments.append(f"{extracted_params['materiality']} material")
-        
-        if "climate" in extracted_params:
-            acknowledgments.append(f"{extracted_params['climate']} climate")
-        
-        if "wwr" in extracted_params:
-            acknowledgments.append(f"{int(extracted_params['wwr']*100)}% windows")
-        
-        if acknowledgments:
-            response_parts.append(f"Got it! {', '.join(acknowledgments)}.")
-    
-    if next_state == "complete":
-        response_parts.append("🎉 Perfect! All basic parameters collected.")
-        # ======= [COMMENTED OUT] Build full ML dictionary from design_data (bring it back if we introduce weathers)=======
-        # ml_dict = create_ml_dictionary(design_data)
-        # if ml_dict:
-            # save_success = save_ml_dictionary(ml_dict)
-            # if save_success:
-            #     response_parts.append("Material parameters ready! Geometry data will be added when you create/analyze the building geometry in Rhino.")
-            # else:
-            #     response_parts.append("Parameters collected but dictionary save failed.")
-        # else:
-        #     response_parts.append("Parameters collected but dictionary creation failed.")
-    else:
-        response_parts.append(next_question)
-    
-    final_response = " ".join(response_parts)
-    
-    print(f"[CONVERSATION DEBUG] Final state: {next_state}, Response: {final_response}")
-    
-    return next_state, final_response, design_data
-
-# -- Entry-point fallback for general design questions or changes --
-def handle_change_or_question(user_input, design_data):
-    try:
-        state, reply, updated_data = manage_conversation_state("active", user_input, design_data)
-        return state, reply, updated_data
-    except Exception as e:
-        print(f"Error in handle_change_or_question: {str(e)}")
-        return "active", "I'm having trouble with that. Could you try rephrasing?", design_data
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║                5. Versioning, Suggestions & Query Handlers                ║
@@ -680,12 +548,6 @@ def generate_user_summary(ml_dict):
 
 # -- Suggest a change and update model inputs via JSON patching --
 def suggest_change(user_prompt, design_data):
-        import json
-        import re
-        import os
-        import subprocess
-        import sys
-
         # --- Load current parameters from file ---
         compiled_path = os.path.join("knowledge", "compiled_ml_data.json")
         with open(compiled_path, "r", encoding="utf-8") as f:
@@ -818,11 +680,15 @@ def suggest_change(user_prompt, design_data):
                     text=True,
                     check=True
                 )
-                print("✅ ML Predictor Output:\n", result.stdout)
+                print("ML Predictor Output:\n", result.stdout)
             except subprocess.CalledProcessError as e:
-                print("❌ ML Predictor failed:\n", e.stderr)
+                print("ML Predictor failed:\n", e.stderr)
 
         run_ml_predictor()
+        if not os.path.exists(predictor_path):
+            print("⚠️ ML Predictor script not found.")
+            return
+
 
         # --- Load new output for comparison ---
         try:
@@ -936,7 +802,6 @@ def query_version_outputs():
         return f"Could not summarize version outputs: {e}"
 
 # -- Return best performing version based on a given metric --
-from utils.version_analysis_utils import get_best_version
 def get_best_version_summary():
     """Return a human-readable summary of the best version based on GWP"""
     try:
@@ -947,51 +812,6 @@ def get_best_version_summary():
     except Exception as e:
         print(f"[BEST VERSION SUMMARY ERROR] {e}")
         return "Error while evaluating the best performing version."
-
-# -- Return input/output details for one specific version --
-def load_version_details_summary(version_name):
-    """Return decoded design inputs and outputs of a specific version"""
-    try:
-        data = load_version_details(version_name)
-        if not data:
-            return f"Version {version_name} not found."
-        
-        decoded = json.dumps(data.get("inputs_decoded", {}), indent=2)
-        outputs = json.dumps(data.get("outputs", {}), indent=2)
-        return f"Design {version_name}\n\nInputs:\n{decoded}\n\nOutputs:\n{outputs}"
-    except Exception as e:
-        return f"Failed to load version {version_name}: {e}"
-
-# -- Summarize material selection in a specific version --
-def summarize_version_materials(version_name):
-    try:
-        from utils.version_analysis_utils import load_version_details
-        data = load_version_details(version_name)
-        decoded = data.get("inputs_decoded", {})
-
-        response = f"Materials for {version_name}:\n"
-        response += f"• Exterior Wall Partition: {decoded.get('Ext.Wall_Partition', 'N/A')}\n"
-        response += f"• Exterior Wall Insulation: {decoded.get('Ext.Wall_Insulation', 'N/A')}\n"
-        response += f"• Interior Wall Partition: {decoded.get('Int.Wall_Partition', 'N/A')}\n"
-        response += f"• External Slab Insulation: {decoded.get('Ext.Slab_Insulation', 'N/A')}\n"
-        response += f"• Internal Slab Partition: {decoded.get('Int.Slab_Partition', 'N/A')}\n"
-        response += f"• Roof Partition: {decoded.get('Roof_Partition', 'N/A')}\n"
-        response += f"• Roof Insulation: {decoded.get('Roof_Insulation', 'N/A')}\n"
-        response += f"• Window-to-Wall Ratio: {decoded.get('Window-to-Wall_Ratio', 'N/A')}\n"
-        response += f"• Gross Floor Area: {decoded.get('Gross-Floor-Area', 'N/A')} m²"
-        return response
-    except Exception as e:
-        print(f"[VERSION MATERIALS] Error: {e}")
-        return f"Could not retrieve materials for {version_name}"
-
-# -- Optional helper: generate diff summary for raw param dicts --
-def generate_diff_summary(before: dict, after: dict):
-    """Return a human-readable summary of parameter changes."""
-    diff = []
-    for key in before:
-        if key in after and before[key] != after[key]:
-            diff.append(f"{key}: {before[key]} → {after[key]}")
-    return "\n".join(diff) if diff else "No parameter differences detected."
 
 # -- Optional helper: get latest saved version data (V*.json) --
 def get_last_version_data():
