@@ -672,6 +672,11 @@ def suggest_change(user_prompt, design_data):
             project_root = os.path.dirname(os.path.abspath(__file__))
             predictor_path = os.path.join(project_root, "utils", "ML_predictor.py")
             python_path = sys.executable
+
+            if not os.path.exists(predictor_path):
+                print("⚠️ ML Predictor script not found.")
+                return
+
             try:
                 result = subprocess.run(
                     [python_path, predictor_path],
@@ -685,9 +690,7 @@ def suggest_change(user_prompt, design_data):
                 print("ML Predictor failed:\n", e.stderr)
 
         run_ml_predictor()
-        if not os.path.exists(predictor_path):
-            print("⚠️ ML Predictor script not found.")
-            return
+
 
 
         # --- Load new output for comparison ---
