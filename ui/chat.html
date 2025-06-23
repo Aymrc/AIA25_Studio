@@ -33,7 +33,7 @@
            
            // MODIFIED - Wait for LLM to Load. Load greeting on window load 07.06.25
                 window.addEventListener("load", async function() {
-                    console.log("🚀 Page loaded - checking if server is ready...");
+                    console.log("Page loaded - checking if server is ready...");
                     
                     // Show loading message
                     addToChat("bot", "Connecting...");
@@ -118,9 +118,20 @@
             // Typing indicator
             const typingMsg = document.createElement("div");
             typingMsg.className = "bot typing";
-            typingMsg.textContent = "Copilot is thinking...";
+            typingMsg.innerHTML = `<img src="assets/copilot_icon_chat.png" alt="Copilot" class="chat-icon"> <span id="typingDots">.</span>`; // adding . / .. / ...
             chatbox.appendChild(typingMsg);
             chatbox.scrollTop = chatbox.scrollHeight;
+            
+            // Typing dots . / .. / ...
+            let dotCount = 1;
+            const maxDots = 3;
+            const typingSpan = typingMsg.querySelector("#typingDots");
+
+            const dotInterval = setInterval(() => {
+                dotCount = (dotCount % maxDots) + 1;
+                typingSpan.textContent = ".".repeat(dotCount);
+            }, 350);
+
 
             try {
                 const res = await fetch("http://127.0.0.1:5001/chat", {
@@ -130,6 +141,7 @@
                 });
 
                 const data = await res.json();
+                clearInterval(dotInterval); // removing typing dots before LLM's answer
                 chatbox.removeChild(typingMsg);
 
                 if (data.error) {

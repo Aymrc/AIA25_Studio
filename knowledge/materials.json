@@ -13,7 +13,7 @@
     "2": "EPS",
     "3": "Glass_wool",
     "4": "Mineral_wool",
-    "5": "Wood_fiber" 
+    "5": "Wood_fiber"
   },
   "Int.Wall_Partition": {
     "0": "Brick",
@@ -46,5 +46,22 @@
     "5": "Mineral_wool",
     "6": "Wood_fiber",
     "7": "XPS"
+  },
+  "Beams & Columns": {
+    "0": "Steel",
+    "1": "Concrete",
+    "2": "Timber"
+  },
+  "Typology": {
+    "0": "Block",
+    "1": "L-Shape",
+    "2": "C-Shape",
+    "3": "Courtyard"
+  },
+  "Window-to-Wall_Ratio": {
+    "0": "Very Low Glazing",
+    "1": "Low Glazing",
+    "2": "Moderate Glazing",
+    "3": "High Glazing"
   }
 }

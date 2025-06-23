@@ -27,101 +27,93 @@ class MaterialMapper:
             "Roof_Insulation": {
                 "cellulose": 0, "cork": 1, "eps": 2, "extruded_glas": 3,
                 "glass_wool": 4, "mineral_wool": 5, "wood_fiber": 6, "xps": 7
+            },
+            "Beams_Columns": {
+                "steel": 0,
+                "concrete": 1,
+                "timber": 2
             }
+
         }
-        
-        # Reverse mapping for display
-        self.value_to_material = {}
-        for category, materials in self.material_mappings.items():
-            self.value_to_material[category] = {v: k for k, v in materials.items()}
-    
-    def map_simple_material_to_parameters(self, simple_material):
-        """Convert simple material category to detailed ML parameters"""
-        
-        # Default parameters structure
+
+        self.value_to_material = {
+            category: {v: k for k, v in mapping.items()}
+            for category, mapping in self.material_mappings.items()
+        }
+
+    def map_simple_material_to_parameters(self, material):
+        material = material.lower()
         parameters = {
-            "ew_par": 0,   # External wall partition
-            "ew_ins": 0,   # External wall insulation
-            "iw_par": 0,   # Internal wall partition  
-            "es_ins": 1,   # External slab insulation (default)
-            "is_par": 0,   # Internal slab partition
-            "ro_par": 0,   # Roof partition
-            "ro_ins": 0    # Roof insulation
+            "EW_PAR": 0,
+            "EW_INS": 0,
+            "IW_PAR": 0,
+            "ES_INS": 1,
+            "IS_PAR": 0,
+            "RO_PAR": 0,
+            "RO_INS": 0,
+            "BC": 1
         }
-        
-        # Map simple material to detailed parameters
-        material_lower = simple_material.lower()
-        
-        # External and internal wall partitions (same material)
-        if material_lower in self.material_mappings["Ext.Wall_Partition"]:
-            wall_value = self.material_mappings["Ext.Wall_Partition"][material_lower]
-            parameters["ew_par"] = wall_value
-            parameters["iw_par"] = wall_value
-        
-        # Roof and slab materials based on main material
-        if material_lower in ["timber_frame", "timber_mass"]:
-            # Timber buildings
-            if material_lower == "timber_frame":
-                parameters["is_par"] = 1  # Timber frame slab
-                parameters["ro_par"] = 1  # Timber frame roof
-            else:  # timber_mass
-                parameters["is_par"] = 2  # Timber mass slab
-                parameters["ro_par"] = 2  # Timber mass roof
-        else:
-            # Non-timber buildings default to concrete structure
-            parameters["is_par"] = 0  # Concrete slab
-            parameters["ro_par"] = 0  # Concrete roof
-        
-        # Default insulation (can be enhanced based on climate later)
-        # For now, using defaults:
-        # ew_ins = 0 (cellulose)
-        # es_ins = 1 (xps) 
-        # ro_ins = 0 (cellulose)
-        
-        print(f"[MATERIAL MAPPER] {simple_material} -> {parameters}")
+
+        # First, map beam/column material if it exists
+        if material in self.material_mappings["Beams_Columns"]:
+            parameters["BC"] = self.material_mappings["Beams_Columns"][material]
+
+            # Optional: propagate structure logic to other parts (if applicable)
+            if material == "concrete":
+                parameters["IS_PAR"] = 0
+                parameters["RO_PAR"] = 0
+            elif material == "timber":
+                parameters["IS_PAR"] = 2  # mass timber default
+                parameters["RO_PAR"] = 2
+            elif material == "steel":
+                parameters["IS_PAR"] = 0  # fallback if you want to keep concrete
+                parameters["RO_PAR"] = 0
+
+        # Additionally, try matching wall materials if relevant
+        if material in self.material_mappings["Ext.Wall_Partition"]:
+            val = self.material_mappings["Ext.Wall_Partition"][material]
+            parameters["EW_PAR"] = val
+            parameters["IW_PAR"] = val
+
         return parameters
-    
-    def map_materials_to_parameters(self, extracted_materials):
-        """Convert extracted materials to parameter dictionary (existing method)"""
+
+
+    def map_materials_to_parameters(self, extracted):
         parameters = {}
-        
-        # Mapping logic
-        material_to_param = {
-            "wall_material": ["ew_par", "iw_par"],
-            "wall_insulation": ["ew_ins"],
-            "roof_material": ["ro_par"],
-            "roof_insulation": ["ro_ins"],
-            "slab_material": ["is_par"],
-            "slab_insulation": ["es_ins"]
+
+        mapping_keys = {
+            "wall_material": ["EW_PAR", "IW_PAR"],
+            "wall_insulation": ["EW_INS"],
+            "roof_material": ["RO_PAR"],
+            "roof_insulation": ["RO_INS"],
+            "slab_material": ["IS_PAR"],
+            "slab_insulation": ["ES_INS"],
+            "bc_material": ["BC"] 
         }
-        
-        for material_type, material_name in extracted_materials.items():
-            param_keys = material_to_param.get(material_type, [])
-            
-            for param_key in param_keys:
-                category = self.get_category_for_param(param_key)
+
+        for material_key, material_value in extracted.items():
+            for param in mapping_keys.get(material_key, []):
+                category = self.get_category_for_param(param)
                 if category:
-                    value = self.material_mappings[category].get(material_name.lower())
-                    if value is not None:
-                        parameters[param_key] = value
-        
+                    val = self.material_mappings[category].get(material_value.lower())
+                    if val is not None:
+                        parameters[param] = val
+
         return parameters
-    
-    def get_category_for_param(self, param_key):
-        """Get material category for parameter key"""
-        mapping = {
-            "ew_par": "Ext.Wall_Partition",
-            "iw_par": "Int.Wall_Partition", 
-            "ew_ins": "Ext.Wall_Insulation",
-            "ro_par": "Roof_Partition",
-            "ro_ins": "Roof_Insulation",
-            "is_par": "Int.Slab_Partition",
-            "es_ins": "Ext.Slab_Insulation"
-        }
-        return mapping.get(param_key)
-    
+
+    def get_category_for_param(self, key):
+        return {
+            "EW_PAR": "Ext.Wall_Partition",
+            "IW_PAR": "Int.Wall_Partition",
+            "EW_INS": "Ext.Wall_Insulation",
+            "RO_PAR": "Roof_Partition",
+            "RO_INS": "Roof_Insulation",
+            "IS_PAR": "Int.Slab_Partition",
+            "ES_INS": "Ext.Slab_Insulation",
+            "BC": "Beams_Columns"
+        }.get(key)
+
     def get_material_name(self, param_key, value):
-        """Get material name from parameter value"""
         category = self.get_category_for_param(param_key)
         if category:
             return self.value_to_material[category].get(value, f"Unknown({value})")

@@ -108,7 +108,6 @@ def get_universal_python_path():
     print("No Python installation found!")
     return None
 
-
 def install_requirements_if_needed():
     python_path = get_universal_python_path()
     req_file = "requirements.txt"
@@ -122,49 +121,8 @@ def install_requirements_if_needed():
             print("Failed to install requirements: {}".format(e))
     else:
         print("requirements.txt not found!")
+
 install_requirements_if_needed()
-
-
-# def show_copilot_ui():
-#     """Show the Rhino Copilot UI"""
-#     dialog = forms.Form()
-#     dialog.Title = "Rhino Copilot"
-#     dialog.ClientSize = drawing.Size(600, 1000)
-#     dialog.Topmost = True
-
-#     # icon
-#     icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
-#     if os.path.exists(icon_path):
-#         dialog.Icon = drawing.Icon(icon_path)
-#     else:
-#         print("Icon not found at:", icon_path)
-
-#     # start positoin position 
-#     screen = Rhino.UI.RhinoEtoApp.MainWindow.Screen
-#     screen_width = screen.WorkingArea.Width
-#     screen_height = screen.WorkingArea.Height
-#     x = int(screen.WorkingArea.X + screen_width * 0.75 - dialog.ClientSize.Width / 2) # change the 0.75 to change the position in x axis
-#     y = int(screen.WorkingArea.Y + (screen_height - dialog.ClientSize.Height) / 2)
-#     dialog.Location = drawing.Point(x, y)
-
-#     web_view = forms.WebView()
-
-#     # Always use script-relative paths
-#     script_dir = os.path.dirname(os.path.abspath(__file__))
-#     html_path = os.path.join(script_dir, "ui", "index.html")
-    
-#     print("Looking for HTML at: " + str(html_path))
-    
-#     if os.path.exists(html_path):
-#         uri = System.Uri("file:///" + html_path.replace("\\", "/"))
-#         web_view.Url = uri
-#         dialog.Content = web_view
-#         dialog.Show()
-#         print("UI loaded successfully!")
-#         return True
-#     else:
-#         print("HTML file not found: " + str(html_path))
-#         return False
 
 def show_copilot_ui():
     # === Show the Rhino Copilot UI ===
@@ -174,7 +132,7 @@ def show_copilot_ui():
     chatWidth = 550
     chatHeight = 250
     dataWidth = 500
-    dataHeight = 400
+    dataHeight = 600
 
     screen = Rhino.UI.RhinoEtoApp.MainWindow.Screen
     work_x = screen.WorkingArea.X
@@ -194,7 +152,7 @@ def show_copilot_ui():
     chat_form.Topmost = True
 
     # === icon ===
-    icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
+    icon_path = os.path.abspath("ui/assets/copilot_icon.ico")
     if os.path.exists(icon_path):
         chat_form.Icon = drawing.Icon(icon_path)
     else:
@@ -218,7 +176,7 @@ def show_copilot_ui():
     data_form.Topmost = True
 
     # === icon ===
-    icon_path = os.path.abspath("ui/assets/copilot_icon_dark.ico")
+    icon_path = os.path.abspath("ui/assets/copilot_icon.ico")
     if os.path.exists(icon_path):
         data_form.Icon = drawing.Icon(icon_path)
     else:
@@ -352,7 +310,6 @@ def start_backend():
         print("2. Check Windows Defender/Antivirus settings")
         print("3. Run Rhino as Administrator")
         return False, python_path
-
 
 def launch_copilot():
     # Universal launcher that works for any Rhino user

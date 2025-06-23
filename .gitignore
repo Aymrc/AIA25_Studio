@@ -1,20 +1,17 @@
-# Ignore all V*.json files inside knowledge/iterations
+# Ignore iteration outputs
 knowledge/iterations/V*.json
 knowledge/iterations/V*.png
+knowledge/iterations/V*.3dm
+knowledge/iterations/I*.json
+knowledge/iterations/In.json
+knowledge/iterations/In-1.json
 
-# Ignore everything inside knowledge/iterations (png, json, ...)
-# knowledge/iterations/*
-
-# Ignore specific files (based on iterations)
+# Ignore processed ML data
 knowledge/ml_output.json
 knowledge/compiled_ml_data.json
 knowledge/geometry_metrics.json
 knowledge/ml_processed.flag
 
-# Ignore Python cache
+# Python cache
 __pycache__/
 *.pyc
-knowledge/compiled_ml_data.json
-knowledge/geometry_metrics.json
-knowledge/ml_output.json
-server/__pycache__/chat_server.cpython-310.pyc

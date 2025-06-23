@@ -1,0 +1,34 @@
+import pandas as pd
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
+import pickle
+
+# Cargar el CSV
+df = pd.read_csv(r"C:\Users\CDH\Documents\GitHub\aia\datagen\gh\knowledge\4A-high_buildings.csv")
+
+
+# Convertir filas a texto
+def row_to_text(row):
+    return (
+        f"Typology: {row['Typology']}, Structure: {row['STR_MAT']}, "
+        f"GFA: {row['GFA']} m², Volume: {row['Volume(m3)']} m³, "
+        f"WWR: {row['WWR']}, A/V: {row['A/V']}, "
+        f"EUI: {row['EUI(kWh/m2a)']} kWh/m²a, "
+        f"Embodied carbon (A-D): {row['A-D/m²(GFA)']} kg CO2e/m²."
+    )
+
+texts = df.apply(row_to_text, axis=1).tolist()
+
+# Crear embeddings
+model = SentenceTransformer("all-MiniLM-L6-v2")
+embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=True)
+
+# Indexar
+index = faiss.IndexFlatL2(embeddings.shape[1])
+index.add(embeddings)
+
+# Guardar
+faiss.write_index(index, "building_index.faiss")
+with open("rag_texts.pkl", "wb") as f:
+    pickle.dump(texts, f)

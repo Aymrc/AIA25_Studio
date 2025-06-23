@@ -15,61 +15,175 @@ import os
 import collections
 from collections import OrderedDict
 
-
 # === CONFIGURATION ===
-
 POST_URL = "http://127.0.0.1:5005/geometry"
 debounce_timer = None
 is_running = False
-listener_active = True  
+listener_active = True
 
-def capture_viewport(version_name, output_folder):
-    # #"""Captures two PNGs:
-    # 1. The current user viewport
-    # 2. A predefined axonometric SW view with ZoomExtents
-    
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
+from Rhino.UI import RhinoEtoApp
+from Eto.Forms import Dialog, Label, ImageView, Button, TableLayout, TableRow
+from Eto.Drawing import Size, Padding
+from Eto.Drawing import Bitmap as EtoBitmap
+import scriptcontext as sc
+import System.IO
+from System.Drawing import Imaging
+from System import EventHandler, EventArgs
 
-    # --- 1. Capture current user viewport ---
-    user_filename = os.path.join(output_folder, "{}_user.png".format(version_name))
 
-    try:
-        rs.Command('-_SaveViewportToFile "{}" _Enter'.format(user_filename), echo=False)
-        print("✅ User viewport saved: {}".format(user_filename))
 
-    except Exception as e:
-        print("❌ Failed to save user viewport: {}".format(e))
 
-    # --- 2. Capture SW axonometric after zoom extents ---
-    axo_filename = os.path.join(output_folder, "{}_axon.png".format(version_name))
+def show_capture_dialog(show_ui=False):
+    import sys
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    sys.path.append(os.path.join(base_dir, "utils"))
 
     try:
-        rs.CurrentView("Perspective")  # Switch to a reliable viewport
-        rs.ViewDisplayMode("Perspective", "Shaded")
-        rs.Command("_SetView _World _SW", echo=False)
-        rs.Command("_Zoom _Extents", echo=False)
-        rs.Command('-_SaveViewportToFile "{}" _Enter'.format(axo_filename), echo=False)
-        print("✅ Axonometric view saved: {}".format(axo_filename))
+        from iteration_saver import create_manual_iteration
     except Exception as e:
-        print("❌ Failed to save axonometric view: {}".format(e))
+        Rhino.RhinoApp.WriteLine("Could not import create_manual_iteration(): {}".format(e))
+        return
+
+    class SampleEtoViewCaptureDialog(Dialog[bool]):
+        def __init__(self):
+            self.Title = 'Capture Viewport'
+            self.Padding = Padding(10)
+            layout = TableLayout(Padding=Padding(10), Spacing=Size(5, 5))
+            layout.Rows.Add(self.create_label())
+            layout.Rows.Add(self.create_image_view())
+            layout.Rows.Add(None)
+            layout.Rows.Add(self.create_buttons())
+            self.Content = layout
+
+        def create_label(self):
+            self.label = Label(Text='Click "Capture" to take screenshot...')
+            return self.label
+
+        def create_image_view(self):
+            self.image_view = ImageView(Size=Size(300, 200))
+            return self.image_view
+
+        def create_buttons(self):
+            self.capture_btn = Button(Text='Capture')
+            self.capture_btn.Click += System.EventHandler(self.on_capture)
+
+            self.close_btn = Button(Text='Close')
+            self.close_btn.Click += System.EventHandler(self.on_close)
+            return TableRow(None, self.capture_btn, self.close_btn)
+
+        def on_capture(self, sender=None, e=None):
+            try:
+                destination_folder = os.path.join(base_dir, "knowledge")
+                destination_filename = "ml_output.json"
+                json_folder = os.path.join(base_dir, "knowledge", "iterations")
+
+                success, version_id = create_manual_iteration(destination_folder, destination_filename, json_folder)
+
+                if not success:
+                    self.label.Text = "Failed to create version: {}".format(version_id)
+                    return
+                Rhino.RhinoApp.WriteLine("Created new JSON: {}".format(version_id))
+            except Exception as ex:
+                self.label.Text = "JSON error: {}".format(ex)
+                return
+
+            try:
+                view = sc.doc.Views.ActiveView
+                if not view:
+                    self.label.Text = 'No active view.'
+                    return
+
+                bmp = view.CaptureToBitmap()
+                if bmp:
+                    stream = System.IO.MemoryStream()
+                    bmp.Save(stream, Imaging.ImageFormat.Png)
+                    if stream.Length != 0:
+                        self.image_view.Image = Bitmap(stream)
+                        self.label.Text = 'Captured view: {}'.format(view.ActiveViewport.Name)
+                    stream.Dispose()
+
+                    img_path = os.path.join(base_dir, "knowledge", "iterations", "{}.png".format(version_id))
+                    bmp.Save(img_path)
+                    Rhino.RhinoApp.WriteLine("Screenshot saved to: {}".format(img_path))
+            except Exception as e:
+                self.label.Text = "Capture error: {}".format(e)
+
+
+            # ➕ Save 3DM file
+            try:
+                model_path = os.path.join(base_dir, "knowledge", "iterations", "{}.3dm".format(version_id))
+                opts = Rhino.FileIO.FileWriteOptions()
+                doc = Rhino.RhinoDoc.ActiveDoc
+                success = doc.Write3dmFile(model_path, opts)
+                if success:
+                    Rhino.RhinoApp.WriteLine(".3dm file saved: {}".format(model_path))
+                else:
+                    Rhino.RhinoApp.WriteLine("Failed to save .3dm file.")
+            except Exception as e:
+                Rhino.RhinoApp.WriteLine("Error saving .3dm file: {}".format(e))
+
+        def on_close(self, sender, e):
+            self.Close(True if self.image_view.Image else False)
+
+    if show_ui:
+        dlg = SampleEtoViewCaptureDialog()
+        dlg.ShowModal(RhinoEtoApp.MainWindow)
+    else:
+        try:
+            destination_folder = os.path.join(base_dir, "knowledge")
+            destination_filename = "ml_output.json"
+            json_folder = os.path.join(base_dir, "knowledge", "iterations")
+
+            success, version_id = create_manual_iteration(destination_folder, destination_filename, json_folder)
+
+            if not success:
+                Rhino.RhinoApp.WriteLine("Could not create version: {}".format(version_id))
+                return
+            Rhino.RhinoApp.WriteLine("JSON version created: {}".format(version_id))
+        except Exception as ex:
+            Rhino.RhinoApp.WriteLine("JSON creation error: {}".format(ex))
+            return
+
+        try:
+            view = sc.doc.Views.ActiveView
+            if not view:
+                Rhino.RhinoApp.WriteLine("No active view.")
+                return
+            bmp = view.CaptureToBitmap()
+            if bmp:
+                img_path = os.path.join(base_dir, "knowledge", "iterations", "{}.png".format(version_id))
+                bmp.Save(img_path)
+                Rhino.RhinoApp.WriteLine("Screenshot saved to: {}".format(img_path))
+        except Exception as e:
+            Rhino.RhinoApp.WriteLine("Image capture error: {}".format(e))
+
+        # ➕ Save 3DM file (headless mode)
+        try:
+            model_path = os.path.join(base_dir, "knowledge", "iterations", "{}.3dm".format(version_id))
+            opts = Rhino.FileIO.FileWriteOptions()
+            doc = Rhino.RhinoDoc.ActiveDoc
+            success = doc.Write3dmFile(model_path, opts)
+            if success:
+                Rhino.RhinoApp.WriteLine(".3dm file saved: {}".format(model_path))
+            else:
+                Rhino.RhinoApp.WriteLine("Failed to save .3dm file.")
+        except Exception as e:
+            Rhino.RhinoApp.WriteLine("Error saving .3dm file: {}".format(e))
 
 
 # === POST METRICS ===
-
 def post_json(url, data):
     try:
         client = System.Net.WebClient()
         client.Headers.Add("Content-Type", "application/json")
         body = System.Text.Encoding.UTF8.GetBytes(json.dumps(data))
         client.UploadData(url, "POST", body)
-        Rhino.RhinoApp.WriteLine("✅ Data successfully posted to server.")
-        Rhino.RhinoApp.WriteLine("📡 Posting to URL: " + url)
+        Rhino.RhinoApp.WriteLine("Data successfully posted to server.")
+        Rhino.RhinoApp.WriteLine("Posting to URL: " + url)
     except Exception as e:
-        Rhino.RhinoApp.WriteLine("❌ Error posting data: " + str(e))
+        Rhino.RhinoApp.WriteLine("Error posting data: " + str(e))
 
 # === SAVE METRICS LOCALLY ===
-
 def save_to_file(data):
     try:
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -77,74 +191,87 @@ def save_to_file(data):
         if not os.path.exists(folder):
             os.makedirs(folder)
         path = os.path.join(folder, "geometry_metrics.json")
-        Rhino.RhinoApp.WriteLine("📝 Saving data:\n" + json.dumps(data, indent=2))
+        Rhino.RhinoApp.WriteLine("Saving data:\n" + json.dumps(data, indent=2))
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
-        Rhino.RhinoApp.WriteLine("💾 Metrics saved to: " + path)
+        Rhino.RhinoApp.WriteLine("Metrics saved to: " + path)
     except Exception as e:
-        Rhino.RhinoApp.WriteLine("❌ Error saving JSON: " + str(e))
+        Rhino.RhinoApp.WriteLine("Error saving JSON: " + str(e))
 
 # === MAIN METRICS COMPUTATION ===
-
-def update_compiled_ml_data(gfa_value, av_value):
+def update_compiled_ml_data(volume, compactness, shape_efficiency):
     path = os.path.join(os.path.dirname(__file__), "..", "knowledge", "compiled_ml_data.json")
-
-    # Read existing data
     with open(path, "r") as f:
         data = json.load(f)
 
-    # Build OrderedDict with the exact key order you want
     ordered_data = OrderedDict()
-    ordered_data["ew_par"] = data.get("ew_par", 0)
-    ordered_data["ew_ins"] = data.get("ew_ins", 0)
-    ordered_data["iw_par"] = data.get("iw_par", 0)
-    ordered_data["es_ins"] = data.get("es_ins", 0)
-    ordered_data["is_par"] = data.get("is_par", 0)
-    ordered_data["ro_par"] = data.get("ro_par", 0)
-    ordered_data["ro_ins"] = data.get("ro_ins", 0)
-    ordered_data["wwr"] = data.get("wwr", 0)
-    ordered_data["av"] = av_value
-    ordered_data["gfa"] = gfa_value
+    ordered_data["Typology"] = data.get("Typology", 1)
+    ordered_data["WWR"] = data.get("WWR", 3)
+    ordered_data["EW_PAR"] = data.get("EW_PAR", 0)
+    ordered_data["EW_INS"] = data.get("EW_INS", 0)
+    ordered_data["IW_PAR"] = data.get("IW_PAR", 0)
+    ordered_data["ES_INS"] = data.get("ES_INS", 0)
+    ordered_data["IS_PAR"] = data.get("IS_PAR", 0)
+    ordered_data["RO_PAR"] = data.get("RO_PAR", 0)
+    ordered_data["RO_INS"] = data.get("RO_INS", 0)
+    ordered_data["BC"] = data.get("BC", 2)
+    ordered_data["A/V"] = compactness
+    ordered_data["Volume(m3)"] = volume
+    ordered_data["VOL/VOLBBOX"] = shape_efficiency
 
-    # Write back preserving order
     with open(path, "w") as f:
         json.dump(ordered_data, f, indent=2)
 
-    print("✅ Updated {} with av={} and gfa={} preserving key order.".format(path, av_value, gfa_value))
-
+    Rhino.RhinoApp.WriteLine("Updated compiled_ml_data.json with Volume(m3)={}, A/V={}, VOL/VOLBBOX={}".format(volume, compactness, shape_efficiency))
 
 def compute_total_metrics():
-    Rhino.RhinoApp.WriteLine("📊 Computing total geometry metrics...")
-
+    sc.doc = Rhino.RhinoDoc.ActiveDoc
+    #Rhino.RhinoApp.WriteLine("Computing total geometry metrics...")
     breps = []
 
+    # Ensure "Copilot" layer exists
+    copilot_layer_name = "___COPILOT_LAYER"
+    copilot_layer_index = sc.doc.Layers.FindByFullPath(copilot_layer_name, True)
+
+    if copilot_layer_index == -1:
+        Rhino.RhinoApp.WriteLine("'{}' layer not found. Creating it...".format(copilot_layer_name))
+        layer = Rhino.DocObjects.Layer()
+        layer.Name = copilot_layer_name
+        sc.doc.Layers.Add(layer)
+        copilot_layer_index = sc.doc.Layers.FindByFullPath(copilot_layer_name, True)
+        if copilot_layer_index == -1:
+            Rhino.RhinoApp.WriteLine("Could not create or locate the '{}' layer.".format(copilot_layer_name))
+            return
+        
+    # Collect Breps from the "Copilot" layer only
+    breps = []
     for obj in sc.doc.Objects:
         if not obj.IsValid or not obj.Attributes.Visible:
+            continue
+        if obj.Attributes.LayerIndex != copilot_layer_index:
             continue
 
         geom = obj.Geometry
         if isinstance(geom, Rhino.Geometry.Extrusion):
             geom = geom.ToBrep()
-
         if geom and isinstance(geom, Rhino.Geometry.Brep) and geom.IsSolid:
             breps.append(geom)
 
     if not breps:
-        Rhino.RhinoApp.WriteLine("⚠️ No solid Breps found to union.")
-        update_compiled_ml_data(gfa_value=0, av_value=0)
+        Rhino.RhinoApp.WriteLine("No solid Breps found to union.")
+        update_compiled_ml_data(0, 0, 0)
         return
 
     union_result = Rhino.Geometry.Brep.CreateBooleanUnion(breps, sc.doc.ModelAbsoluteTolerance)
-
     if union_result and len(union_result) > 0:
-        Rhino.RhinoApp.WriteLine("✅ Boolean union successful. Resulting solids: {}".format(len(union_result)))
-        breps = union_result  # Use union result for metric calculation
+        Rhino.RhinoApp.WriteLine("Boolean union successful. Resulting solids: {}".format(len(union_result)))
+        breps = union_result
     else:
-        Rhino.RhinoApp.WriteLine("⚠️ Boolean union failed. Falling back to individual Breps.")
+        Rhino.RhinoApp.WriteLine("Boolean union failed. Falling back to individual Breps.")
 
     total_volume = 0
     total_face_area = 0
-    count = 0
+    combined_bbox = None
 
     for brep in breps:
         if not brep.IsSolid:
@@ -159,36 +286,38 @@ def compute_total_metrics():
             if area:
                 total_face_area += area.Area
 
-        count += 1
+        bbox = brep.GetBoundingBox(True)
+        if combined_bbox:
+            combined_bbox.Union(bbox)
+        else:
+            combined_bbox = bbox
 
-    compactness = round(total_face_area / total_volume, 5) if total_volume > 0 else 0
-    gfa = round(total_volume / 3, 3)
-
-    if count == 0:
-        Rhino.RhinoApp.WriteLine("⚠️ No valid geometry found after union.")
+    if total_volume == 0 or combined_bbox is None:
+        Rhino.RhinoApp.WriteLine("No valid geometry found or invalid bounding box.")
+        update_compiled_ml_data(0, 0, 0)
         return
+
+    compactness = round(total_face_area / total_volume, 3)
+    bbox_volume = round(combined_bbox.Volume, 3) if combined_bbox.IsValid else 1.0
+    shape_efficiency = round(total_volume / bbox_volume, 3) if bbox_volume > 0 else 0.0
 
     payload = {
         "total_volume": round(total_volume, 3),
         "total_face_area": round(total_face_area, 3),
         "compactness": compactness,
-        "gfa": gfa
+        "bbox_volume": bbox_volume,
+        "shape_efficiency": shape_efficiency
     }
 
-    Rhino.RhinoApp.WriteLine("✅ Union-based metrics | Volume: {} | Area: {} | Compactness: {} | GFA: {}".format(
-        payload["total_volume"], payload["total_face_area"], compactness, gfa
-    ))
+    Rhino.RhinoApp.WriteLine("\nFinal Metrics:")
+    for k, v in payload.items():
+        Rhino.RhinoApp.WriteLine("{}: {}".format(k, v))
 
-    update_compiled_ml_data(payload["gfa"], payload["compactness"])
-
-
-
+    update_compiled_ml_data(total_volume, compactness, shape_efficiency)
     post_json(POST_URL, payload)
     save_to_file(payload)
 
-
-# === DESELECTION & SAFE COMPUTATION ===
-
+# === EVENT HANDLING ===
 def deselect_all():
     for obj in sc.doc.Objects:
         if obj.IsSelected(True):
@@ -201,32 +330,24 @@ def try_compute_with_geometry(max_attempts=1, wait=1.0):
         time.sleep(wait)
         deselect_all()
         sc.doc.Views.Redraw()
-
-        valid_count = sum(
-            1 for obj in sc.doc.Objects
-            if obj.IsValid and not obj.IsDeleted and obj.Attributes.Visible
-        )
-
+        valid_count = sum(1 for obj in sc.doc.Objects if obj.IsValid and not obj.IsDeleted and obj.Attributes.Visible)
         if valid_count > 0:
-            Rhino.RhinoApp.WriteLine("✅ Found {} valid objects.".format(valid_count))
+            Rhino.RhinoApp.WriteLine("Found {} valid objects.".format(valid_count))
             compute_total_metrics()
             return
         else:
-            Rhino.RhinoApp.WriteLine("⏳ Waiting for geometry... ({}/{})".format(attempt + 1, max_attempts))
+            Rhino.RhinoApp.WriteLine(" Waiting for geometry... ({}/{})".format(attempt + 1, max_attempts))
             attempt += 1
-
-    # After all attempts, no valid geometry found: update JSON with zeros
-    Rhino.RhinoApp.WriteLine("⚠️ No valid geometry found after waiting. Updating data with zeros.")
+    Rhino.RhinoApp.WriteLine("No valid geometry found after waiting. Updating data with zeros.")
     update_compiled_ml_data(0, 0)
-
 
 def safe_compute():
     global is_running
     if not listener_active:
-        Rhino.RhinoApp.WriteLine("🚫 Listener inactive. Skipping computation.")
+        Rhino.RhinoApp.WriteLine("Listener inactive. Skipping computation.")
         return
     if is_running:
-        Rhino.RhinoApp.WriteLine("⏳ Computation already in progress.")
+        Rhino.RhinoApp.WriteLine("Computation already in progress.")
         return
     is_running = True
     try:
@@ -234,41 +355,38 @@ def safe_compute():
     finally:
         is_running = False
 
-# === DEBOUNCING ===
-
 def debounce_refresh():
     global debounce_timer
     if debounce_timer and debounce_timer.is_alive():
-        Rhino.RhinoApp.WriteLine("⏱️ Debounce active, skipping trigger.")
+        Rhino.RhinoApp.WriteLine("Debounce active, skipping trigger.")
         return
 
     def delayed_refresh():
         time.sleep(1)
         if not listener_active:
-            Rhino.RhinoApp.WriteLine("🚫 Debounced trigger ignored. Listener is inactive.")
+            Rhino.RhinoApp.WriteLine("Debounced trigger ignored. Listener is inactive.")
             return
-        Rhino.RhinoApp.WriteLine("🔁 Debounced event triggered - computing metrics...")
+        Rhino.RhinoApp.WriteLine("Debounced event triggered - computing metrics...")
         safe_compute()
 
     debounce_timer = threading.Thread(target=delayed_refresh)
     debounce_timer.start()
 
-# === EVENT HANDLERS ===
-
+# === RHINO EVENTS ===
 def on_add(sender, e):
-    Rhino.RhinoApp.WriteLine("➕ Object added.")
+    Rhino.RhinoApp.WriteLine("Object added.")
     debounce_refresh()
 
 def on_delete(sender, e):
-    Rhino.RhinoApp.WriteLine("➖ Object deleted.")
+    Rhino.RhinoApp.WriteLine("Object deleted.")
     debounce_refresh()
 
 def on_replace(sender, e):
-    Rhino.RhinoApp.WriteLine("♻️ Object replaced.")
+    Rhino.RhinoApp.WriteLine("Object replaced.")
     debounce_refresh()
 
 def on_modify(sender, e):
-    Rhino.RhinoApp.WriteLine("✏️ Object modified.")
+    Rhino.RhinoApp.WriteLine("Object modified.")
     debounce_refresh()
 
 def remove_listeners():
@@ -280,7 +398,7 @@ def remove_listeners():
     except: pass
     try: Rhino.RhinoDoc.ModifyObjectAttributes -= on_modify
     except: pass
-    Rhino.RhinoApp.WriteLine("🧹 Removed existing event listeners.")
+    Rhino.RhinoApp.WriteLine("Removed existing event listeners.")
 
 def setup_listeners():
     remove_listeners()
@@ -288,54 +406,56 @@ def setup_listeners():
     Rhino.RhinoDoc.DeleteRhinoObject += on_delete
     Rhino.RhinoDoc.ReplaceRhinoObject += on_replace
     Rhino.RhinoDoc.ModifyObjectAttributes += on_modify
-    Rhino.RhinoApp.WriteLine("🎧 Rhino listener is active and monitoring geometry changes.")
+    Rhino.RhinoApp.WriteLine("Rhino listener is active and monitoring geometry changes.")
 
 
-def watch_for_capture_signal():
+def watch_for_dialog_signal():
+    def safe_show_dialog(sender=None, args=None):
+        try:
+            show_capture_dialog()
+        except Exception as e:
+            Rhino.RhinoApp.WriteLine("Dialog error: {}".format(e))
+
     def watcher():
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        flag_path = os.path.join(base_dir, "knowledge", "capture_now.txt")
-        iterations_folder = os.path.join(base_dir, "knowledge", "iterations")
-        last_version = None
+        flag_path = os.path.join(base_dir, "knowledge", "show_dialog.flag")
+        last_trigger_time = 0
 
         while True:
             if os.path.exists(flag_path):
                 try:
-                    with open(flag_path, "r") as f:
-                        version_name = f.read().strip()
+                    if time.time() - last_trigger_time > 1:
+                        last_trigger_time = time.time()
+                        os.remove(flag_path)
+                        Rhino.RhinoApp.WriteLine("Triggered Eto viewport capture dialog.")
 
-                    if version_name and version_name != last_version:
-                        Rhino.RhinoApp.WriteLine("🔔 Triggered capture for version: {}".format(version_name))
-                        capture_viewport(version_name, iterations_folder)
-                        last_version = version_name
+                        # ✅ Correct delegate usage
+                        Rhino.RhinoApp.InvokeOnUiThread(System.Action(safe_show_dialog))
+
                 except Exception as e:
-                    Rhino.RhinoApp.WriteLine("⚠️ Error reading flag file: {}".format(e))
-
-            time.sleep(2)
+                    Rhino.RhinoApp.WriteLine("Error launching dialog: {}".format(e))
+            time.sleep(1)
 
     t = threading.Thread(target=watcher)
     t.setDaemon(True)
     t.start()
+    Rhino.RhinoApp.WriteLine("Dialog watcher thread started.")
 
-    Rhino.RhinoApp.WriteLine("Screenshot watcher thread started.")
 
 
-# === SCRIPT START ===
 
-Rhino.RhinoApp.WriteLine("🚦 Starting Rhino listener script...")
+# === INIT SCRIPT ===
+Rhino.RhinoApp.WriteLine("Starting Rhino listener script...")
 setup_listeners()
 compute_total_metrics()
-Rhino.RhinoApp.WriteLine("✅ Rhino listener initialized and ready.")
-# Start the background watcher
-watch_for_capture_signal()
+Rhino.RhinoApp.WriteLine("Rhino listener initialized and ready.")
+#watch_for_capture_signal()
+watch_for_dialog_signal()
 
-
-# === SHUTDOWN CLEANUP ===
 
 def shutdown_listener():
     global listener_active
-    listener_active = False  
+    listener_active = False
     remove_listeners()
-    Rhino.RhinoApp.WriteLine("🛑 Rhino listener stopped.")
-    Rhino.RhinoApp.WriteLine("✅ Rhino listener shut down.")
-
+    Rhino.RhinoApp.WriteLine("Rhino listener stopped.")
+    Rhino.RhinoApp.WriteLine("Rhino listener shut down.")
