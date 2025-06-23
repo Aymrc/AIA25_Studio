@@ -53,7 +53,7 @@ def classify_intent_via_embeddings(user_input: str, examples: dict = None, preco
                     best_score, best_intent = score, intent
 
         print(f"[🔎 EMBEDDING INTENT] → {best_intent} (score={best_score:.4f})")
-        return (best_intent, best_score) if best_score > 0.7 else ("general_query", best_score)
+        return (best_intent, best_score) if best_score > 0.67 else ("general_query", best_score)
 
     except Exception as e:
         print(f"[❌ EMBEDDING INTENT ERROR] {e}")
