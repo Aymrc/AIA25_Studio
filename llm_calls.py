@@ -385,40 +385,69 @@ from utils.version_analysis_utils import (
 )
 
 # -- Answer user questions using design inputs/outputs --
+from utils.version_analysis_utils import (
+    extract_versions_from_input,
+    summarize_versions_data,
+    load_version_details,
+    summarize_version_outputs
+)
+from server.config import client, completion_model
+import json
+
 def answer_user_query(user_query, design_data):
     """Return a precise, factual answer using available project data."""
-    
-   # NEW DEFINITION FOR VERSIONING CONSIDERATIONS 07.06.25 
+
     mentioned_versions = extract_versions_from_input(user_query)
 
+    # Case 1: Compare versions explicitly mentioned
     if mentioned_versions:
         version_data = summarize_versions_data(mentioned_versions)
-        summary_text = json.dumps(version_data, indent=2)
-    else:
-        version_data = summarize_version_outputs()
-        summary_text = json.dumps(version_data, indent=2)
 
+        if not version_data:
+            return "I couldn't find any data for those versions."
 
-    if mentioned_versions:
-        first_version = mentioned_versions[0]
-        version_details = load_version_details(first_version)
-        if version_details:
-            design_inputs = version_details.get("inputs_decoded", {})
-            design_outputs = version_details.get("outputs", {})
+        response_lines = ["Here’s a summary of the selected versions:\n"]
+        for v, data in version_data.items():
+            response_lines.append(f"▶ **{v}**:")
+            outputs = data.get("outputs", {})
+            for k, val in outputs.items():
+                response_lines.append(f"  • {k}: {val}")
+            response_lines.append("")  # extra line break
+
+        return "\n".join(response_lines)
+
+    # Case 2: Ask for best version (new block)
+    keywords = [
+        "best version",
+        "lowest gwp",
+        "lowest impact",
+        "lowest carbon",
+        "most efficient",
+        "least impact",
+        "lowest footprint",
+        "minimum gwp",
+        "lowest emissions",
+        "version with best performance"
+    ]
+
+    if any(kw in user_query.lower() for kw in keywords):
+        best_version, best_val = get_best_version(metric="GWP total (kg CO2e/m²a GFA)")
+        if best_version:
+            return f"The version with the lowest GWP is **{best_version}**, with a total of **{best_val:.2f} kg CO2e/m² GFA**."
         else:
-            design_inputs = {}
-            design_outputs = {}
-    else:
-        try:
-            with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
-                ml_data = json.load(f)
-                design_inputs = ml_data.get("inputs_decoded", {})
-                design_outputs = ml_data.get("outputs", {})
-        except Exception as e:
-            print(f"[QUERY] Failed to load ml_output.json: {e}")
-            design_inputs, design_outputs = {}, {}
+            return "I couldn't determine the best version — the data might be missing or incomplete."
 
+    # Case 3: Fallback to current ML data
+    try:
+        with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
+            ml_data = json.load(f)
+            design_inputs = ml_data.get("inputs_decoded", {})
+            design_outputs = ml_data.get("outputs", {})
+    except Exception as e:
+        print(f"[QUERY] Failed to load ml_output.json: {e}")
+        design_inputs, design_outputs = {}, {}
 
+    # Case 4: Fallback to LLM
     response = client.chat.completions.create(
         model=completion_model,
         messages=[

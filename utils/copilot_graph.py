@@ -54,7 +54,8 @@ def build_copilot_graph():
             "design_change": "handle_design_change",
             "improvement_suggestion": "suggest_improvement",
             "carbon_query": "answer_query",
-            "general_query": "answer_query"  # ← AÑADE ESTO
+            "general_query": "answer_query",
+            "version_query": "answer_query"
         }
     )
 

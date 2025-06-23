@@ -9,9 +9,9 @@ from server.config import client, completion_model
 # =====================================
 
 def list_all_version_files(folder="knowledge/iterations"):
-    """Return a sorted list of all version filenames (e.g., V0.json … V19.json)"""
+    """Return a sorted list of all version filenames like V1.json, V2.json..."""
     try:
-        files = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
+        files = [f for f in os.listdir(folder) if re.match(r"^V\d+\.json$", f)]
         return sorted(files, key=lambda x: int(re.search(r"\d+", x).group()))
     except Exception as e:
         print(f"[VERSION LIST] Error: {e}")
@@ -37,7 +37,7 @@ def summarize_version_outputs(folder="knowledge/iterations"):
             with open(os.path.join(folder, filename), "r", encoding="utf-8") as f:
                 data = json.load(f)
                 summaries.append({
-                    "version": data.get("version", filename.replace(".json", "")),
+                    "version": filename.replace(".json", ""),
                     "outputs": data.get("outputs", {})
                 })
         except Exception as e:
@@ -46,7 +46,7 @@ def summarize_version_outputs(folder="knowledge/iterations"):
 
 def get_best_version(metric="GWP total", folder="knowledge/iterations"):
     """Find the version with the lowest specified output metric"""
-    summaries = summarize_version_outputs(folder)
+    summaries = [s for s in summarize_version_outputs(folder) if s["version"].startswith("V")]
     best = None
     best_val = float("inf")
     for entry in summaries:
