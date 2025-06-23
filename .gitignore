@@ -1,0 +1,17 @@
+# Ignore iteration outputs
+knowledge/iterations/V*.json
+knowledge/iterations/V*.png
+knowledge/iterations/V*.3dm
+knowledge/iterations/I*.json
+knowledge/iterations/In.json
+knowledge/iterations/In-1.json
+
+# Ignore processed ML data
+knowledge/ml_output.json
+knowledge/compiled_ml_data.json
+knowledge/geometry_metrics.json
+knowledge/ml_processed.flag
+
+# Python cache
+__pycache__/
+*.pyc

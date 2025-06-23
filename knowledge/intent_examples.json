@@ -1,0 +1,58 @@
+{
+  "carbon_query": [
+    "What is the embodied carbon?",
+    "What’s the carbon footprint?",
+    "Tell me the CO2 emissions.",
+    "How sustainable is this design?",
+    "What's the global warming potential?",
+    "How much CO2 does this emit?",
+    "Total carbon impact?",
+    "Carbon intensity of this version?",
+    "What are the emissions per square meter?",
+    "Estimate the GWP",
+    "What is the environmental load?"
+  ],
+  "design_change": [
+    "Change everything to timber.",
+    "Change exterior wall partition to concrete",
+    "Switch insulation to cork.",
+    "Use straw for the walls.",
+    "Replace the roof material.",
+    "Update WWR to 0.4",
+    "Switch to low-carbon concrete.",
+    "Change windows to triple glazing.",
+    "Can you modify the structure?",
+    "Try using CLT instead of concrete.",
+    "Reduce the glazing ratio."
+  ],
+  "version_query": [
+    "Compare version V2 and V5.",
+    "Which version performs best?",
+    "List all saved designs.",
+    "Show me version history.",
+    "Summarize the outputs of V6.",
+    "Which design is most efficient?",
+    "What's the difference between V1 and V3?",
+    "Tell me about version V4.",
+    "What versions have I saved?",
+    "Load the results from V7."
+  ],
+  "improvement_suggestion": [
+    "How can I lower emissions?",
+    "Suggest improvements to my design.",
+    "Any advice to reduce carbon?",
+    "What should I change?",
+    "Optimize the structure for sustainability.",
+    "How do I improve the design?",
+    "Ways to reduce the GWP?",
+    "What changes would reduce carbon emissions?",
+    "What upgrades would make this more energy-efficient?",
+    "Suggest ways to optimize this building.",
+    "What can I change to make it greener?",
+    "Make this greener.",
+    "Tips to improve efficiency?",
+    "Make it more energy efficient.",
+    "How do I reduce CO2?",
+    "Improve the overall environmental performance."
+  ]
+}

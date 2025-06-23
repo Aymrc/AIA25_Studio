@@ -1,0 +1,103 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f3f3f3;
+  overflow-x: hidden;
+}
+
+.container {
+  padding: 80px 20px 20px 20px;
+}
+
+/* COPILOT title */
+.floating-title {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  font-size: 36px;
+  font-weight: 700;
+  z-index: 9999;
+  pointer-events: none;
+
+  background: linear-gradient(100deg, #add8e6, #4682b4, #da70d6, #ff8c00, #ffd700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
+}
+/* Animated compare panel */
+.compare-panel {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: height 0.4s ease, opacity 0.3s ease, margin-bottom 0.3s ease;
+  background: white;
+  border-radius: 0px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 0 20px;
+  margin-bottom: 0;
+}
+
+/* When 2 items selected — reveal the full panel */
+.compare-panel.active {
+  height: 60vh;
+  opacity: 1;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+.tile {
+  background-color: white;
+  border-radius: 0px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  padding: 10px;
+}
+
+.tile:hover {
+  transform: scale(1.02);
+}
+
+.tile.selected {
+  border: 2px solid #da70d6; /*#da70d6, #ff8c00, #ffd700);*/
+  box-shadow: none; /*0 0 0 2px #00000044;*/
+}
+
+.image-placeholder {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background-color: #d9d9d9;
+  border-radius: 0px;
+}
+
+.tile-info {
+  padding-top: 8px;
+}
+
+.tile-info h2 {
+  font-size: 16px;
+  margin-bottom: 4px;
+  color: #222;
+}
+
+.tile-info p {
+  font-size: 14px;
+  color: #666;
+}
