@@ -37,6 +37,8 @@ async def receive_geometry(request: Request):
     except Exception as e:
         print("❌ Error:", str(e))
         return {"status": "error", "message": str(e)}
+    
+
 
 @app.get("/screenshot/", response_class=PlainTextResponse)
 def trigger_capture_dialog():

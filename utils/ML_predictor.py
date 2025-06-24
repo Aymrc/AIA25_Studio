@@ -24,7 +24,7 @@ json_folder = os.path.join(project_root, "knowledge", "iterations")
 destination_folder = os.path.join(project_root, "knowledge")
 destination_filename = "ml_output.json"
 
-model_path = os.path.normpath(os.path.join(project_root, "..", "lightgbm_multi.pkl"))
+model_path = "lightgbm_multi.pkl"
 print("model to GWP PREDICTOR path:", model_path)
 
 
