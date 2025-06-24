@@ -122,6 +122,8 @@ class ChatRequest(BaseModel):
 # export report endpoint
 @app.post("/api/export_report")
 def export_report():
+    print("📥 Received /api/export_report call")
+
     try:
         result = subprocess.run(
             ["python", "utils/export.py"],
@@ -129,9 +131,12 @@ def export_report():
             text=True,
             check=True
         )
+        print("✅ Export script finished.")
         return {"status": "success", "message": result.stdout}
     except subprocess.CalledProcessError as e:
+        print("❌ Export script error:", e.stderr)
         return {"status": "error", "message": e.stderr}
+
 
 # chat_endpoint(): Main chat handler that routes user input to the appropriate LLM function using ML data.
 from utils.copilot_graph import CopilotState, build_copilot_graph
