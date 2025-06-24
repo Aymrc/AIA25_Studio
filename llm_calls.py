@@ -400,6 +400,16 @@ def answer_user_query(user_query, design_data):
     )
     from server.config import client, completion_model
 
+    if not design_data or "outputs" not in design_data:
+        try:
+            with open("knowledge/ml_output.json", "r", encoding="utf-8") as f:
+                design_data = json.load(f)
+                print("[DEBUG] Reloaded design_data from ml_output.json")
+        except Exception as e:
+            print(f"[ERROR] Failed to reload design_data: {e}")
+            return "Unable to load current design outputs."
+
+
     # Check for malformed input
     if not isinstance(user_query, str) or not user_query.strip():
         return "Your question appears to be empty or invalid."
