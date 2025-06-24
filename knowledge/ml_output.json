@@ -1,6 +1,6 @@
 {
-    "version": "I4",
-    "timestamp": "2025-06-24T14:54:14.241917",
+    "version": "I1",
+    "timestamp": "2025-06-24T23:12:24.576379",
     "inputs_raw": {
         "Typology": 3,
         "Window-to-Wall_Ratio": 2,
@@ -12,9 +12,9 @@
         "Roof_Partition": 0,
         "Roof_Insulation": 2,
         "Beams & Columns": 1,
-        "Volume": 117378.51867918632,
-        "Compactness": 0.449,
-        "Shape-Efficiency": 0.32
+        "Volume": 4999.999999999998,
+        "Compactness": 0.6,
+        "Shape-Efficiency": 0.733
     },
     "inputs_decoded": {
         "Typology": "Courtyard",
@@ -27,17 +27,17 @@
         "Roof_Partition": "Concrete",
         "Roof_Insulation": "EPS",
         "Beams & Columns": "Concrete",
-        "Volume": 117378.51867918632,
-        "Compactness": 0.449,
-        "Shape-Efficiency": 0.32
+        "Volume": 4999.999999999998,
+        "Compactness": 0.6,
+        "Shape-Efficiency": 0.733
     },
     "outputs": {
-        "Energy Intensity - EUI (kWh/m²a)": 377.15,
-        "Cooling Demand (kWh/m²a)": 147.05,
-        "Heating Demand (kWh/m²a)": 146.15,
-        "Operational Carbon (kg CO2e/m²a GFA)": 169.72,
-        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 4.84,
-        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 7.75,
-        "GWP total (kg CO2e/m²a GFA)": 187.74
+        "Energy Intensity - EUI (kWh/m²a)": 286.23,
+        "Cooling Demand (kWh/m²a)": 120.72,
+        "Heating Demand (kWh/m²a)": 97.41,
+        "Operational Carbon (kg CO2e/m²a GFA)": 128.8,
+        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 5.28,
+        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 8.26,
+        "GWP total (kg CO2e/m²a GFA)": 135.22
     }
 }
