@@ -102,11 +102,19 @@
 				});
 			</script>
 
-			<a href="cherry/index.html" target="_blank">
-				<button class="button"><!-- WebApp -->
-					<img src="assets/copilot_icon_chat.png" alt="Copilot" class="chat-icon">
-				</button>
-			</a>
+			<button onclick="openCherry()"><img src="assets/copilot_icon_chat.png" alt="Copilot" class="chat-icon"></button>
+			<script>
+				function openCherry() {
+					fetch("http://localhost:5002/api/open_cherry")
+					.then(res => res.json())
+					.then(data => {
+						console.log("WebApp opened:", data);
+					})
+					.catch(err => {
+						console.error("Failed to open WebApp", err);
+					});
+				}
+			</script>
 		
 		</div>
 		<span id="clearStatus"></span><!-- show user if it worked -->

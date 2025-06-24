@@ -11,8 +11,7 @@ import time
 import threading
 from pathlib import Path
 import socket
-import subprocess
-import re
+import subprocess, multiprocessing
 from utils.embeddings import classify_intent_via_embeddings
 
 # Try to import watchdog for file monitoring
