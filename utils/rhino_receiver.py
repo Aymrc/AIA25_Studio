@@ -5,8 +5,6 @@ import uvicorn
 import json
 import sys
 import os
-import time
-
 
 # Add parent directory of ML_predictor.py to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "utils")))
@@ -39,8 +37,6 @@ async def receive_geometry(request: Request):
     except Exception as e:
         print("❌ Error:", str(e))
         return {"status": "error", "message": str(e)}
-    
-
 
 @app.get("/screenshot/", response_class=PlainTextResponse)
 def trigger_capture_dialog():
@@ -66,5 +62,3 @@ if __name__ == "__main__":
             log.write("🚨 Rhino listener crashed:\n")
             log.write(traceback.format_exc())
         print("❌ Rhino listener crashed. See rhino_listener_error.log for details.")
-
-
