@@ -1,8 +1,8 @@
 {
-    "version": "I142",
-    "timestamp": "2025-06-24T22:55:59.596060",
+    "version": "I152",
+    "timestamp": "2025-06-25T08:16:47.559671",
     "inputs_raw": {
-        "Typology": 3,
+        "Typology": 2,
         "Window-to-Wall_Ratio": 2,
         "Ext.Wall_Partition": 1,
         "Ext.Wall_Insulation": 2,
@@ -17,7 +17,7 @@
         "Shape-Efficiency": 0
     },
     "inputs_decoded": {
-        "Typology": "Courtyard",
+        "Typology": "C-Shape",
         "Window-to-Wall_Ratio": "Moderate Glazing",
         "Ext.Wall_Partition": "Concrete",
         "Ext.Wall_Insulation": "EPS",

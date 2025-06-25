@@ -24,7 +24,7 @@ json_folder = os.path.join(project_root, "knowledge", "iterations")
 destination_folder = os.path.join(project_root, "knowledge")
 destination_filename = "ml_output.json"
 
-model_path = "lightgbm_multi.pkl"
+model_path = "utils\lightgbm_multi.pkl"
 print("model to GWP PREDICTOR path:", model_path)
 
 
@@ -87,7 +87,7 @@ def predict_outputs(inputs: dict, model_path: str) -> list:
     return list(output)
 
 # ============================
-# FUNCTION: Save Version JSON
+# FUNCTION: CLIP Typology Inference
 # ============================
 
 def clip_Gaia(latest_image_path):
@@ -125,6 +125,10 @@ def clip_Gaia(latest_image_path):
     print(f"Predicted typology: {pred_label}")
     return pred_label
 
+# ============================
+# FUNCTION: Save Version JSON
+# ============================
+
 def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
     
     os.makedirs(folder, exist_ok=True)
@@ -136,6 +140,7 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
         print(f"Could not load materials.json: {e}")
         materials_map = {}
 
+    # Find latest I* versions
     existing_versions = [f for f in os.listdir(folder) if f.startswith("I") and f.endswith(".json")]
     existing_numbers = [int(f[1:-5]) for f in existing_versions if f[1:-5].isdigit()]
     next_version = max(existing_numbers, default=-1) + 1
@@ -143,7 +148,7 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
     json_path = os.path.join(folder, f"{version_name}.json")
 
 
-
+    # Find latest V*.png image
     existing_versions_clip = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
     existing_numbers_clip = [int(f[1:-5]) for f in existing_versions_clip if f[1:-5].isdigit()]
     next_version_clip = max(existing_numbers_clip, default=-1)
@@ -151,10 +156,21 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
 
     latest_image_filename = version_name_clip + ".png"
     latest_image_path = os.path.join(folder, latest_image_filename)
-    typology_prediction = clip_Gaia(latest_image_path) # calling CLIP on the latest png
-    print(typology_prediction)
-    # inputs["Typology"] = typology_prediction
+    typology_prediction = clip_Gaia(latest_image_path)
+    print(f"CLIP predicted typology: {typology_prediction}")
 
+    # Convert label (e.g. "Block") to integer (e.g. 0) using materials_map
+    typology_encoding_map = {v: int(k) for k, v in materials_map.get("Typology", {}).items()}
+    encoded_typology = typology_encoding_map.get(typology_prediction)
+
+    # Set inputs["Typology"] to encoded prediction
+    typology_encoding_map = {v: int(k) for k, v in materials_map.get("Typology", {}).items()}
+    encoded_typology = typology_encoding_map.get(typology_prediction)
+    if encoded_typology is not None:
+        inputs["Typology"] = encoded_typology
+        print(f"Inferred Typology set to: {encoded_typology}")
+    else:
+        print(f"Could not encode typology: {typology_prediction}")
 
     inputs_raw = {}
     inputs_decoded = {}
