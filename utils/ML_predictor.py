@@ -153,6 +153,7 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
     existing_numbers_clip = [int(f[1:-5]) for f in existing_versions_clip if f[1:-5].isdigit()]
     next_version_clip = max(existing_numbers_clip, default=-1)
     version_name_clip = f"V{next_version_clip}"
+    print (version_name_clip)
 
     latest_image_filename = version_name_clip + ".png"
     latest_image_path = os.path.join(folder, latest_image_filename)

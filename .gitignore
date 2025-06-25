@@ -1,7 +1,7 @@
 # Ignore iteration outputs
-knowledge/iterations/V*.json
-knowledge/iterations/V*.png
-knowledge/iterations/V*.3dm
+#knowledge/iterations/V*.json
+#knowledge/iterations/V*.png
+#knowledge/iterations/V*.3dm
 knowledge/iterations/I*.json
 knowledge/iterations/In.json
 knowledge/iterations/In-1.json
