@@ -106,7 +106,7 @@ for json_file in all_jsons:
             image=control_image,
             strength=0.6,
             guidance_scale=4.0,
-            num_inference_steps=20
+            num_inference_steps=6
         ).images[0]
         result.save(output_path)
         log(f"✅ Render saved to: {output_path}")
