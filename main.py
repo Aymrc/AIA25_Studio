@@ -281,6 +281,18 @@ def start_backend():
             cwd=project_root
         )
 
+        #=== Start WebApp server
+        webapp_server_path = os.path.join(script_dir, "server", "webapp_server.py")
+        if os.path.exists(webapp_server_path):
+            print("🚀 Launching WebApp server on port 5002...")
+            subprocess.Popen(
+                [python_path, webapp_server_path],
+                cwd=script_dir,
+                creationflags=0,#subprocess.CREATE_NO_WINDOW,  # optional: hides terminal
+            )
+        else:
+            print("WebApp server not found at:", webapp_server_path)
+
 
         # === Start geometry receiver on port 5060 ============================NEW
         receiver_path = os.path.join(script_dir, "utils", "rhino_receiver.py")
@@ -288,7 +300,7 @@ def start_backend():
             print("✅ Launching Rhino geometry receiver...")
             subprocess.Popen(
                 [python_path, receiver_path],
-                creationflags=0,
+                creationflags=0, #subprocess.CREATE_NO_WINDOW, #0 to get terminal back
                 cwd=script_dir
             )
         else:

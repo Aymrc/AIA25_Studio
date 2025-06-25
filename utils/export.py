@@ -17,18 +17,14 @@ VERS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "knowle
 LOGO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "ui", "assets", "copilot_icon_chat.png"))
 os.makedirs(OUT_DIR, exist_ok=True)
 
-SHOW_VERSIONS = []
-
 COLORS = ["#7EAECF", "#748DC2", "#B282C5", "#E88B86", "#F1B151", "#F2C92C"]
 rgb = lambda hx: tuple(int(hx.lstrip("#")[i:i+2], 16) for i in (0,2,4))
 
-# Benchmarks
 BENCHMARKS = {
     "EUI": 175,
     "Operational": 130,
     "A-D": 6.5
 }
-
 
 def beautify(k: str) -> str:
     k = re.sub(r"[_\-]", " ", k)
@@ -48,7 +44,7 @@ Below are the input parameters for version {version_name}. Write a 2–3 sentenc
             max_tokens=300
         )
         return response.choices[0].message.content.strip()
-    except Exception as e:
+    except Exception:
         return "LLM error: input summary unavailable."
 
 def generate_page_level_llm_description(page_title, data_dict):
@@ -63,7 +59,7 @@ You are an expert in sustainable architecture. Write a brief, informative summar
             max_tokens=250
         )
         return response.choices[0].message.content.strip()
-    except Exception as e:
+    except Exception:
         return "LLM error: section summary unavailable."
 
 def get_val(frag, d):
@@ -76,7 +72,7 @@ def get_val(frag, d):
 class PDF(FPDF):
     def header(self):
         if self.page_no() > 1:
-            try: self.image(LOGO_PATH, x=210 - self.r_margin - 18, y=5, w=18)
+            try: self.image(LOGO_PATH, x=192, y=5, w=18)
             except: pass
         if hasattr(self, "head_title") and self.page_no() > 1:
             self.set_font("Georgia", "B", 12)
@@ -121,7 +117,7 @@ class PDF(FPDF):
         self.head_color = COLORS[2]
         self.add_page()
         self.set_font("Georgia", "B", 14)
-        self.set_text_color(*rgb(COLORS[2]))
+        self.set_text_color(*rgb(self.head_color))
         self.cell(0, 10, "Input Parameters", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.hline(); self.ln(4)
 
@@ -154,6 +150,21 @@ class PDF(FPDF):
         if os.path.exists(img):
             self.image(img, x=15, w=180)
 
+    def page_materials(self, v, image_path):
+        self.head_title = f"Material System – {v}"
+        self.head_color = COLORS[3]
+        self.add_page()
+        self.set_font("Georgia", "B", 14)
+        self.set_text_color(*rgb(self.head_color))
+        self.cell(0, 10, "Material System", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.hline(); self.ln(4)
+        self.set_font("Georgia", "", 10)
+        self.set_text_color(33)
+        self.wrap(f"Commentary: The image below shows the mass model approach in version {v}, helping assess visually the design logic.")
+        self.ln(4)
+        if os.path.exists(image_path):
+            self.image(image_path, x=15, w=180)
+
 pdf = PDF()
 pdf.add_font("Georgia", "",  r"C:\\Windows\\Fonts\\georgia.ttf")
 pdf.add_font("Georgia", "B", r"C:\\Windows\\Fonts\\georgiab.ttf")
@@ -168,74 +179,54 @@ for f in sorted(os.listdir(VERS_DIR)):
         name = os.path.splitext(f)[0]
         with open(os.path.join(VERS_DIR, f)) as fp:
             vers[name] = json.load(fp)
-
 order = sorted(vers)
-
 
 def save_bar_plot(data_dict, title, path, benchmark=None):
     fig = px.bar(x=list(data_dict.keys()), y=list(data_dict.values()),
-                 color=list(data_dict.keys()),
-                 text=[f"{v:.2f}" for v in data_dict.values()],
+                 color=list(data_dict.keys()), text=[f"{v:.2f}" for v in data_dict.values()],
                  color_discrete_sequence=COLORS)
     if benchmark is not None:
         fig.add_hline(y=benchmark, line_dash="dash", line_color="red",
                       annotation_text="Benchmark", annotation_position="top right")
-
     fig.update_layout(
-        title=title,
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        width=640,
-        height=400,
-        margin=dict(l=20, r=20, t=40, b=20),
-        font=dict(family="Georgia")
+        title=title, plot_bgcolor='white', paper_bgcolor='white',
+        width=640, height=400, margin=dict(l=20, r=20, t=40, b=20), font=dict(family="Georgia")
     )
     fig.write_image(path)
-
 
 def save_trend(df, title, path):
     fig = px.line(df, markers=True, color_discrete_sequence=COLORS)
     fig.update_layout(
-        title=title,
-        plot_bgcolor='white',
-        paper_bgcolor='white',
-        width=700,
-        height=400,
-        margin=dict(l=20, r=20, t=40, b=20),
-        font=dict(family="Georgia")
+        title=title, plot_bgcolor='white', paper_bgcolor='white',
+        width=700, height=400, margin=dict(l=20, r=20, t=40, b=20), font=dict(family="Georgia")
     )
     fig.write_image(path)
 
+energy_records = []
+carbon_records = []
+gwp_records = []
 
 for v, js in vers.items():
     pdf.page_inputs(v, js["inputs_decoded"])
+    version_img_path = os.path.join(VERS_DIR, f"{v}.png")
+    pdf.page_materials(v, version_img_path)
 
-    en_img = os.path.join(OUT_DIR, f"energy_{v}.png")
-    ca_img = os.path.join(OUT_DIR, f"carbon_{v}.png")
+    energy_dict = {k: get_val(k, js["outputs"]) for k in ["Energy Intensity", "Cooling Demand", "Heating Demand"]}
+    carbon_dict = {k: get_val(k, js["outputs"]) for k in ["Operational Carbon", "A-D", "GWP total"]}
 
-    save_bar_plot({k: get_val(k, js["outputs"]) for k in ["Energy Intensity", "Cooling Demand", "Heating Demand"]},
-                  f"Energy – {v}", en_img, benchmark=BENCHMARKS["EUI"])
+    save_bar_plot(energy_dict, f"Energy – {v}", os.path.join(OUT_DIR, f"energy_{v}.png"), benchmark=BENCHMARKS["EUI"])
+    save_bar_plot(carbon_dict, f"Carbon – {v}", os.path.join(OUT_DIR, f"carbon_{v}.png"), benchmark=BENCHMARKS["Operational"])
 
-    save_bar_plot({k: get_val(k, js["outputs"]) for k in ["Operational Carbon", "A-D", "GWP total"]},
-                  f"Carbon – {v}", ca_img, benchmark=BENCHMARKS["Operational"])
+    pdf.page_plot(f"Energy Performance – {v}", js["outputs"], os.path.join(OUT_DIR, f"energy_{v}.png"), 0)
+    pdf.page_plot(f"Carbon Emissions – {v}", js["outputs"], os.path.join(OUT_DIR, f"carbon_{v}.png"), 1)
 
-    pdf.page_plot(f"Energy Performance – {v}", js["outputs"], en_img, 0)
-    pdf.page_plot(f"Carbon Emissions – {v}", js["outputs"], ca_img, 1)
+    energy_records.append({"Version": v, **energy_dict})
+    carbon_records.append({"Version": v, "Operational": carbon_dict["Operational Carbon"], "A-D": carbon_dict["A-D"]})
+    gwp_records.append({"Version": v, "Total": carbon_dict["Operational Carbon"] + carbon_dict["A-D"]})
 
-energy_df = pd.DataFrame({
-    "EUI": [get_val("Energy Intensity", v["outputs"]) for v in vers.values()],
-    "Cooling": [get_val("Cooling Demand", v["outputs"]) for v in vers.values()],
-    "Heating": [get_val("Heating Demand", v["outputs"]) for v in vers.values()]
-}, index=order)
-
-carbon_df = pd.DataFrame({
-    "Operational": [get_val("Operational Carbon", v["outputs"]) for v in vers.values()],
-    "A-D": [get_val("A-D", v["outputs"]) for v in vers.values()]
-}, index=order)
-
-gwp_df = pd.DataFrame({
-    "Total": carbon_df["Operational"] + carbon_df["A-D"]
-}, index=order)
+energy_df = pd.DataFrame(energy_records).set_index("Version")
+carbon_df = pd.DataFrame(carbon_records).set_index("Version")
+gwp_df = pd.DataFrame(gwp_records).set_index("Version")
 
 save_trend(energy_df, "Energy Trend by Version", os.path.join(OUT_DIR, "energy_trend.png"))
 save_trend(carbon_df, "Carbon Trend by Version", os.path.join(OUT_DIR, "carbon_trend.png"))
