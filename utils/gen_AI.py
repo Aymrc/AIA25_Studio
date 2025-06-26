@@ -104,9 +104,9 @@ for json_file in all_jsons:
         result = pipe(
             prompt=prompt,
             image=control_image,
-            strength=0.3,
-            guidance_scale=2.5,
-            num_inference_steps=4
+            strength=0.6,
+            guidance_scale=4.0,
+            num_inference_steps=6
         ).images[0]
         result.save(output_path)
         log(f"✅ Render saved to: {output_path}")
