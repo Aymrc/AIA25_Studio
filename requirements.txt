@@ -19,3 +19,12 @@ plotly
 kaleido
 git+https://github.com/openai/CLIP.git
 torch
+diffusers>=0.27.0
+transformers>=4.36.0
+accelerate>=0.25.0
+opencv-python
+Pillow
+torch==2.2.2+cu121
+torchvision==0.17.2+cu121
+torchaudio==2.2.2+cu121
+--extra-index-url https://download.pytorch.org/whl/cu121

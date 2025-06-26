@@ -19,7 +19,7 @@ local_client = OpenAIClient(
 local_embedding_model = "text-embedding-nomic-embed-text-v1.5"
 llama3 = [
     {
-        "model": "llama-3.1-tulu-3-8b",  # Model1
+        "model": "llama-3-groq-8b-tool-use",  # Model1
         # "model": "Qwen3 4B",  # Model2
         # "model": "nombre",  # Model3 to be defined
         "api_key": "any",  # Placeholder, not used by LM Studio

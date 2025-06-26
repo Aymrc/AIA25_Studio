@@ -1,15 +1,15 @@
 {
-  "Typology": 3, 
-  "WWR": 2, 
-  "EW_PAR": 1, 
-  "EW_INS": 2, 
-  "IW_PAR": 1, 
-  "ES_INS": 1, 
-  "IS_PAR": 0, 
-  "RO_PAR": 0, 
-  "RO_INS": 2, 
-  "BC": 1, 
-  "A/V": 0, 
-  "Volume(m3)": 0, 
-  "VOL/VOLBBOX": 0
+  "Typology": 3,
+  "WWR": 2,
+  "EW_PAR": 5,
+  "EW_INS": 0,
+  "IW_PAR": 2,
+  "ES_INS": 1,
+  "IS_PAR": 2,
+  "RO_PAR": 1,
+  "RO_INS": 6,
+  "BC": 2,
+  "A/V": 0.205,
+  "Volume(m3)": 123700.6596352813,
+  "VOL/VOLBBOX": 0.291
 }
