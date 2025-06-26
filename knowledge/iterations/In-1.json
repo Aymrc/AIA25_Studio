@@ -1,43 +1,43 @@
 {
-    "version": "I76",
-    "timestamp": "2025-06-26T13:03:02.831302",
+    "version": "I6",
+    "timestamp": "2025-06-25T16:38:41.562903",
     "inputs_raw": {
         "Typology": 2,
         "Window-to-Wall_Ratio": 2,
-        "Ext.Wall_Partition": 5,
-        "Ext.Wall_Insulation": 0,
-        "Int.Wall_Partition": 2,
+        "Ext.Wall_Partition": 1,
+        "Ext.Wall_Insulation": 2,
+        "Int.Wall_Partition": 1,
         "Ext.Slab_Insulation": 1,
-        "Int.Slab_Partition": 2,
-        "Roof_Partition": 1,
-        "Roof_Insulation": 6,
-        "Beams & Columns": 2,
-        "Volume": 123700.6596352813,
-        "Compactness": 0.205,
-        "Shape-Efficiency": 0.291
+        "Int.Slab_Partition": 0,
+        "Roof_Partition": 0,
+        "Roof_Insulation": 2,
+        "Beams & Columns": 1,
+        "Volume": 92457.49594704006,
+        "Compactness": 0.227,
+        "Shape-Efficiency": 0.286
     },
     "inputs_decoded": {
         "Typology": "C-Shape",
         "Window-to-Wall_Ratio": "Moderate Glazing",
-        "Ext.Wall_Partition": "Timber_mass",
-        "Ext.Wall_Insulation": "Cellulose",
-        "Int.Wall_Partition": "Earth",
+        "Ext.Wall_Partition": "Concrete",
+        "Ext.Wall_Insulation": "EPS",
+        "Int.Wall_Partition": "Concrete",
         "Ext.Slab_Insulation": "XPS",
-        "Int.Slab_Partition": "Timber_mass",
-        "Roof_Partition": "Timber_frame",
-        "Roof_Insulation": "Wood_fiber",
-        "Beams & Columns": "Timber",
-        "Volume": 123700.6596352813,
-        "Compactness": 0.205,
-        "Shape-Efficiency": 0.291
+        "Int.Slab_Partition": "Concrete",
+        "Roof_Partition": "Concrete",
+        "Roof_Insulation": "EPS",
+        "Beams & Columns": "Concrete",
+        "Volume": 92457.49594704006,
+        "Compactness": 0.227,
+        "Shape-Efficiency": 0.286
     },
     "outputs": {
         "Energy Intensity - EUI (kWh/m²a)": 517.11,
         "Cooling Demand (kWh/m²a)": 189.61,
         "Heating Demand (kWh/m²a)": 216.18,
         "Operational Carbon (kg CO2e/m²a GFA)": 232.7,
-        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 0.33,
-        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 5.49,
-        "GWP total (kg CO2e/m²a GFA)": 237.25
+        "Embodied Carbon A1-A3 (kg CO2e/m²a GFA)": 4.67,
+        "Embodied Carbon A-D (kg CO2e/m²a GFA)": 7.52,
+        "GWP total (kg CO2e/m²a GFA)": 239.12
     }
 }
