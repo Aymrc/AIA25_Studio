@@ -24,7 +24,7 @@ json_folder = os.path.join(project_root, "knowledge", "iterations")
 destination_folder = os.path.join(project_root, "knowledge")
 destination_filename = "ml_output.json"
 
-model_path = "utils\\lightgbm_multi.pkl"
+model_path = "utils\lightgbm_multi.pkl"
 print("model to GWP PREDICTOR path:", model_path)
 
 
@@ -90,40 +90,40 @@ def predict_outputs(inputs: dict, model_path: str) -> list:
 # FUNCTION: CLIP Typology Inference
 # ============================
 
-# def clip_Gaia(latest_image_path):
-#     # Set device
-#     device = "cuda" if torch.cuda.is_available() else "cpu"
+def clip_Gaia(latest_image_path):
+    # Set device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-#     # Load CLIP model and preprocessing
-#     model, preprocess = clip.load("ViT-B/32", device=device)
-#     model.eval()
+    # Load CLIP model and preprocessing
+    model, preprocess = clip.load("ViT-B/32", device=device)
+    model.eval()
 
-#     # Load trained classifier and class names
-#     script_dir = os.path.dirname(os.path.abspath(__file__))
-#     clip_model_path = os.path.join(script_dir, "clip_finetuned_w_linear_classifier.pkl")
+    # Load trained classifier and class names
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    clip_model_path = os.path.join(script_dir, "clip_finetuned_w_linear_classifier.pkl")
 
-#     if not os.path.exists(clip_model_path):
-#         raise FileNotFoundError(f"Classifier .pkl not found at: {clip_model_path}")
+    if not os.path.exists(clip_model_path):
+        raise FileNotFoundError(f"Classifier .pkl not found at: {clip_model_path}")
 
-#     checkpoint = joblib.load(clip_model_path)
-#     clf = checkpoint["classifier"]
-#     class_names = checkpoint["class_names"]
+    checkpoint = joblib.load(clip_model_path)
+    clf = checkpoint["classifier"]
+    class_names = checkpoint["class_names"]
 
-#     # Load and preprocess image
-#     image = preprocess(Image.open(latest_image_path).convert("RGB")).unsqueeze(0).to(device)
+    # Load and preprocess image
+    image = preprocess(Image.open(latest_image_path).convert("RGB")).unsqueeze(0).to(device)
 
-#     # Encode image using CLIP
-#     with torch.no_grad():
-#         image_feature = model.encode_image(image)
-#         image_feature /= image_feature.norm(dim=-1, keepdim=True)
-#         image_feature = image_feature.cpu().numpy()
+    # Encode image using CLIP
+    with torch.no_grad():
+        image_feature = model.encode_image(image)
+        image_feature /= image_feature.norm(dim=-1, keepdim=True)
+        image_feature = image_feature.cpu().numpy()
 
-#     # Predict using classifier
-#     pred_class = clf.predict(image_feature)[0]
-#     pred_label = class_names[pred_class]
+    # Predict using classifier
+    pred_class = clf.predict(image_feature)[0]
+    pred_label = class_names[pred_class]
 
-#     print(f"Predicted typology: {pred_label}")
-#     return pred_label
+    print(f"Predicted typology: {pred_label}")
+    return pred_label
 
 # ============================
 # FUNCTION: Save Version JSON
@@ -148,18 +148,17 @@ def save_version_json(inputs: dict, outputs: list, labels: list, folder: str):
     json_path = os.path.join(folder, f"{version_name}.json")
 
 
-    # # Find latest V*.png image
-    # existing_versions_clip = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
-    # existing_numbers_clip = [int(f[1:-5]) for f in existing_versions_clip if f[1:-5].isdigit()]
-    # next_version_clip = max(existing_numbers_clip, default=-1)
-    # version_name_clip = f"V{next_version_clip}"
-    # print (version_name_clip)
+    # Find latest V*.png image
+    existing_versions_clip = [f for f in os.listdir(folder) if f.startswith("V") and f.endswith(".json")]
+    existing_numbers_clip = [int(f[1:-5]) for f in existing_versions_clip if f[1:-5].isdigit()]
+    next_version_clip = max(existing_numbers_clip, default=-1)
+    version_name_clip = f"V{next_version_clip}"
+    print (version_name_clip)
 
-    # latest_image_filename = version_name_clip + ".png"
-    # latest_image_path = os.path.join(folder, latest_image_filename)
-    # typology_prediction = clip_Gaia(latest_image_path)
-    #print(f"CLIP predicted typology: {typology_prediction}")
-    typology_prediction = 3
+    latest_image_filename = version_name_clip + ".png"
+    latest_image_path = os.path.join(folder, latest_image_filename)
+    typology_prediction = clip_Gaia(latest_image_path)
+    print(f"CLIP predicted typology: {typology_prediction}")
 
     # Convert label (e.g. "Block") to integer (e.g. 0) using materials_map
     typology_encoding_map = {v: int(k) for k, v in materials_map.get("Typology", {}).items()}
